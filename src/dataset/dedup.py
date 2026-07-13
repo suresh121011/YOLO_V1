@@ -131,9 +131,9 @@ def _compute_flipped_hash(path: Path) -> str | None:
             small = (
                 img.convert("L")
                 .transpose(Image.Transpose.FLIP_LEFT_RIGHT)
-                .resize((_HASH_SIZE, _HASH_SIZE), Image.LANCZOS)
+                .resize((_HASH_SIZE, _HASH_SIZE), Image.Resampling.LANCZOS)
             )
-            pixels = list(small.getdata())
+            pixels = list(small.tobytes())  # mode "L" → one byte per pixel
 
         mean = sum(pixels) / len(pixels)
         bits = "".join("1" if p > mean else "0" for p in pixels)

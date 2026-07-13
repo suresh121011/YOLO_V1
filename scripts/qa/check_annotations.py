@@ -723,6 +723,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     """Main QA entry point. Returns exit code (0/1/2)."""
+    # Windows consoles often use cp1252, which cannot encode the emoji
+    # badges printed in the summary — degrade to '?' instead of crashing.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="replace")
+
     args = parse_args()
 
     logger.info("=" * 60)

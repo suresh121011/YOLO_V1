@@ -44,6 +44,7 @@ data/raw/negatives/
 data/merged/
 data/processed/images/
 data/processed/labels/
+data/processed/split_report/
 
 # ─── Local agent tooling (not project code) ──────────────────────────────────
 .agents/

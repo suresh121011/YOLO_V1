@@ -1,17 +1,17 @@
 # Annotation QA Report — Elderly Assistant System
 
-*Generated: 2026-07-13T06:14:18Z*
+*Generated: 2026-07-13T16:43:25Z*
 
-- **Data directory:** C:\Users\sm646\OneDrive\Desktop\YOLO_V1\data\processed
+- **Data directory:** C:\Users\haris\OneDrive\Desktop\YOLO_V1\data\processed
 - **Classes:** 23
-- **Images scanned:** 0
-- **Boxes validated:** 0
+- **Images scanned:** 53
+- **Boxes validated:** 272
 
 ## Overall Status: ✅ PASS
 
-- **Images scanned:** 0
-- **Label files scanned:** 0
-- **Bounding boxes validated:** 0
+- **Images scanned:** 53
+- **Label files scanned:** 53
+- **Bounding boxes validated:** 272
 - **Critical issues:** 0
 - **Warnings:** 0
 - **Info:** 0

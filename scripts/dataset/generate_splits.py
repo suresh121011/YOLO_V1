@@ -132,6 +132,10 @@ def print_summary(
 
 def main() -> int:
     """Main orchestrator entry point. Returns exit code."""
+    # Windows cp1252 consoles cannot encode the emoji in print_summary.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="replace")
+
     args = parse_args()
 
     # Resolve settings: explicit CLI flags override the split config YAML.

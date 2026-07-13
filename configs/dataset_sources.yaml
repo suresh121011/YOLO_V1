@@ -55,6 +55,7 @@ sources:
     smoke_split: val2017      # 5k-image annotation set — cheap smoke source
     full_split: train2017
     remap_table: coco
+    indoor_filter: true       # apply brightness/aspect heuristics at merge
     trusted_classes:
       [person, water_bottle, knife, laptop, monitor, chair, bed, toilet, sink, book]
     class_caps:               # prevent imbalance (docs 01_download_coco_subset)
@@ -72,6 +73,7 @@ sources:
     full_split: train
     image_url_template: "https://open-images-dataset.s3.amazonaws.com/{split}/{image_id}.jpg"
     remap_table: openimages
+    indoor_filter: true       # apply brightness/aspect heuristics at merge
     classes: ["Door", "Cupboard", "Gas stove"]
     trusted_classes: [door, cupboard, stove]
 

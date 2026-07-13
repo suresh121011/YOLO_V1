@@ -37,7 +37,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import random
 import shutil
 import sys
 from pathlib import Path
@@ -46,7 +45,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.dataset.split_config import DEFAULT_SPLIT_CONFIG_PATH, load_split_settings
+from src.dataset.splitting import SplitContext, get_strategy
 from src.utils.dataset_utils import (
+    IMAGE_EXTENSIONS,
     find_image_files,
     group_files_by_key,
 )
@@ -92,35 +93,16 @@ def compute_split_assignments(
     Returns:
         Dict mapping split name ("train"/"val"/"test") to list of group keys.
     """
-    total = train_ratio + val_ratio + test_ratio
-    if abs(total - 1.0) > 1e-6:
-        raise ValueError(
-            f"Split ratios must sum to 1.0, got {total:.6f} "
-            f"(train={train_ratio}, val={val_ratio}, test={test_ratio})"
-        )
-
-    group_keys = list(groups.keys())
-    # Deterministic shuffle for reproducible splits — not a security context.
-    rng = random.Random(seed)  # noqa: S311
-    rng.shuffle(group_keys)
-
-    n = len(group_keys)
-    n_train = round(n * train_ratio)
-    n_val = round(n * val_ratio)
-    # Assign remainder to test to ensure all groups are covered
-    n_test = n - n_train - n_val
-
-    assignments: dict[str, list[str]] = {
-        "train": group_keys[:n_train],
-        "val": group_keys[n_train : n_train + n_val],
-        "test": group_keys[n_train + n_val :],
-    }
-
-    logger.info(
-        f"Group assignments: {n_train} train / {n_val} val / {n_test} test "
-        f"(from {n} total groups)"
+    # Delegates to the default strategy (kept for backward compatibility —
+    # generate_splits.py and the unit tests call this directly).
+    context = SplitContext(
+        groups=groups,
+        train_ratio=train_ratio,
+        val_ratio=val_ratio,
+        test_ratio=test_ratio,
+        seed=seed,
     )
-    return assignments
+    return get_strategy("group_aware").assign(context)
 
 
 def copy_split_files(
@@ -195,7 +177,12 @@ def verify_no_leakage(
     for split in SPLIT_NAMES:
         split_dir = output_dir / "images" / split
         if split_dir.exists():
-            split_files[split] = {p.name for p in split_dir.iterdir() if p.is_file()}
+            # Only images count — scaffolding files (.gitkeep) are not leakage.
+            split_files[split] = {
+                p.name
+                for p in split_dir.iterdir()
+                if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
+            }
         else:
             split_files[split] = set()
 
@@ -434,16 +421,20 @@ def main() -> int:
     groups = group_files_by_key(all_images)
     logger.info(f"Found {len(groups)} capture groups")
 
-    # Compute assignments
+    # Compute assignments via the configured strategy
     try:
-        assignments = compute_split_assignments(
-            groups,
-            train_ratio=args.train,
-            val_ratio=args.val,
-            test_ratio=args.test,
-            seed=args.seed,
+        strategy = get_strategy(settings.strategy)
+        assignments = strategy.assign(
+            SplitContext(
+                groups=groups,
+                train_ratio=args.train,
+                val_ratio=args.val,
+                test_ratio=args.test,
+                seed=args.seed,
+                labels_dir=labels_dir,
+            )
         )
-    except ValueError as e:
+    except (ValueError, NotImplementedError) as e:
         logger.error(str(e))
         return 1
 

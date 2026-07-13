@@ -57,7 +57,7 @@ def validate_image(path: Path) -> tuple[bool, str]:
 
     # Try PIL first (fast header read)
     try:
-        from PIL import Image, UnidentifiedImageError  # type: ignore[import]
+        from PIL import Image, UnidentifiedImageError
 
         try:
             with Image.open(path) as img:
@@ -91,7 +91,7 @@ def _validate_with_opencv(path: Path) -> tuple[bool, str]:
         Tuple (is_valid, message).
     """
     try:
-        import cv2  # type: ignore[import]
+        import cv2
 
         img = cv2.imread(str(path))
         if img is None:
@@ -123,7 +123,7 @@ def get_image_dimensions(path: Path) -> tuple[int, int] | None:
         (width, height) tuple, or None if the image cannot be read.
     """
     try:
-        from PIL import Image  # type: ignore[import]
+        from PIL import Image
 
         with Image.open(path) as img:
             return img.size  # (width, height)
@@ -133,11 +133,11 @@ def get_image_dimensions(path: Path) -> tuple[int, int] | None:
         logger.debug(f"PIL could not get dimensions for {path.name}: {e}")
 
     try:
-        import cv2  # type: ignore[import]
+        import cv2
 
-        img = cv2.imread(str(path))
-        if img is not None:
-            h, w = img.shape[:2]
+        arr = cv2.imread(str(path))
+        if arr is not None:
+            h, w = arr.shape[:2]
             return w, h
     except ImportError:
         pass
@@ -172,7 +172,7 @@ def compute_perceptual_hash(path: Path, hash_size: int = 8) -> str | None:
         or the image cannot be opened.
     """
     try:
-        from PIL import Image  # type: ignore[import]
+        from PIL import Image
     except ImportError:
         logger.debug("PIL not available — perceptual hashing disabled")
         return None
@@ -180,11 +180,8 @@ def compute_perceptual_hash(path: Path, hash_size: int = 8) -> str | None:
     try:
         with Image.open(path) as img:
             # Convert to grayscale and resize to hash_size × hash_size
-            small = img.convert("L").resize((hash_size, hash_size), Image.LANCZOS)
-            try:
-                pixels = list(small.get_flattened_data())  # Pillow 14+
-            except AttributeError:
-                pixels = list(small.getdata())  # Pillow <14 fallback
+            small = img.convert("L").resize((hash_size, hash_size), Image.Resampling.LANCZOS)
+            pixels = list(small.tobytes())  # mode "L" → one byte per pixel
 
         mean = sum(pixels) / len(pixels)
         # Use strict greater-than: pixels equal to mean are treated as "low"
@@ -264,7 +261,7 @@ def build_perceptual_hash_index(
 def _check_pil_available() -> bool:
     """Return True if PIL (Pillow) is importable."""
     try:
-        import PIL  # noqa: F401 # type: ignore[import]
+        import PIL  # noqa: F401
 
         return True
     except ImportError:

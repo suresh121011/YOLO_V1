@@ -20,6 +20,7 @@ import logging
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from src.dataset.dedup import DedupIndex
 from src.dataset.filters import check_image_filter
@@ -86,7 +87,7 @@ def merge_sources(
     dedup_index = DedupIndex(settings=dedup_settings)
 
     for source in sources:
-        stats = {
+        stats: dict[str, Any] = {
             "source": source.name,
             "total": 0,
             "accepted": 0,

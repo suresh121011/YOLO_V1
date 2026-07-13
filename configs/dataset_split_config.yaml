@@ -27,7 +27,8 @@ split:
   group_by_capture: true
 
   # Source directory containing flat images/ and labels/ subdirectories
-  source_dir: data/processed
+  # (the merge stage output — see scripts/dataset/07_merge_datasets.py)
+  source_dir: data/merged
 
   # Output directory for split images/ and labels/ subdirectories
   output_dir: data/processed
