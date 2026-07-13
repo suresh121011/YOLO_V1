@@ -20,10 +20,14 @@ Output directory structure (data/processed/):
     images/train/    val/    test/
     labels/train/    val/    test/
 
+Configuration:
+    Defaults come from configs/dataset_split_config.yaml (ratios, seed,
+    strategy, source/output dirs). Explicit CLI flags override the YAML.
+
 Usage:
     python scripts/dataset/split_dataset.py
     python scripts/dataset/split_dataset.py --seed 42 --train 0.8 --val 0.1 --test 0.1
-    python scripts/dataset/split_dataset.py --source data/raw/merged --output data/processed
+    python scripts/dataset/split_dataset.py --source data/merged --output data/processed
 
 DVC integration:
     This script is invoked by the split_train_val_test DVC stage.
@@ -41,10 +45,9 @@ from pathlib import Path
 # Allow running as a script from the project root
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from src.utils.config_helpers import load_data_config, get_class_names_from_data_yaml
+from src.dataset.split_config import DEFAULT_SPLIT_CONFIG_PATH, load_split_settings
 from src.utils.dataset_utils import (
     find_image_files,
-    get_image_label_pairs,
     group_files_by_key,
 )
 from src.utils.report_utils import save_json_report, save_markdown_report, timestamp_str
@@ -97,7 +100,8 @@ def compute_split_assignments(
         )
 
     group_keys = list(groups.keys())
-    rng = random.Random(seed)
+    # Deterministic shuffle for reproducible splits — not a security context.
+    rng = random.Random(seed)  # noqa: S311
     rng.shuffle(group_keys)
 
     n = len(group_keys)
@@ -262,14 +266,16 @@ def generate_split_report(
 
     # Markdown report
     table_rows = [
-        [s.upper(), str(stats[s]["images"]), str(stats[s]["labels"]),
-         str(len(assignments[s])),
-         f"{report['splits'][s]['pct_images']:.1f}%"]
+        [
+            s.upper(),
+            str(stats[s]["images"]),
+            str(stats[s]["labels"]),
+            str(len(assignments[s])),
+            f"{report['splits'][s]['pct_images']:.1f}%",
+        ]
         for s in SPLIT_NAMES
     ]
-    table_rows.append([
-        "**TOTAL**", str(total_images), str(total_labels), str(len(groups)), "100%"
-    ])
+    table_rows.append(["**TOTAL**", str(total_images), str(total_labels), str(len(groups)), "100%"])
 
     leakage_status = "✅ None detected" if not leakage else f"🔴 {len(leakage)} files"
 
@@ -314,44 +320,52 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--source",
         type=Path,
-        default=Path("data/processed"),
-        help="Source directory containing images/ and labels/ subdirectories.",
+        default=None,
+        help="Source directory containing images/ and labels/ subdirectories "
+        "(default: from split config).",
     )
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("data/processed"),
-        help="Output directory for split images/ and labels/ subdirectories.",
+        default=None,
+        help="Output directory for split images/ and labels/ subdirectories "
+        "(default: from split config).",
     )
     parser.add_argument(
         "--train",
         type=float,
-        default=0.80,
-        help="Fraction of data for the training set.",
+        default=None,
+        help="Fraction of data for the training set (default: from split config).",
     )
     parser.add_argument(
         "--val",
         type=float,
-        default=0.10,
-        help="Fraction of data for the validation set.",
+        default=None,
+        help="Fraction of data for the validation set (default: from split config).",
     )
     parser.add_argument(
         "--test",
         type=float,
-        default=0.10,
-        help="Fraction of data for the test set.",
+        default=None,
+        help="Fraction of data for the test set (default: from split config).",
     )
     parser.add_argument(
         "--seed",
         type=int,
-        default=42,
-        help="Random seed for reproducible splits.",
+        default=None,
+        help="Random seed for reproducible splits (default: from split config).",
     )
     parser.add_argument(
         "--config",
         type=Path,
         default=Path("configs/data.yaml"),
         help="Path to data.yaml for class configuration.",
+    )
+    parser.add_argument(
+        "--split-config",
+        type=Path,
+        default=DEFAULT_SPLIT_CONFIG_PATH,
+        help="Path to the dataset split configuration YAML.",
     )
     parser.add_argument(
         "--dry-run",
@@ -365,6 +379,27 @@ def main() -> int:
     """Main entry point. Returns exit code (0 = success, 1 = error)."""
     args = parse_args()
 
+    # Resolve settings: explicit CLI flags override the split config YAML.
+    try:
+        settings = load_split_settings(args.split_config).with_overrides(
+            train_ratio=args.train,
+            val_ratio=args.val,
+            test_ratio=args.test,
+            seed=args.seed,
+            source_dir=args.source,
+            output_dir=args.output,
+        )
+    except ValueError as e:
+        logger.error(str(e))
+        return 1
+
+    args.source = settings.source_dir
+    args.output = settings.output_dir
+    args.train = settings.train_ratio
+    args.val = settings.val_ratio
+    args.test = settings.test_ratio
+    args.seed = settings.seed
+
     logger.info("=" * 60)
     logger.info("Dataset Splitter — Elderly Assistant System")
     logger.info("=" * 60)
@@ -372,6 +407,7 @@ def main() -> int:
     logger.info(f"Output:  {args.output.absolute()}")
     logger.info(f"Ratios:  train={args.train}, val={args.val}, test={args.test}")
     logger.info(f"Seed:    {args.seed}")
+    logger.info(f"Strategy: {settings.strategy} (config: {args.split_config})")
 
     # Validate ratios
     total = args.train + args.val + args.test

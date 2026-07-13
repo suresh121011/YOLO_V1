@@ -30,14 +30,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.utils.annotation_utils import parse_label_file
-from src.utils.config_helpers import load_data_config, get_class_names_from_data_yaml
+from src.utils.config_helpers import get_class_names_from_data_yaml, load_data_config
 from src.utils.dataset_utils import find_image_files, find_label_files
 from src.utils.report_utils import (
-    format_count_pct,
-    format_table,
-    save_json_report,
-    save_csv_report,
-    save_markdown_report,
     timestamp_str,
     write_all_formats,
 )
@@ -51,17 +46,32 @@ logger = logging.getLogger(__name__)
 
 # ─── Safety-critical class names (from data.yaml comments) ───────────────────
 
-SAFETY_CRITICAL_CLASSES: frozenset[str] = frozenset({
-    "medicine_strip", "medicine_bottle", "knife", "stove",
-    "gas_cylinder", "wire", "wet_floor",
-})
+SAFETY_CRITICAL_CLASSES: frozenset[str] = frozenset(
+    {
+        "medicine_strip",
+        "medicine_bottle",
+        "knife",
+        "stove",
+        "gas_cylinder",
+        "wire",
+        "wet_floor",
+    }
+)
 
 # ─── Custom data classes (require Indian-home custom captures) ────────────────
 
-CUSTOM_REQUIRED_CLASSES: frozenset[str] = frozenset({
-    "gas_cylinder", "medicine_strip", "wet_floor", "walking_stick",
-    "support_handle", "stove", "passport", "cupboard",
-})
+CUSTOM_REQUIRED_CLASSES: frozenset[str] = frozenset(
+    {
+        "gas_cylinder",
+        "medicine_strip",
+        "wet_floor",
+        "walking_stick",
+        "support_handle",
+        "stove",
+        "passport",
+        "cupboard",
+    }
+)
 
 SPLITS: list[str] = ["train", "val", "test"]
 
@@ -166,11 +176,9 @@ def compute_imbalance_metrics(
     # Gini coefficient (0 = perfectly balanced, 1 = maximally imbalanced)
     sorted_counts = sorted(counts)
     n = len(sorted_counts)
-    gini = sum(
-        abs(sorted_counts[i] - sorted_counts[j])
-        for i in range(n)
-        for j in range(n)
-    ) / (2 * n * max(total, 1))
+    gini = sum(abs(sorted_counts[i] - sorted_counts[j]) for i in range(n) for j in range(n)) / (
+        2 * n * max(total, 1)
+    )
 
     return {
         "max_ratio": max(ratios),
@@ -200,11 +208,7 @@ def find_empty_and_missing_classes(
         for cid in range(num_classes)
         if class_counts.get(cid, 0) == 0
     ]
-    unknown = [
-        str(cid)
-        for cid in class_counts
-        if cid < 0 or cid >= num_classes
-    ]
+    unknown = [str(cid) for cid in class_counts if cid < 0 or cid >= num_classes]
     return empty, unknown
 
 
@@ -268,19 +272,21 @@ def build_reports(
         for cid_str, cdata in split_data.get("classes", {}).items():
             cid = int(cid_str)
             name = cdata["name"]
-            csv_rows.append({
-                "split": split,
-                "class_id": cid,
-                "class_name": name,
-                "images_with_class": cdata["images_with_class"],
-                "bounding_boxes": cdata["bounding_boxes"],
-                "is_safety_critical": name in SAFETY_CRITICAL_CLASSES,
-                "is_custom_required": name in CUSTOM_REQUIRED_CLASSES,
-                "total_split_boxes": split_data["total_boxes"],
-                "pct_of_split": round(
-                    100.0 * cdata["bounding_boxes"] / max(split_data["total_boxes"], 1), 2
-                ),
-            })
+            csv_rows.append(
+                {
+                    "split": split,
+                    "class_id": cid,
+                    "class_name": name,
+                    "images_with_class": cdata["images_with_class"],
+                    "bounding_boxes": cdata["bounding_boxes"],
+                    "is_safety_critical": name in SAFETY_CRITICAL_CLASSES,
+                    "is_custom_required": name in CUSTOM_REQUIRED_CLASSES,
+                    "total_split_boxes": split_data["total_boxes"],
+                    "pct_of_split": round(
+                        100.0 * cdata["bounding_boxes"] / max(split_data["total_boxes"], 1), 2
+                    ),
+                }
+            )
 
     # Markdown sections
     # Summary table
@@ -318,14 +324,22 @@ def build_reports(
         {
             "heading": "Class Distribution (All Splits Combined)",
             "table": {
-                "headers": ["ID", "Class", "Total Boxes", "Safety-Critical", "Custom Required", "Status"],
+                "headers": [
+                    "ID",
+                    "Class",
+                    "Total Boxes",
+                    "Safety-Critical",
+                    "Custom Required",
+                    "Status",
+                ],
                 "rows": total_rows,
             },
         },
         {
             "heading": "Class Imbalance",
             "content": (
-                f"- **Imbalance ratio** (max/min instances): `{imbalance['imbalance_ratio']:.1f}x`\n"
+                f"- **Imbalance ratio** (max/min instances): "
+                f"`{imbalance['imbalance_ratio']:.1f}x`\n"
                 f"- **Gini coefficient**: `{imbalance['gini_coefficient']:.4f}` "
                 f"(0=balanced, 1=maximally imbalanced)\n"
                 f"- **Empty classes** ({len(empty_classes)}): "
@@ -335,8 +349,7 @@ def build_reports(
         {
             "heading": "Safety-Critical Class Summary",
             "content": "\n".join(
-                f"- **{name}**: {count} instances"
-                + (" ⚠️ ZERO" if count == 0 else "")
+                f"- **{name}**: {count} instances" + (" ⚠️ ZERO" if count == 0 else "")
                 for name, count in sorted(safety_stats.items())
             ),
         },
@@ -422,9 +435,15 @@ def main() -> int:
         output_dir=args.output,
         base_name="dataset_statistics",
         csv_fieldnames=[
-            "split", "class_id", "class_name", "images_with_class",
-            "bounding_boxes", "is_safety_critical", "is_custom_required",
-            "total_split_boxes", "pct_of_split",
+            "split",
+            "class_id",
+            "class_name",
+            "images_with_class",
+            "bounding_boxes",
+            "is_safety_critical",
+            "is_custom_required",
+            "total_split_boxes",
+            "pct_of_split",
         ],
         md_metadata={
             "Data directory": str(args.data_dir.absolute()),

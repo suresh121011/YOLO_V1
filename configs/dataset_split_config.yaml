@@ -5,6 +5,12 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 split:
+  # Split strategy (see src/dataset/splitting/registry.py):
+  #   group_aware      — groups stay together (default; prevents leakage)
+  #   stratified_group — group-aware + per-class balance across splits
+  #   kfold, leave_one_house_out — reserved for future phases
+  strategy: group_aware
+
   # Fraction of images assigned to each split (must sum to 1.0)
   train_ratio: 0.80
   val_ratio: 0.10

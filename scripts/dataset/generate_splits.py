@@ -24,15 +24,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from src.utils.config_helpers import load_data_config, get_class_names_from_data_yaml
-from src.utils.dataset_utils import find_image_files, group_files_by_key
+from scripts.dataset.dataset_stats import build_reports, compute_split_stats
 from scripts.dataset.split_dataset import (
     compute_split_assignments,
     copy_split_files,
-    verify_no_leakage,
     generate_split_report,
+    verify_no_leakage,
 )
-from scripts.dataset.dataset_stats import compute_split_stats, build_reports
+from src.dataset.split_config import DEFAULT_SPLIT_CONFIG_PATH, load_split_settings
+from src.utils.config_helpers import get_class_names_from_data_yaml, load_data_config
+from src.utils.dataset_utils import find_image_files, group_files_by_key
 from src.utils.report_utils import write_all_formats
 
 logging.basicConfig(
@@ -58,14 +59,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--source",
         type=Path,
-        default=Path("data/processed"),
-        help="Source directory containing flat images/ and labels/.",
+        default=None,
+        help="Source directory containing flat images/ and labels/ "
+        "(default: from split config).",
     )
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("data/processed"),
-        help="Output directory for split images/ and labels/.",
+        default=None,
+        help="Output directory for split images/ and labels/ " "(default: from split config).",
     )
     parser.add_argument(
         "--reports-dir",
@@ -73,10 +75,16 @@ def parse_args() -> argparse.Namespace:
         default=Path("data/qa_reports"),
         help="Root directory for all generated reports.",
     )
-    parser.add_argument("--train", type=float, default=0.80)
-    parser.add_argument("--val", type=float, default=0.10)
-    parser.add_argument("--test", type=float, default=0.10)
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--train", type=float, default=None)
+    parser.add_argument("--val", type=float, default=None)
+    parser.add_argument("--test", type=float, default=None)
+    parser.add_argument("--seed", type=int, default=None)
+    parser.add_argument(
+        "--split-config",
+        type=Path,
+        default=DEFAULT_SPLIT_CONFIG_PATH,
+        help="Path to the dataset split configuration YAML.",
+    )
     parser.add_argument(
         "--skip-split",
         action="store_true",
@@ -125,6 +133,27 @@ def print_summary(
 def main() -> int:
     """Main orchestrator entry point. Returns exit code."""
     args = parse_args()
+
+    # Resolve settings: explicit CLI flags override the split config YAML.
+    try:
+        settings = load_split_settings(args.split_config).with_overrides(
+            train_ratio=args.train,
+            val_ratio=args.val,
+            test_ratio=args.test,
+            seed=args.seed,
+            source_dir=args.source,
+            output_dir=args.output,
+        )
+    except ValueError as e:
+        logger.error(str(e))
+        return 1
+
+    args.source = settings.source_dir
+    args.output = settings.output_dir
+    args.train = settings.train_ratio
+    args.val = settings.val_ratio
+    args.test = settings.test_ratio
+    args.seed = settings.seed
 
     logger.info("=" * 60)
     logger.info("Dataset Pipeline Orchestrator — Elderly Assistant System")
@@ -186,6 +215,7 @@ def main() -> int:
 
         # Create a minimal Namespace for the split report
         import argparse as ap
+
         split_args = ap.Namespace(
             seed=args.seed,
             train=args.train,
@@ -216,9 +246,15 @@ def main() -> int:
             output_dir=args.reports_dir / "dataset_statistics",
             base_name="dataset_statistics",
             csv_fieldnames=[
-                "split", "class_id", "class_name", "images_with_class",
-                "bounding_boxes", "is_safety_critical", "is_custom_required",
-                "total_split_boxes", "pct_of_split",
+                "split",
+                "class_id",
+                "class_name",
+                "images_with_class",
+                "bounding_boxes",
+                "is_safety_critical",
+                "is_custom_required",
+                "total_split_boxes",
+                "pct_of_split",
             ],
         )
         empty_classes = json_report.get("empty_classes", [])

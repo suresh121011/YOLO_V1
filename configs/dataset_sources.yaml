@@ -1,0 +1,119 @@
+# ─── Dataset Sources Configuration ────────────────────────────────────────────
+# Elderly Assistant System — Phase-2 Dataset Acquisition Settings
+#
+# Read by: src/dataset/sources_config.py (and every scripts/dataset/0*_*.py CLI)
+# Used as the DVC params file for the acquisition stages (see dvc.yaml).
+#
+# mode:
+#   smoke — capped downloads (limit_per_source images) to validate the
+#           pipeline end-to-end without multi-GB pulls.
+#   full  — complete downloads honoring per-class caps only.
+# The full dataset build is therefore: set `mode: full`, then `dvc repro`.
+# ─────────────────────────────────────────────────────────────────────────────
+
+mode: smoke
+
+smoke:
+  # Max images fetched per source in smoke mode
+  limit_per_source: 60
+
+# Governance gate: WIDER FACE (and possibly some Roboflow Universe datasets)
+# are research-only / non-commercial. While true, such sources are included
+# and flagged in manifests + QA license report. MUST be false for any
+# commercial/shippable dataset build (see docs/04_dataset_engineering/).
+allow_noncommercial: true
+
+# Perceptual deduplication (runs at merge time, BEFORE splitting)
+dedup:
+  hamming_threshold: 5      # Hamming distance < threshold → duplicate
+  check_flips: true         # also hash horizontally mirrored image
+                            # (catches pre-augmented copies, e.g. Roboflow)
+
+# Indoor / quality filtering heuristics (docs/03 dataset_templates.md)
+indoor_filter:
+  enabled: true
+  brightness_outdoor_threshold: 160   # mean grayscale > this → likely outdoor
+  portrait_aspect_max: 0.6            # w/h < this → portrait → likely indoor
+  min_image_dim: 320                  # reject images smaller than this
+
+paths:
+  raw_root: data/raw
+  merged_root: data/merged
+
+# ─── Sources ──────────────────────────────────────────────────────────────────
+# trusted_classes: classes this source labels EXHAUSTIVELY. Any other taxonomy
+# class may appear unlabeled in these images — recorded in manifests so
+# training can compensate (label-completeness policy, governance doc §3).
+
+sources:
+  coco:
+    enabled: true
+    output_dir: data/raw/coco_filtered
+    license: "CC BY 4.0 (annotations); images retain original Flickr licenses"
+    annotations_url: "http://images.cocodataset.org/annotations/annotations_trainval2017.zip"
+    image_url_template: "http://images.cocodataset.org/{split}/{file_name}"
+    smoke_split: val2017      # 5k-image annotation set — cheap smoke source
+    full_split: train2017
+    remap_table: coco
+    trusted_classes:
+      [person, water_bottle, knife, laptop, monitor, chair, bed, toilet, sink, book]
+    class_caps:               # prevent imbalance (docs 01_download_coco_subset)
+      person: 800
+      chair: 500
+
+  openimages:
+    enabled: true
+    output_dir: data/raw/openimages_filtered
+    license: "Annotations CC BY 4.0; images CC BY 2.0 (per Open Images terms)"
+    class_descriptions_url: "https://storage.googleapis.com/openimages/v7/oidv7-class-descriptions-boxable.csv"
+    smoke_bbox_url: "https://storage.googleapis.com/openimages/v6/oidv6-validation-annotations-bbox.csv"
+    full_bbox_url: "https://storage.googleapis.com/openimages/v6/oidv6-train-annotations-bbox.csv"
+    smoke_split: validation
+    full_split: train
+    image_url_template: "https://open-images-dataset.s3.amazonaws.com/{split}/{image_id}.jpg"
+    remap_table: openimages
+    classes: ["Door", "Cupboard", "Gas stove"]
+    trusted_classes: [door, cupboard, stove]
+
+  roboflow:
+    enabled: true
+    output_dir: data/raw/roboflow_imports
+    license: "varies per Universe dataset — recorded per-dataset below"
+    api_key_env: ROBOFLOW_API_KEY   # graceful skip when unset
+    remap_table: roboflow
+    trusted_classes: [medicine_bottle, charger, wire, gas_cylinder]
+    # Roboflow Universe datasets to pull (workspace/project/version).
+    # Populate after selecting datasets; each entry needs its own license
+    # + class remap review before the full build.
+    datasets: []
+    #  - slug: "workspace/project"
+    #    version: 1
+    #    license: "CC BY 4.0"
+    #    classes: {source_name: taxonomy_name}
+
+  wider_face:
+    enabled: true
+    output_dir: data/raw/wider_face
+    license: "research-only / non-commercial (WIDER FACE terms)"
+    noncommercial: true       # gated by allow_noncommercial above
+    smoke_images_url: "https://huggingface.co/datasets/CUHK-CSE/wider_face/resolve/main/data/WIDER_val.zip"
+    full_images_url: "https://huggingface.co/datasets/CUHK-CSE/wider_face/resolve/main/data/WIDER_train.zip"
+    annotations_url: "https://huggingface.co/datasets/CUHK-CSE/wider_face/resolve/main/data/wider_face_split.zip"
+    remap_table: wider_face
+    trusted_classes: [face]
+
+  negatives:
+    enabled: true
+    output_dir: data/raw/negatives
+    license: "inherits COCO licensing (sampled from COCO)"
+    # Indoor COCO images containing NONE of the 23 taxonomy classes;
+    # written with empty label files as background/negative examples.
+    smoke_count: 20
+    full_count: 500
+    trusted_classes: []       # special case: verified absence of all classes
+
+  custom_captures:
+    enabled: false            # Phase-3 human task — ingest path ships ready
+    output_dir: data/raw/custom_captures
+    license: "proprietary (consent-gated; see CaptureSessionManifest)"
+    trusted_classes: []       # set per capture session
