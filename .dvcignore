@@ -1,0 +1,31 @@
+# DVC ignore file
+# Files and directories that DVC should not track
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+
+# Development tools
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs (tracked separately as pipeline outputs)
+logs/
+
+# Git internal
+.git/

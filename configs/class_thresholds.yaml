@@ -1,0 +1,53 @@
+# ─── Per-Class Confidence Thresholds ───────────────────────────────────────────
+# Elderly Assistant System
+#
+# These thresholds OVERRIDE the global confidence_threshold in feature_flags.yaml
+# for specific classes. The Rule Engine applies these before evaluating rules.
+#
+# Design rationale:
+#   - Safety-critical classes use LOWER thresholds: prefer recall over precision.
+#     A missed knife/stove detection is worse than a false alarm.
+#   - Document and privacy-sensitive classes use HIGHER thresholds.
+#
+# Read by: src/pipeline/detector.py, src/config/config_loader.py
+# ─────────────────────────────────────────────────────────────────────────────
+
+class_thresholds:
+
+  # Safety-Critical — prefer recall (lower threshold)
+  knife: 0.20
+  stove: 0.22
+  gas_cylinder: 0.22
+  wire: 0.22
+  wet_floor: 0.20          # High false-positive risk on shiny floors; VLM confirms
+  medicine_strip: 0.25
+  medicine_bottle: 0.25
+
+  # Navigation classes — balanced
+  person: 0.30
+  face: 0.35               # Face is used for person-presence only, not identification
+  walking_stick: 0.28
+  support_handle: 0.28
+  door: 0.30
+
+  # Privacy-sensitive — stricter threshold
+  passport: 0.40           # Higher bar to avoid false alarms on similar documents
+
+  # Default for all other classes: use global confidence_threshold (0.25)
+  # water_bottle, book, charger, laptop, monitor, cupboard,
+  # chair, bed, toilet, sink — all use global default
+
+# ─── Confidence Fusion Thresholds ──────────────────────────────────────────────
+# When SmolVLM2 is active, a two-tier system applies for safety classes.
+# See: src/pipeline/confidence_fusion.py
+confidence_fusion:
+  safety_classes:
+    - knife
+    - stove
+    - gas_cylinder
+    - wet_floor
+    - wire
+    - medicine_strip
+    - medicine_bottle
+  yolo_only_threshold: 0.55      # Stricter when no VLM confirmation
+  yolo_vlm_confirmed_threshold: 0.35  # Relaxed when VLM confirms detection

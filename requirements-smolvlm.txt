@@ -1,0 +1,11 @@
+# SmolVLM2 optional dependencies
+# Install only if target hardware supports it (requires ~2GB+ RAM for 256M variant)
+#
+# Usage:
+#   pip install -r requirements.txt
+#   pip install -r requirements-smolvlm.txt
+
+transformers>=4.40,<5.0
+torch>=2.2,<3.0
+Pillow>=10.0,<11.0
+accelerate>=0.27,<0.28

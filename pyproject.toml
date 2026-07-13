@@ -1,0 +1,163 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# ─── Project Metadata ─────────────────────────────────────────────────────────
+
+[project]
+name = "elderly-assistant"
+version = "0.1.0"
+description = "Real-time AI safety companion for elderly people in Indian homes"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+
+# Core runtime dependencies (pinned in requirements.txt)
+dependencies = [
+    "ultralytics>=8.3",
+    "opencv-python>=4.9",
+    "numpy>=1.26",
+    "pyyaml>=6.0",
+    "sounddevice>=0.4",
+]
+
+[project.optional-dependencies]
+smolvlm = [
+    "transformers>=4.40",
+    "torch>=2.2",
+    "Pillow>=10.0",
+    "accelerate>=0.27",
+]
+dev = [
+    "black>=24.0",
+    "ruff>=0.4",
+    "mypy>=1.10",
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "types-PyYAML>=6.0",
+]
+mlops = [
+    "dvc>=3.50",
+]
+
+# ─── Package Discovery ────────────────────────────────────────────────────────
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "scripts*"]
+
+[tool.setuptools.package-dir]
+"" = "."
+
+# ─── Black ───────────────────────────────────────────────────────────────────
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+    \.git
+  | \.venv
+  | venv
+  | build
+  | dist
+  | __pycache__
+)/
+'''
+
+# ─── Ruff ────────────────────────────────────────────────────────────────────
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "S",   # flake8-bandit (security)
+]
+ignore = [
+    "S101",  # Allow assert in tests
+    "S603",  # subprocess calls — needed for Piper TTS
+    "S607",  # subprocess partial path — needed for Piper TTS
+    "N999",  # Allow non-PEP8 module names in scripts
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "S105", "S106"]  # Allow asserts and hardcoded credentials in tests
+"scripts/**/*.py" = ["T201"]               # Allow print() in scripts
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+
+# ─── MyPy ────────────────────────────────────────────────────────────────────
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+show_error_codes = true
+
+# Ignore missing stubs for third-party packages in Stage 1
+[[tool.mypy.overrides]]
+module = [
+    "ultralytics.*",
+    "cv2.*",
+    "sounddevice.*",
+    "PIL.*",
+    "transformers.*",
+    "torch.*",
+]
+ignore_missing_imports = true
+
+# ─── Pytest ───────────────────────────────────────────────────────────────────
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "--color=yes",
+]
+markers = [
+    "unit: Unit tests (fast, no I/O)",
+    "integration: Integration tests (component pairs)",
+    "system: System tests (end-to-end scenarios)",
+    "performance: Performance/latency budget tests",
+    "slow: Tests that take > 5 seconds",
+]
+
+# ─── Coverage ─────────────────────────────────────────────────────────────────
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/tests/*", "*/scripts/*", "*/__init__.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "@abstractmethod",
+]
+show_missing = true
+fail_under = 0  # No minimum in Stage 1 — raised in Stage 6

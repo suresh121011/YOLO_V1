@@ -1,0 +1,32 @@
+# ─── ONNX Export Configuration ─────────────────────────────────────────────────
+# Elderly Assistant System — ONNX Runtime Deployment Settings
+#
+# ONNX is the primary deployment format for:
+#   - Raspberry Pi 5 (CPU-only via onnxruntime)
+#   - Android (via onnxruntime-android)
+#   - Cross-platform inference
+#
+# Read by: scripts/training/export_model.py
+# ─────────────────────────────────────────────────────────────────────────────
+
+export:
+  format: onnx
+  imgsz: 640
+  half: false                      # FP16 export (requires CUDA — leave false for CPU)
+  dynamic: false                   # Fixed input shape (faster on edge)
+  simplify: true                   # ONNX graph simplification (recommended)
+  opset: 17                        # ONNX opset version
+
+runtime:
+  providers:
+    - CPUExecutionProvider         # Always available
+    # - CUDAExecutionProvider      # Enable if CUDA GPU available
+    # - CoreMLExecutionProvider    # Enable for Apple Silicon
+  graph_optimization_level: ORT_ENABLE_ALL  # Maximum optimization
+  intra_op_num_threads: 4          # CPU threads for inference
+  inter_op_num_threads: 2
+
+verification:
+  run_after_export: true           # Verify exported model before deployment
+  compare_with_pytorch: true       # Check output matches PyTorch model
+  tolerance: 0.001                 # Maximum allowed output difference

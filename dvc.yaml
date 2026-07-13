@@ -1,0 +1,122 @@
+# dvc.yaml — Elderly Assistant System Pipeline
+# Full reproducible pipeline from raw data acquisition to model evaluation.
+# Stage 1: Stub structure only — commands will be implemented in Stage 2+.
+#
+# Usage:
+#   dvc repro              — reproduce all stages
+#   dvc repro train_yolo11n — reproduce specific stage
+#   dvc dag                — view pipeline DAG
+#   dvc metrics diff       — compare training metrics
+
+stages:
+
+  # ─── Phase 2: Public Data Acquisition ──────────────────────────────────────
+
+  download_coco:
+    cmd: python scripts/dataset/01_download_coco_subset.py
+    deps:
+      - scripts/dataset/01_download_coco_subset.py
+      - configs/data.yaml
+    outs:
+      - data/raw/coco_filtered
+
+  download_openimages:
+    cmd: python scripts/dataset/02_download_openimages_subset.py
+    deps:
+      - scripts/dataset/02_download_openimages_subset.py
+      - configs/data.yaml
+    outs:
+      - data/raw/openimages_filtered
+
+  download_roboflow:
+    cmd: python scripts/dataset/03_download_roboflow_datasets.py
+    deps:
+      - scripts/dataset/03_download_roboflow_datasets.py
+      - configs/data.yaml
+    outs:
+      - data/raw/roboflow_imports
+
+  download_wider_face:
+    cmd: python scripts/dataset/04_download_wider_face.py
+    deps:
+      - scripts/dataset/04_download_wider_face.py
+    outs:
+      - data/raw/wider_face
+
+  # ─── Phase 3: Dataset Processing ────────────────────────────────────────────
+
+  remap_classes:
+    cmd: python scripts/dataset/05_remap_classes.py --all
+    deps:
+      - scripts/dataset/05_remap_classes.py
+      - configs/data.yaml
+      - data/raw/coco_filtered
+      - data/raw/openimages_filtered
+      - data/raw/roboflow_imports
+      - data/raw/wider_face
+
+  collect_negatives:
+    cmd: python scripts/dataset/06_collect_negatives.py
+    deps:
+      - scripts/dataset/06_collect_negatives.py
+    outs:
+      - data/raw/negatives
+
+  merge_datasets:
+    cmd: python scripts/dataset/07_merge_datasets.py
+    deps:
+      - scripts/dataset/07_merge_datasets.py
+      - configs/data.yaml
+      - data/raw/coco_filtered
+      - data/raw/openimages_filtered
+      - data/raw/roboflow_imports
+      - data/raw/wider_face
+      - data/raw/custom_captures
+      - data/raw/negatives
+    outs:
+      - data/processed/images
+      - data/processed/labels
+
+  # ─── Phase 4: Dataset QA & Versioning ───────────────────────────────────────
+
+  qa_check:
+    cmd: python scripts/qa/run_full_qa.py
+    deps:
+      - scripts/qa/run_full_qa.py
+      - data/processed
+    outs:
+      - data/qa_reports
+    metrics:
+      - data/qa_reports/annotation_qa_report.json:
+          cache: false
+
+  split_train_val_test:
+    cmd: python scripts/dataset/08_split_dataset.py --train 0.80 --val 0.10 --test 0.10
+    deps:
+      - scripts/dataset/08_split_dataset.py
+      - data/processed
+
+  # ─── Phase 5: Training ───────────────────────────────────────────────────────
+
+  train_yolo11n:
+    cmd: python scripts/training/train_yolo11n.py
+    deps:
+      - scripts/training/train_yolo11n.py
+      - data/processed
+      - configs/data.yaml
+      - configs/training/yolo11n_config.yaml
+    outs:
+      - models/yolo11n/weights
+    metrics:
+      - models/yolo11n/results/results.csv:
+          cache: false
+
+  evaluate:
+    cmd: python scripts/training/evaluate_model.py --model models/yolo11n/weights/best.pt
+    deps:
+      - scripts/training/evaluate_model.py
+      - models/yolo11n/weights/best.pt
+      - configs/data.yaml
+    metrics:
+      - models/yolo11n/results/evaluation.json:
+          cache: false

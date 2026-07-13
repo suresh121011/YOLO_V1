@@ -1,0 +1,37 @@
+# ─── Dataset Split Configuration ──────────────────────────────────────────────
+# Elderly Assistant System — Dataset Preparation Settings
+#
+# Read by: scripts/dataset/split_dataset.py, generate_splits.py
+# ─────────────────────────────────────────────────────────────────────────────
+
+split:
+  # Fraction of images assigned to each split (must sum to 1.0)
+  train_ratio: 0.80
+  val_ratio: 0.10
+  test_ratio: 0.10
+
+  # Random seed for deterministic, reproducible splits
+  # Change only when intentionally creating a new split version
+  seed: 42
+
+  # Group images by capture session before splitting.
+  # Prevents data leakage from video frame extraction or burst capture.
+  # Images with the same filename prefix (before _frame_, _NNN suffix, etc.)
+  # are guaranteed to land in the same split.
+  group_by_capture: true
+
+  # Source directory containing flat images/ and labels/ subdirectories
+  source_dir: data/processed
+
+  # Output directory for split images/ and labels/ subdirectories
+  output_dir: data/processed
+
+qa:
+  # Minimum number of instances required per class
+  min_instances_per_class: 200
+
+  # Maximum fraction a single class may represent of the total dataset
+  max_class_ratio: 0.20
+
+  # Expected number of classes (from data.yaml)
+  num_classes: 23

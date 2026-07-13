@@ -1,0 +1,43 @@
+# ─── Piper TTS Configuration ───────────────────────────────────────────────────
+# Elderly Assistant System — Neural Text-to-Speech Settings
+#
+# Technology: Piper TTS (offline, neural VITS architecture)
+# Selected over pyttsx3 for: natural speech, Indian English voice, <500ms latency
+#
+# Read by: src/pipeline/tts_engine.py
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─── Voice Model ───────────────────────────────────────────────────────────────
+model:
+  language: en_IN                  # Indian English (primary V1 voice)
+  variant: medium                  # Options: low (fastest) | medium (balanced) | high (best)
+  # V2: Set language to hi_IN for Hindi voice support
+
+# ─── Model Paths ───────────────────────────────────────────────────────────────
+# Piper model files — downloaded separately (not in git or DVC)
+paths:
+  en_IN_medium_model: models/tts/en_IN-indic-medium.onnx
+  en_IN_medium_config: models/tts/en_IN-indic-medium.onnx.json
+  # hi_IN_medium_model: models/tts/hi_IN-medium.onnx    # V2
+  # hi_IN_medium_config: models/tts/hi_IN-medium.onnx.json  # V2
+
+# ─── Speech Parameters ─────────────────────────────────────────────────────────
+speech:
+  rate: 0.90                       # Speech rate (0.9 = 10% slower — clearer for elderly)
+  volume: 0.80                     # Volume [0.0, 1.0]
+  sentence_silence: 0.3            # Pause between sentences (seconds)
+
+# ─── Queue Behavior ────────────────────────────────────────────────────────────
+queue:
+  max_pending: 5                   # Maximum queued alerts (oldest dropped on overflow)
+  priority_critical: 0             # CRITICAL alerts: highest priority
+  priority_high: 1
+  priority_medium: 2
+  priority_low: 3
+  priority_info: 4                 # INFO alerts: lowest priority
+
+# ─── Fallback Behavior ─────────────────────────────────────────────────────────
+fallback:
+  on_piper_unavailable: beep       # Options: beep | silent | system_tts
+  beep_frequency_hz: 800           # Alert beep frequency
+  beep_duration_ms: 500            # Alert beep duration

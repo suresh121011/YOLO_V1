@@ -1,0 +1,71 @@
+# ─── Safety Risk Rules ──────────────────────────────────────────────────────────
+# Elderly Assistant System — YAML-Driven Rule Engine
+#
+# Each rule defines:
+#   id:               Unique identifier — used in logs, cooldown tracking, feature flags
+#   condition:        DSL expression evaluated by the Rule Engine
+#   severity:         INFO | LOW | MEDIUM | HIGH | CRITICAL
+#   cooldown_seconds: Minimum seconds between repeat alerts for the same rule
+#   message_en:       User-facing spoken message (Indian English — simple, clear)
+#   message_hi:       Hindi translation (V2 — not used in V1)
+#
+# Condition DSL (implemented in src/pipeline/rule_engine.py):
+#   detected(class_name)          — class present in current frame
+#   absent_for(class_name, secs)  — class not seen for N seconds (requires memory)
+#   any_of([c1, c2])              — any of the listed classes detected
+#   NOT detected(class_name)      — class NOT present
+#   AND / OR operators supported
+#
+# Read by: src/pipeline/rule_engine.py
+# Toggles:  configs/feature_flags.yaml → rules section
+# ─────────────────────────────────────────────────────────────────────────────
+
+rules:
+
+  # ─── Proximity Rules ───────────────────────────────────────────────────────
+
+  - id: knife_near_person
+    condition: "detected(knife) AND detected(person)"
+    severity: HIGH
+    cooldown_seconds: 60
+    message_en: "Please be careful. There is a knife nearby."
+    message_hi: "कृपया सावधान रहें। पास में चाकू है।"
+
+  - id: wire_tripping_hazard
+    condition: "detected(wire) AND detected(person)"
+    severity: HIGH
+    cooldown_seconds: 120
+    message_en: "There are wires on the floor. Please watch your step."
+    message_hi: "फर्श पर तार हैं। कृपया ध्यान से चलें।"
+
+  - id: wet_floor_hazard
+    condition: "detected(wet_floor)"
+    severity: HIGH
+    cooldown_seconds: 120
+    message_en: "The floor looks wet. Please walk carefully to avoid slipping."
+    message_hi: "फर्श गीला दिख रहा है। फिसलने से बचने के लिए सावधानी से चलें।"
+
+  # ─── Temporal Rules (require Event Memory) ─────────────────────────────────
+
+  - id: stove_unattended
+    condition: "detected(stove) AND absent_for(person, 30)"
+    severity: CRITICAL
+    cooldown_seconds: 30
+    message_en: "The stove appears to be on without anyone nearby. Please check the kitchen."
+    message_hi: "चूल्हा बिना किसी के पास चालू दिख रहा है। कृपया रसोई की जांच करें।"
+
+  # ─── Detection Rules ───────────────────────────────────────────────────────
+
+  - id: medicine_reminder
+    condition: "any_of([medicine_strip, medicine_bottle])"
+    severity: INFO
+    cooldown_seconds: 300
+    message_en: "I can see your medicine. Have you taken your medication today?"
+    message_hi: "मुझे आपकी दवाई दिख रही है। क्या आपने आज अपनी दवाई ली?"
+
+  - id: gas_cylinder_check
+    condition: "detected(gas_cylinder) AND NOT detected(stove)"
+    severity: INFO
+    cooldown_seconds: 600
+    message_en: "A gas cylinder is visible. Please ensure the regulator is properly connected and turned off."
+    message_hi: "गैस सिलेंडर दिख रहा है। कृपया सुनिश्चित करें कि रेगुलेटर ठीक से बंद है।"

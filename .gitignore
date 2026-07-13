@@ -1,0 +1,111 @@
+# ─── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+pip-wheel-metadata/
+*.whl
+
+# ─── Virtual Environments ─────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.env/
+
+# ─── Model Weights ────────────────────────────────────────────────────────────
+# Tracked via DVC — not committed to git
+models/yolo11n/weights/
+models/yolo11n/exports/
+models/yolo11n/results/
+models/smolvlm2/
+models/tts/*.onnx
+models/tts/*.onnx.json
+# Pretrained base weights auto-downloaded by Ultralytics
+yolo11n.pt
+yolo11s.pt
+# Ultralytics run artifacts
+runs/
+
+# ─── Dataset Files ────────────────────────────────────────────────────────────
+# Tracked via DVC — not committed to git
+data/raw/coco_filtered/
+data/raw/openimages_filtered/
+data/raw/roboflow_imports/
+data/raw/wider_face/
+data/raw/custom_captures/
+data/raw/negatives/
+data/merged/
+data/processed/images/
+data/processed/labels/
+
+# ─── Local agent tooling (not project code) ──────────────────────────────────
+.agents/
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+# Runtime logs contain potentially sensitive detection history
+logs/pipeline/
+logs/training/
+logs/qa/
+*.log
+*.jsonl
+
+# ─── Outputs ──────────────────────────────────────────────────────────────────
+outputs/visualizations/
+outputs/benchmarks/
+
+# ─── DVC Internal ─────────────────────────────────────────────────────────────
+.dvc/cache/
+.dvc/tmp/
+
+# ─── Secrets & Environment ────────────────────────────────────────────────────
+.env
+.env.*
+*.secret
+*_secret*
+secrets/
+api_keys.yaml
+
+# ─── IDE & System ─────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Testing & Coverage ───────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.coverage
+.mypy_cache/
+.ruff_cache/
+
+# ─── Jupyter ──────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ─── Temporary Files ──────────────────────────────────────────────────────────
+tmp/
+temp/
+*.tmp
+*.bak
+*.orig
+
+# ─── Audio (TTS output files) ─────────────────────────────────────────────────
+*.wav
+*.mp3
+
+# ─── Annotation Tool Exports ──────────────────────────────────────────────────
+# CVAT, Label Studio exports — managed externally
+*.cvat.zip
+*.labelstudio.json

@@ -1,0 +1,25 @@
+# ─── TFLite Quantization Configuration ─────────────────────────────────────────
+# Elderly Assistant System — TFLite Deployment Settings (Android NPU)
+#
+# TFLite is used for Android deployment with NPU/DSP acceleration.
+# INT8 quantization reduces model size ~4x and improves NPU throughput.
+#
+# Read by: scripts/training/export_model.py
+# ─────────────────────────────────────────────────────────────────────────────
+
+export:
+  format: tflite
+  imgsz: 640
+  int8: true                       # INT8 quantization — required for NPU
+  # Calibration data for INT8 quantization (representative dataset)
+  data: configs/data.yaml          # Uses val split for calibration
+
+runtime:
+  delegate: nnapi                  # Android NNAPI (NPU/DSP acceleration)
+  # Alternatives: gpu (GPU delegate), xnnpack (CPU SIMD)
+  num_threads: 4
+
+verification:
+  run_after_export: true
+  compare_with_onnx: true          # Verify TFLite output matches ONNX
+  tolerance: 0.01                  # Slightly higher tolerance for INT8

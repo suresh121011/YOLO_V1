@@ -1,0 +1,90 @@
+# ─── Feature Flags ─────────────────────────────────────────────────────────────
+# Elderly Assistant System — Runtime Feature Configuration
+# All runtime behavior is controlled here. No code changes required.
+#
+# Read by: src/config/config_loader.py → SystemConfig
+# Used by: orchestrator, rule_engine, detector, tts_engine
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─── Component Toggles ─────────────────────────────────────────────────────────
+# Enable or disable entire pipeline subsystems
+components:
+  yolo_detection: true
+  smolvlm_analysis: false          # Set true only if hardware supports VLM
+  tts_output: true
+  active_learning_logging: true
+  performance_logging: true
+  thermal_monitoring: false        # Enable in Phase 7 field testing
+  rule_hot_reload: false           # Hot-reload rules without restart (V2)
+  caregiver_sync: false            # WiFi sync to caregiver dashboard (V2)
+  hindi_tts: false                 # Hindi TTS voice model (V2)
+  debug_overlay: false             # Visual bounding box overlay on frame
+
+# ─── Per-Class Detection Toggles ───────────────────────────────────────────────
+# Set any class to false to suppress its detections globally.
+# Useful for environments where a class causes false positives.
+classes:
+  person: true
+  face: true
+  medicine_strip: true
+  medicine_bottle: true
+  water_bottle: true
+  knife: true
+  stove: true
+  gas_cylinder: true
+  passport: false                  # Disabled by default — privacy
+  book: true
+  charger: true
+  wire: true
+  laptop: true
+  monitor: true
+  cupboard: true
+  door: true
+  chair: true
+  bed: true
+  toilet: true
+  sink: true
+  wet_floor: true
+  walking_stick: true
+  support_handle: true
+
+# ─── Per-Rule Toggles ──────────────────────────────────────────────────────────
+# Disable individual safety rules without touching code or risk_rules.yaml
+rules:
+  knife_near_person: true
+  stove_unattended: true
+  wet_floor_hazard: true
+  medicine_reminder: true
+  wire_tripping_hazard: true
+  gas_cylinder_check: true
+
+# ─── Runtime Behavior ──────────────────────────────────────────────────────────
+runtime:
+  # Frame processing
+  target_fps: 15                   # Target inference FPS
+  camera_index: 0                  # OpenCV camera index
+
+  # Confidence thresholds
+  confidence_threshold: 0.25       # Global minimum confidence (all classes)
+  # Safety-class thresholds override the global default (see class_thresholds.yaml)
+
+  # SmolVLM2 (when enabled)
+  smolvlm_every_n_frames: 5       # Run VLM on every Nth frame
+  smolvlm_timeout_ms: 2000        # Timeout for VLM inference
+
+  # Alert behavior
+  alert_cooldown_multiplier: 1.0  # Multiply all rule cooldowns by this factor
+  max_alerts_per_minute: 6        # Hard cap — prevents alert fatigue
+
+  # Event Memory
+  memory_window_frames: 150       # Sliding window size (~10s at 15 FPS)
+
+  # TTS
+  tts_speed: 1.0                  # Speech rate (1.0 = normal, 0.9 = slightly slower)
+  tts_volume: 0.8                 # Volume level [0.0, 1.0]
+  tts_language: en_IN             # Voice model language code
+
+  # Logging
+  log_retention_days: 7           # Delete log files older than N days
+  active_learning_conf_min: 0.25  # Log detections above this confidence...
+  active_learning_conf_max: 0.55  # ...and below this confidence (uncertain band)

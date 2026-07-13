@@ -1,0 +1,52 @@
+# Git attributes for the Elderly Assistant System repository
+# Ensures consistent line endings across OS and marks large binary files
+
+# ─── Default: normalize line endings ──────────────────────────────────────────
+* text=auto eol=lf
+
+# ─── Python source ────────────────────────────────────────────────────────────
+*.py text eol=lf
+*.pyi text eol=lf
+
+# ─── Configuration ────────────────────────────────────────────────────────────
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+*.cfg text eol=lf
+*.ini text eol=lf
+*.txt text eol=lf
+
+# ─── Documentation ────────────────────────────────────────────────────────────
+*.md text eol=lf
+*.rst text eol=lf
+
+# ─── Scripts ──────────────────────────────────────────────────────────────────
+*.sh text eol=lf
+Makefile text eol=lf
+
+# ─── Binary / Large Files (DVC managed) ───────────────────────────────────────
+*.pt binary
+*.onnx binary
+*.tflite binary
+*.pb binary
+*.pkl binary
+*.h5 binary
+
+# ─── Images ───────────────────────────────────────────────────────────────────
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
+*.bmp binary
+*.tiff binary
+*.webp binary
+
+# ─── Audio (TTS) ──────────────────────────────────────────────────────────────
+*.wav binary
+*.mp3 binary
+*.ogg binary
+
+# ─── Archives ─────────────────────────────────────────────────────────────────
+*.zip binary
+*.tar binary
+*.gz binary

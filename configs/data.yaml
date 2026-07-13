@@ -1,0 +1,58 @@
+# ─── YOLO Dataset Configuration ───────────────────────────────────────────────
+# Elderly Assistant System — 23-Class Object Taxonomy
+# Used by: Ultralytics YOLO training, evaluation, and inference scripts
+#
+# Split strategy: 80% train / 10% val / 10% test
+# - train: model training (gradient updates)
+# - val:   hyperparameter selection and early stopping
+# - test:  held-out final evaluation ONLY (never seen during development)
+#
+# Leakage prevention:
+#   Images from the same capture session are always assigned to the same split.
+# ─────────────────────────────────────────────────────────────────────────────
+
+path: ./data/processed
+
+train: images/train
+val: images/val
+test: images/test   # held-out — do not inspect until final evaluation
+
+nc: 23
+
+names:
+  0: person
+  1: face
+  2: medicine_strip
+  3: medicine_bottle
+  4: water_bottle
+  5: knife
+  6: stove
+  7: gas_cylinder
+  8: passport
+  9: book
+  10: charger
+  11: wire
+  12: laptop
+  13: monitor
+  14: cupboard
+  15: door
+  16: chair
+  17: bed
+  18: toilet
+  19: sink
+  20: wet_floor
+  21: walking_stick
+  22: support_handle
+
+# ─── Class Categories (documentation only — not read by YOLO) ─────────────────
+# safety_critical: [medicine_strip, medicine_bottle, knife, stove, gas_cylinder, wire, wet_floor]
+# navigation:      [person, face, door, walking_stick, support_handle]
+# furniture:       [chair, bed, cupboard, toilet, sink]
+# daily_objects:   [water_bottle, laptop, monitor, charger, book]
+# documents:       [passport]
+#
+# ─── Custom Data Required ──────────────────────────────────────────────────────
+# These classes have no adequate public dataset representation and require
+# mandatory Indian-home custom data collection:
+#   gas_cylinder, medicine_strip, wet_floor, walking_stick, support_handle,
+#   stove (Indian variety), passport, cupboard (Indian variety)
