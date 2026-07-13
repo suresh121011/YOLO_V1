@@ -82,7 +82,9 @@ def parse_yolo_line(line: str, line_num: int = 0) -> Annotation | None:
     try:
         class_id = int(parts[0])
         cx, cy, w, h = float(parts[1]), float(parts[2]), float(parts[3]), float(parts[4])
-        return Annotation(class_id=class_id, cx=cx, cy=cy, w=w, h=h, line_num=line_num, raw=stripped)
+        return Annotation(
+            class_id=class_id, cx=cx, cy=cy, w=w, h=h, line_num=line_num, raw=stripped
+        )
     except ValueError as e:
         logger.debug(f"Could not parse line {line_num}: {e}")
         return None
@@ -167,15 +169,11 @@ def validate_yolo_line(ann: Annotation, num_classes: int) -> list[str]:
     # Coordinate range checks [0, 1]
     for name, val in [("cx", ann.cx), ("cy", ann.cy), ("w", ann.w), ("h", ann.h)]:
         if not (0.0 <= val <= 1.0):
-            errors.append(
-                f"Line {ann.line_num}: {name}={val:.6f} out of [0, 1] range"
-            )
+            errors.append(f"Line {ann.line_num}: {name}={val:.6f} out of [0, 1] range")
 
     # Zero/negative area
     if ann.w <= 0.0 or ann.h <= 0.0:
-        errors.append(
-            f"Line {ann.line_num}: zero or negative box dimension (w={ann.w}, h={ann.h})"
-        )
+        errors.append(f"Line {ann.line_num}: zero or negative box dimension (w={ann.w}, h={ann.h})")
 
     # Box extends beyond image boundaries
     x1 = ann.cx - ann.w / 2

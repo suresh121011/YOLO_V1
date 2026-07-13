@@ -92,7 +92,6 @@ def _validate_with_opencv(path: Path) -> tuple[bool, str]:
     """
     try:
         import cv2  # type: ignore[import]
-        import numpy as np
 
         img = cv2.imread(str(path))
         if img is None:
@@ -266,6 +265,7 @@ def _check_pil_available() -> bool:
     """Return True if PIL (Pillow) is importable."""
     try:
         import PIL  # noqa: F401 # type: ignore[import]
+
         return True
     except ImportError:
         return False

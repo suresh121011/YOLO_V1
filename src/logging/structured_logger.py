@@ -28,7 +28,6 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -93,9 +92,18 @@ class StructuredLogger:
                 "class": d.class_name,
                 "conf": round(d.confidence, 3),
                 # Only store bbox for non-privacy classes
-                **({"bbox": [round(d.bbox.cx, 3), round(d.bbox.cy, 3),
-                             round(d.bbox.w, 3), round(d.bbox.h, 3)]}
-                   if d.class_name not in BBOX_REDACT_CLASSES else {}),
+                **(
+                    {
+                        "bbox": [
+                            round(d.bbox.cx, 3),
+                            round(d.bbox.cy, 3),
+                            round(d.bbox.w, 3),
+                            round(d.bbox.h, 3),
+                        ]
+                    }
+                    if d.class_name not in BBOX_REDACT_CLASSES
+                    else {}
+                ),
             }
             for d in detections
         ]
@@ -119,77 +127,94 @@ class StructuredLogger:
             if UNCERTAINTY_LOWER <= d.confidence <= UNCERTAINTY_UPPER
         ]
         if uncertain:
-            self._write(self._al_path, {
-                "ts": round(ts, 3),
-                "type": "active_learn",
-                "frame_id": frame_id,
-                "uncertain": uncertain,
-            })
+            self._write(
+                self._al_path,
+                {
+                    "ts": round(ts, 3),
+                    "type": "active_learn",
+                    "frame_id": frame_id,
+                    "uncertain": uncertain,
+                },
+            )
 
         # Performance metrics
         if metrics is not None:
-            self._write(self._perf_path, {
-                "ts": round(ts, 3),
-                "type": "perf",
-                "frame_id": frame_id,
-                "capture_ms": round(metrics.capture_ms, 2),
-                "detection_ms": round(metrics.detection_ms, 2),
-                "memory_ms": round(metrics.memory_update_ms, 2),
-                "rule_ms": round(metrics.rule_eval_ms, 2),
-                "vlm_ms": round(metrics.vlm_ms, 2) if metrics.vlm_ms else None,
-                "total_ms": round(metrics.total_ms, 2),
-                "fps": round(metrics.fps, 1),
-                "ram_mb": round(metrics.ram_mb, 1),
-            })
+            self._write(
+                self._perf_path,
+                {
+                    "ts": round(ts, 3),
+                    "type": "perf",
+                    "frame_id": frame_id,
+                    "capture_ms": round(metrics.capture_ms, 2),
+                    "detection_ms": round(metrics.detection_ms, 2),
+                    "memory_ms": round(metrics.memory_update_ms, 2),
+                    "rule_ms": round(metrics.rule_eval_ms, 2),
+                    "vlm_ms": round(metrics.vlm_ms, 2) if metrics.vlm_ms else None,
+                    "total_ms": round(metrics.total_ms, 2),
+                    "fps": round(metrics.fps, 1),
+                    "ram_mb": round(metrics.ram_mb, 1),
+                },
+            )
 
     def log_alert(self, alert) -> None:
         """Log a fired alert with full explanation for debugging."""
         self._alert_count += 1
-        self._write(self._events_path, {
-            "ts": round(time.time(), 3),
-            "type": "alert",
-            "rule_id": alert.rule_id,
-            "severity": alert.severity.name,
-            "message": alert.message,
-            "frame_id": alert.frame_id,
-            "explanation": alert.explanation,
-        })
+        self._write(
+            self._events_path,
+            {
+                "ts": round(time.time(), 3),
+                "type": "alert",
+                "rule_id": alert.rule_id,
+                "severity": alert.severity.name,
+                "message": alert.message,
+                "frame_id": alert.frame_id,
+                "explanation": alert.explanation,
+            },
+        )
 
     def log_error(self, error: Exception, context: str = "") -> None:
         """Log a caught exception with context string."""
         self._error_count += 1
-        self._write(self._events_path, {
-            "ts": round(time.time(), 3),
-            "type": "error",
-            "error": type(error).__name__,
-            "message": str(error)[:500],
-            "context": context,
-        })
+        self._write(
+            self._events_path,
+            {
+                "ts": round(time.time(), 3),
+                "type": "error",
+                "error": type(error).__name__,
+                "message": str(error)[:500],
+                "context": context,
+            },
+        )
         logger.error(f"[{context}] {error}")
 
     def dump_health_summary(self) -> None:
         """Write a health snapshot. Call periodically (e.g., every 60 seconds)."""
         import os
+
         uptime = time.time() - self._session_start
         fps_avg = self._frame_count / max(uptime, 1.0)
 
         # Try to get RAM usage
         try:
             import psutil
+
             ram_mb = psutil.Process(os.getpid()).memory_info().rss / 1e6
         except ImportError:
             ram_mb = 0.0
 
-        self._write(self._events_path, {
-            "ts": round(time.time(), 3),
-            "type": "health",
-            "uptime_seconds": round(uptime, 1),
-            "total_frames": self._frame_count,
-            "total_alerts": self._alert_count,
-            "total_errors": self._error_count,
-            "avg_fps": round(fps_avg, 1),
-            "ram_mb": round(ram_mb, 1),
-        })
+        self._write(
+            self._events_path,
+            {
+                "ts": round(time.time(), 3),
+                "type": "health",
+                "uptime_seconds": round(uptime, 1),
+                "total_frames": self._frame_count,
+                "total_alerts": self._alert_count,
+                "total_errors": self._error_count,
+                "avg_fps": round(fps_avg, 1),
+                "ram_mb": round(ram_mb, 1),
+            },
+        )
 
     # ─────────────────────────────────────────
     # Internal

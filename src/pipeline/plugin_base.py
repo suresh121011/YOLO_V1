@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import numpy as np
+
     from . import Alert, Detection
     from .event_memory import EventMemory
 
@@ -68,10 +69,10 @@ class AnalysisPlugin(ABC):
     @abstractmethod
     def analyze(
         self,
-        frame: "np.ndarray",
-        detections: "list[Detection]",
-        memory: "EventMemory",
-    ) -> "list[Alert]":
+        frame: np.ndarray,
+        detections: list[Detection],
+        memory: EventMemory,
+    ) -> list[Alert]:
         """Analyze the current frame and return any triggered alerts.
 
         Args:
@@ -96,7 +97,7 @@ class AnalysisPlugin(ABC):
         """
         return True
 
-    def cleanup(self) -> None:
+    def cleanup(self) -> None:  # noqa: B027 — optional hook; no-op default is intentional
         """Release plugin resources on pipeline shutdown.
 
         Called by orchestrator.shutdown(). Override to close file handles,

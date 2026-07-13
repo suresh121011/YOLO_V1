@@ -1,15 +1,15 @@
 """
 Unit tests for src.utils.image_utils.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 from src.utils.image_utils import (
-    MIN_IMAGE_DIM,
     compute_perceptual_hash,
     hamming_distance,
     validate_image,
@@ -94,9 +94,7 @@ class TestComputePerceptualHash:
         import numpy as np
 
         # Gradient image (dark-to-light left-to-right) — hash will be 0...01...1
-        gradient_arr = np.tile(
-            np.linspace(0, 255, 64, dtype=np.uint8), (64, 1)
-        )
+        gradient_arr = np.tile(np.linspace(0, 255, 64, dtype=np.uint8), (64, 1))
         # Inverse gradient (light-to-dark left-to-right) — hash will be 1...10...0
         inv_gradient_arr = gradient_arr[:, ::-1]
 

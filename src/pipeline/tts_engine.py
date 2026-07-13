@@ -29,7 +29,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-TTS_QUEUE_MAXSIZE = 5   # Drop oldest low-priority items when queue is full
+TTS_QUEUE_MAXSIZE = 5  # Drop oldest low-priority items when queue is full
 
 
 class PiperTTS:
@@ -150,10 +150,14 @@ class PiperTTS:
         length_scale = 1.0 / max(self.speech_rate, 0.1)
         cmd = [
             "piper",
-            "--model", str(self.model_path),
-            "--config", str(self.config_path),
-            "--output_file", "-",             # Write WAV to stdout
-            "--length_scale", str(length_scale),
+            "--model",
+            str(self.model_path),
+            "--config",
+            str(self.config_path),
+            "--output_file",
+            "-",  # Write WAV to stdout
+            "--length_scale",
+            str(length_scale),
         ]
         process = subprocess.Popen(
             cmd,
@@ -190,10 +194,13 @@ class PiperTTS:
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
                 f.write(wav_bytes)
                 tmp_path = f.name
+            # tmp_path comes from NamedTemporaryFile — system-controlled, not user input.
             if os.name == "nt":
-                os.system(f'powershell -c "(New-Object Media.SoundPlayer \'{tmp_path}\').PlaySync()"')
+                os.system(  # noqa: S605
+                    f"powershell -c \"(New-Object Media.SoundPlayer '{tmp_path}').PlaySync()\""
+                )
             else:
-                os.system(f'aplay "{tmp_path}" 2>/dev/null')
+                os.system(f'aplay "{tmp_path}" 2>/dev/null')  # noqa: S605
             os.unlink(tmp_path)
 
     def _beep(self) -> None:
@@ -213,6 +220,7 @@ class PiperTTS:
     def _sanitize(text: str) -> str:
         """Remove control characters and excessive whitespace from TTS input."""
         import re
+
         # Strip control characters (keep printable ASCII + basic Unicode)
         text = re.sub(r"[\x00-\x08\x0b-\x0c\x0e-\x1f\x7f]", "", text)
         return " ".join(text.split()).strip()

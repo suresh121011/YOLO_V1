@@ -1,6 +1,7 @@
 """
 Unit tests for src.utils.dataset_utils.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -9,7 +10,6 @@ from pathlib import Path
 import pytest
 
 from src.utils.dataset_utils import (
-    IMAGE_EXTENSIONS,
     build_hash_index,
     compute_file_hash,
     extract_group_key,
@@ -18,7 +18,6 @@ from src.utils.dataset_utils import (
     get_image_label_pairs,
     group_files_by_key,
 )
-
 
 # ─── find_image_files ─────────────────────────────────────────────────────────
 
@@ -175,15 +174,18 @@ class TestBuildHashIndex:
 
 @pytest.mark.unit
 class TestExtractGroupKey:
-    @pytest.mark.parametrize("filename,expected", [
-        ("video001_frame_00042.jpg", "video001"),
-        ("custom_kitchen_001.jpg", "custom_kitchen"),
-        ("IMG_20240601_143022_001.jpg", "IMG_20240601_143022"),
-        ("standalone.jpg", "standalone"),  # no pattern match → full stem
-        # 'frame_00001' matches the last pattern: ([a-zA-Z][a-zA-Z0-9_]+)_\d+
-        # capturing group is 'frame' (the alphabetic prefix)
-        ("frame_00001.jpg", "frame"),
-    ])
+    @pytest.mark.parametrize(
+        "filename,expected",
+        [
+            ("video001_frame_00042.jpg", "video001"),
+            ("custom_kitchen_001.jpg", "custom_kitchen"),
+            ("IMG_20240601_143022_001.jpg", "IMG_20240601_143022"),
+            ("standalone.jpg", "standalone"),  # no pattern match → full stem
+            # 'frame_00001' matches the last pattern: ([a-zA-Z][a-zA-Z0-9_]+)_\d+
+            # capturing group is 'frame' (the alphabetic prefix)
+            ("frame_00001.jpg", "frame"),
+        ],
+    )
     def test_group_extraction(self, filename: str, expected: str) -> None:
         assert extract_group_key(filename) == expected
 

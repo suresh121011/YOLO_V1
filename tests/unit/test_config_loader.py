@@ -1,11 +1,13 @@
 """
 Unit tests for src.config.config_loader.
 """
+
 from __future__ import annotations
+
+from pathlib import Path
 
 import pytest
 import yaml
-from pathlib import Path
 
 from src.config.config_loader import SystemConfig
 
@@ -18,12 +20,14 @@ class TestSystemConfigLoad:
         """Should load successfully from a valid feature_flags.yaml."""
         flags = tmp_path / "feature_flags.yaml"
         flags.write_text(
-            yaml.dump({
-                "components": {"smolvlm_analysis": False, "tts_output": True},
-                "classes": {"passport": False},
-                "rules": {"stove_unattended": True},
-                "runtime": {"target_fps": 15, "confidence_threshold": 0.25},
-            })
+            yaml.dump(
+                {
+                    "components": {"smolvlm_analysis": False, "tts_output": True},
+                    "classes": {"passport": False},
+                    "rules": {"stove_unattended": True},
+                    "runtime": {"target_fps": 15, "confidence_threshold": 0.25},
+                }
+            )
         )
         config = SystemConfig.load(str(flags), thresholds_path="/nonexistent.yaml")
         assert config.is_component_enabled("tts_output") is True

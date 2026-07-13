@@ -1,6 +1,7 @@
 """
 Unit tests for src.utils.annotation_utils.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -14,11 +15,9 @@ from src.utils.annotation_utils import (
     check_zero_area,
     count_annotations_by_class,
     parse_label_file,
-    parse_label_file_raw,
     parse_yolo_line,
     validate_yolo_line,
 )
-
 
 # ─── parse_yolo_line ─────────────────────────────────────────────────────────
 

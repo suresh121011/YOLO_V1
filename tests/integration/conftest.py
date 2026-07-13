@@ -7,6 +7,7 @@ Integration tests:
     - Should NOT require YOLO model weights or camera hardware
     - All tests complete in < 5 seconds
 """
+
 from __future__ import annotations
 
 from pathlib import Path

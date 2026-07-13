@@ -59,25 +59,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.utils.annotation_utils import (
     check_duplicate_lines,
-    parse_label_file,
     parse_label_file_raw,
-    validate_yolo_line,
 )
-from src.utils.config_helpers import load_data_config, get_class_names_from_data_yaml
+from src.utils.config_helpers import get_class_names_from_data_yaml, load_data_config
 from src.utils.dataset_utils import (
     build_hash_index,
     find_image_files,
     find_label_files,
     get_image_label_pairs,
-    IMAGE_EXTENSIONS,
 )
-from src.utils.image_utils import validate_image, build_perceptual_hash_index
+from src.utils.image_utils import validate_image
 from src.utils.report_utils import (
     format_severity_badge,
-    format_table,
-    save_json_report,
-    save_csv_report,
-    save_markdown_report,
     timestamp_str,
     write_all_formats,
 )
@@ -204,14 +197,19 @@ def check_annotation_format(
             raw_lines = parse_label_file_raw(lbl_path)
             dupes = check_duplicate_lines(raw_lines)
             for first_idx, dupe_idx in dupes:
-                results.add_issue(QAIssue(
-                    check="duplicate_annotations",
-                    severity="WARNING",
-                    split=split,
-                    file=str(lbl_path),
-                    line=dupe_idx + 1,
-                    message=f"Line {dupe_idx + 1} is a duplicate of line {first_idx + 1}: '{raw_lines[dupe_idx]}'",
-                ))
+                results.add_issue(
+                    QAIssue(
+                        check="duplicate_annotations",
+                        severity="WARNING",
+                        split=split,
+                        file=str(lbl_path),
+                        line=dupe_idx + 1,
+                        message=(
+                            f"Line {dupe_idx + 1} is a duplicate of line "
+                            f"{first_idx + 1}: '{raw_lines[dupe_idx]}'"
+                        ),
+                    )
+                )
                 check_counts["duplicate_annotations"] += 1
 
             # Parse and validate each annotation
@@ -225,14 +223,16 @@ def check_annotation_format(
 
                 # Format check
                 if len(parts) != 5:
-                    results.add_issue(QAIssue(
-                        check="invalid_yolo_format",
-                        severity="CRITICAL",
-                        split=split,
-                        file=str(lbl_path),
-                        line=line_num,
-                        message=f"Expected 5 fields, got {len(parts)}: '{stripped[:80]}'",
-                    ))
+                    results.add_issue(
+                        QAIssue(
+                            check="invalid_yolo_format",
+                            severity="CRITICAL",
+                            split=split,
+                            file=str(lbl_path),
+                            line=line_num,
+                            message=f"Expected 5 fields, got {len(parts)}: '{stripped[:80]}'",
+                        )
+                    )
                     check_counts["invalid_yolo_format"] += 1
                     continue
 
@@ -240,66 +240,80 @@ def check_annotation_format(
 
                 try:
                     class_id = int(parts[0])
-                    cx, cy, w, h = float(parts[1]), float(parts[2]), float(parts[3]), float(parts[4])
+                    cx, cy = float(parts[1]), float(parts[2])
+                    w, h = float(parts[3]), float(parts[4])
                 except ValueError:
-                    results.add_issue(QAIssue(
-                        check="invalid_yolo_format",
-                        severity="CRITICAL",
-                        split=split,
-                        file=str(lbl_path),
-                        line=line_num,
-                        message=f"Cannot parse numeric fields: '{stripped[:80]}'",
-                    ))
+                    results.add_issue(
+                        QAIssue(
+                            check="invalid_yolo_format",
+                            severity="CRITICAL",
+                            split=split,
+                            file=str(lbl_path),
+                            line=line_num,
+                            message=f"Cannot parse numeric fields: '{stripped[:80]}'",
+                        )
+                    )
                     check_counts["invalid_yolo_format"] += 1
                     continue
 
                 # Class ID range
                 if class_id < 0 or class_id >= num_classes:
-                    results.add_issue(QAIssue(
-                        check="invalid_class_ids",
-                        severity="CRITICAL",
-                        split=split,
-                        file=str(lbl_path),
-                        line=line_num,
-                        message=f"class_id={class_id} outside valid range [0, {num_classes - 1}]",
-                    ))
+                    results.add_issue(
+                        QAIssue(
+                            check="invalid_class_ids",
+                            severity="CRITICAL",
+                            split=split,
+                            file=str(lbl_path),
+                            line=line_num,
+                            message=(
+                                f"class_id={class_id} outside valid range "
+                                f"[0, {num_classes - 1}]"
+                            ),
+                        )
+                    )
                     check_counts["invalid_class_ids"] += 1
 
                 # Unknown class name check
                 elif class_id not in class_names:
-                    results.add_issue(QAIssue(
-                        check="unknown_class_names",
-                        severity="WARNING",
-                        split=split,
-                        file=str(lbl_path),
-                        line=line_num,
-                        message=f"class_id={class_id} has no name in data.yaml",
-                    ))
+                    results.add_issue(
+                        QAIssue(
+                            check="unknown_class_names",
+                            severity="WARNING",
+                            split=split,
+                            file=str(lbl_path),
+                            line=line_num,
+                            message=f"class_id={class_id} has no name in data.yaml",
+                        )
+                    )
                     check_counts["unknown_class_names"] += 1
 
                 # Zero-area box
                 if w <= 0.0 or h <= 0.0:
-                    results.add_issue(QAIssue(
-                        check="zero_area_boxes",
-                        severity="CRITICAL",
-                        split=split,
-                        file=str(lbl_path),
-                        line=line_num,
-                        message=f"Zero or negative dimensions: w={w}, h={h}",
-                    ))
+                    results.add_issue(
+                        QAIssue(
+                            check="zero_area_boxes",
+                            severity="CRITICAL",
+                            split=split,
+                            file=str(lbl_path),
+                            line=line_num,
+                            message=f"Zero or negative dimensions: w={w}, h={h}",
+                        )
+                    )
                     check_counts["zero_area_boxes"] += 1
 
                 # BBox bounds check
                 for coord_name, val in [("cx", cx), ("cy", cy), ("w", w), ("h", h)]:
                     if not (0.0 <= val <= 1.0):
-                        results.add_issue(QAIssue(
-                            check="bbox_out_of_bounds",
-                            severity="CRITICAL",
-                            split=split,
-                            file=str(lbl_path),
-                            line=line_num,
-                            message=f"{coord_name}={val:.6f} outside [0, 1]",
-                        ))
+                        results.add_issue(
+                            QAIssue(
+                                check="bbox_out_of_bounds",
+                                severity="CRITICAL",
+                                split=split,
+                                file=str(lbl_path),
+                                line=line_num,
+                                message=f"{coord_name}={val:.6f} outside [0, 1]",
+                            )
+                        )
                         check_counts["bbox_out_of_bounds"] += 1
                         break  # One error per line for bbox bounds
 
@@ -316,7 +330,12 @@ def check_file_pairs(data_dir: Path, results: QAResults) -> None:
         - empty_label_files
         - inconsistent_pairs
     """
-    checks = ["missing_label_files", "missing_image_files", "empty_label_files", "inconsistent_pairs"]
+    checks = [
+        "missing_label_files",
+        "missing_image_files",
+        "empty_label_files",
+        "inconsistent_pairs",
+    ]
     check_counts: dict[str, int] = {c: 0 for c in checks}
 
     for split in SPLITS:
@@ -333,13 +352,15 @@ def check_file_pairs(data_dir: Path, results: QAResults) -> None:
 
             for img_path, lbl_path in pairs:
                 if lbl_path is None:
-                    results.add_issue(QAIssue(
-                        check="missing_label_files",
-                        severity="WARNING",
-                        split=split,
-                        file=str(img_path),
-                        message=f"No label file found for image: {img_path.name}",
-                    ))
+                    results.add_issue(
+                        QAIssue(
+                            check="missing_label_files",
+                            severity="WARNING",
+                            split=split,
+                            file=str(img_path),
+                            message=f"No label file found for image: {img_path.name}",
+                        )
+                    )
                     check_counts["missing_label_files"] += 1
 
         # Labels without images
@@ -353,38 +374,47 @@ def check_file_pairs(data_dir: Path, results: QAResults) -> None:
 
             for lbl_path in label_files:
                 if lbl_path.stem not in image_stems:
-                    results.add_issue(QAIssue(
-                        check="missing_image_files",
-                        severity="WARNING",
-                        split=split,
-                        file=str(lbl_path),
-                        message=f"No image found for label: {lbl_path.name}",
-                    ))
+                    results.add_issue(
+                        QAIssue(
+                            check="missing_image_files",
+                            severity="WARNING",
+                            split=split,
+                            file=str(lbl_path),
+                            message=f"No image found for label: {lbl_path.name}",
+                        )
+                    )
                     check_counts["missing_image_files"] += 1
 
                 # Empty label check
                 content = lbl_path.read_text(encoding="utf-8", errors="replace").strip()
                 if not content:
-                    results.add_issue(QAIssue(
-                        check="empty_label_files",
-                        severity="WARNING",
-                        split=split,
-                        file=str(lbl_path),
-                        message=f"Label file is empty: {lbl_path.name}",
-                    ))
+                    results.add_issue(
+                        QAIssue(
+                            check="empty_label_files",
+                            severity="WARNING",
+                            split=split,
+                            file=str(lbl_path),
+                            message=f"Label file is empty: {lbl_path.name}",
+                        )
+                    )
                     check_counts["empty_label_files"] += 1
 
             # Inconsistent pair count
             n_images = len(find_image_files(images_dir)) if images_dir.exists() else 0
             n_labels = len(label_files)
             if n_images != n_labels:
-                results.add_issue(QAIssue(
-                    check="inconsistent_pairs",
-                    severity="INFO",
-                    split=split,
-                    file=str(data_dir / split),
-                    message=f"Image/label count mismatch in '{split}': {n_images} images vs {n_labels} labels",
-                ))
+                results.add_issue(
+                    QAIssue(
+                        check="inconsistent_pairs",
+                        severity="INFO",
+                        split=split,
+                        file=str(data_dir / split),
+                        message=(
+                            f"Image/label count mismatch in '{split}': "
+                            f"{n_images} images vs {n_labels} labels"
+                        ),
+                    )
+                )
                 check_counts["inconsistent_pairs"] += 1
 
     for check in checks:
@@ -407,13 +437,15 @@ def check_corrupted_images(data_dir: Path, results: QAResults) -> None:
         for img_path in find_image_files(images_dir):
             ok, msg = validate_image(img_path)
             if not ok:
-                results.add_issue(QAIssue(
-                    check="corrupted_images",
-                    severity="CRITICAL",
-                    split=split,
-                    file=str(img_path),
-                    message=msg,
-                ))
+                results.add_issue(
+                    QAIssue(
+                        check="corrupted_images",
+                        severity="CRITICAL",
+                        split=split,
+                        file=str(img_path),
+                        message=msg,
+                    )
+                )
                 issue_count += 1
 
     results.finalize_check("corrupted_images", issue_count)
@@ -439,14 +471,16 @@ def check_duplicate_images(data_dir: Path, results: QAResults) -> None:
             if len(files) > 1:
                 file_names = [f.name for f in files]
                 for dup_file in files[1:]:
-                    results.add_issue(QAIssue(
-                        check="duplicate_images",
-                        severity="WARNING",
-                        split=split,
-                        file=str(dup_file),
-                        message=f"Duplicate of {files[0].name} (SHA-256: {digest[:12]}…). "
-                                f"All copies: {file_names}",
-                    ))
+                    results.add_issue(
+                        QAIssue(
+                            check="duplicate_images",
+                            severity="WARNING",
+                            split=split,
+                            file=str(dup_file),
+                            message=f"Duplicate of {files[0].name} (SHA-256: {digest[:12]}…). "
+                            f"All copies: {file_names}",
+                        )
+                    )
                     issue_count += 1
 
     results.finalize_check("duplicate_images", issue_count)
@@ -488,17 +522,19 @@ def check_split_leakage(data_dir: Path, results: QAResults) -> None:
         for digest in sorted(overlap):
             file_a = hashes_a[digest]
             file_b = hashes_b[digest]
-            results.add_issue(QAIssue(
-                check=check_name,
-                severity="CRITICAL",
-                split=f"{split_a}+{split_b}",
-                file=str(file_a),
-                message=(
-                    f"Same image in '{split_a}' and '{split_b}': "
-                    f"{file_a.name} ↔ {file_b.name} "
-                    f"(SHA-256: {digest[:12]}…)"
-                ),
-            ))
+            results.add_issue(
+                QAIssue(
+                    check=check_name,
+                    severity="CRITICAL",
+                    split=f"{split_a}+{split_b}",
+                    file=str(file_a),
+                    message=(
+                        f"Same image in '{split_a}' and '{split_b}': "
+                        f"{file_a.name} ↔ {file_b.name} "
+                        f"(SHA-256: {digest[:12]}…)"
+                    ),
+                )
+            )
 
         results.finalize_check(check_name, len(overlap))
         if overlap:
@@ -564,9 +600,9 @@ def build_qa_reports(
 
     # Markdown
     overall_status = (
-        "🔴 CRITICAL" if results.critical_count > 0
-        else "🟡 WARNING" if results.warning_count > 0
-        else "✅ PASS"
+        "🔴 CRITICAL"
+        if results.critical_count > 0
+        else "🟡 WARNING" if results.warning_count > 0 else "✅ PASS"
     )
 
     check_table_rows = [
@@ -588,7 +624,9 @@ def build_qa_reports(
             str(i.line) if i.line else "",
             i.message[:100] + ("…" if len(i.message) > 100 else ""),
         ]
-        for i in sorted(results.issues, key=lambda x: ["CRITICAL", "WARNING", "INFO"].index(x.severity))[:50]
+        for i in sorted(
+            results.issues, key=lambda x: ["CRITICAL", "WARNING", "INFO"].index(x.severity)
+        )[:50]
     ]
 
     md_sections = [
@@ -613,23 +651,27 @@ def build_qa_reports(
     ]
 
     if results.issues:
-        md_sections.append({
-            "heading": f"Issues (showing {len(issue_rows)} of {len(results.issues)})",
-            "table": {
-                "headers": ["Severity", "Check", "Split", "File", "Line", "Message"],
-                "rows": issue_rows,
-            },
-        })
+        md_sections.append(
+            {
+                "heading": f"Issues (showing {len(issue_rows)} of {len(results.issues)})",
+                "table": {
+                    "headers": ["Severity", "Check", "Split", "File", "Line", "Message"],
+                    "rows": issue_rows,
+                },
+            }
+        )
 
     if results.critical_count > 0:
-        md_sections.append({
-            "heading": "Action Required",
-            "content": (
-                "> [!CAUTION]\n"
-                f"> **{results.critical_count} critical issues found.** "
-                "Do not proceed to training until all CRITICAL issues are resolved."
-            ),
-        })
+        md_sections.append(
+            {
+                "heading": "Action Required",
+                "content": (
+                    "> [!CAUTION]\n"
+                    f"> **{results.critical_count} critical issues found.** "
+                    "Do not proceed to training until all CRITICAL issues are resolved."
+                ),
+            }
+        )
 
     return json_report, csv_rows, md_sections
 

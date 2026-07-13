@@ -25,9 +25,8 @@ import heapq
 import logging
 import threading
 import time
-from typing import Optional
 
-from . import Alert, Severity
+from . import Alert
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +82,7 @@ class AlertQueue:
             self._not_empty.notify()
             return True
 
-    def get(self, timeout: Optional[float] = None) -> Optional[Alert]:
+    def get(self, timeout: float | None = None) -> Alert | None:
         """Get the highest-priority pending alert (blocking).
 
         Args:

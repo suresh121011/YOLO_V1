@@ -19,7 +19,6 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Optional
 
 from . import Detection, SceneContext
 
@@ -76,8 +75,8 @@ class SmolVLM2Analyzer:
     def _try_load(self) -> None:
         """Attempt to load model. Sets _available=False on failure (graceful)."""
         try:
-            from transformers import AutoModelForVision2Seq, AutoProcessor
             import torch
+            from transformers import AutoModelForVision2Seq, AutoProcessor
 
             logger.info(f"Loading SmolVLM2: {self.model_name} ...")
             self._processor = AutoProcessor.from_pretrained(self.model_name)
@@ -103,7 +102,7 @@ class SmolVLM2Analyzer:
         frame,
         detections: list[Detection],
         frame_id: int = 0,
-    ) -> Optional[SceneContext]:
+    ) -> SceneContext | None:
         """Run scene analysis on a frame.
 
         Args:
@@ -127,9 +126,7 @@ class SmolVLM2Analyzer:
             from PIL import Image
 
             # Build detection summary for prompt
-            det_summary = ", ".join(
-                f"{d.class_name} ({d.confidence:.0%})" for d in detections
-            )
+            det_summary = ", ".join(f"{d.class_name} ({d.confidence:.0%})" for d in detections)
             prompt = SCENE_PROMPT.format(detections=det_summary)
 
             # Convert BGR → PIL RGB
@@ -143,6 +140,7 @@ class SmolVLM2Analyzer:
             )
 
             import torch
+
             device = next(self._model.parameters()).device
             inputs = {k: v.to(device) for k, v in inputs.items()}
 
@@ -167,7 +165,7 @@ class SmolVLM2Analyzer:
         response: str,
         frame_id: int,
         inference_time_ms: float,
-    ) -> Optional[SceneContext]:
+    ) -> SceneContext | None:
         """Parse JSON response from VLM into typed SceneContext."""
         try:
             # Extract JSON block from response

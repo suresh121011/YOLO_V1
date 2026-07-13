@@ -21,6 +21,5 @@ V1 System Test Scenarios (from docs/01_executive_implementation_plan/validation_
 
 Mark slow tests with @pytest.mark.slow.
 """
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations

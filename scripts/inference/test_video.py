@@ -19,7 +19,7 @@ Outputs (optional, to --output-dir):
 Usage:
     python scripts/inference/test_video.py --source 0
     python scripts/inference/test_video.py --source video.mp4 --model models/yolo11n/weights/best.pt
-    python scripts/inference/test_video.py --source data/images/ --conf 0.25 --device cpu --no-display
+    python scripts/inference/test_video.py --source data/images/ --conf 0.25 --no-display
 
 Performance measurements:
     - Per-frame inference latency (ms)
@@ -34,14 +34,18 @@ import json
 import logging
 import sys
 import time
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.utils.config_helpers import resolve_device
-from src.utils.report_utils import save_json_report, timestamp_str
 from src.utils.dataset_utils import find_image_files
+from src.utils.report_utils import save_json_report, timestamp_str
 
 logging.basicConfig(
     level=logging.INFO,
@@ -91,7 +95,7 @@ def resolve_source_type(source: str) -> str:
 
 def frames_from_webcam(
     camera_index: int,
-) -> Generator[tuple[int, "np.ndarray"], None, None]:  # type: ignore[name-defined]
+) -> Generator[tuple[int, np.ndarray], None, None]:
     """Yield (frame_id, BGR frame) tuples from a webcam.
 
     Args:
@@ -123,7 +127,7 @@ def frames_from_webcam(
 
 def frames_from_video(
     video_path: Path,
-) -> Generator[tuple[int, "np.ndarray"], None, None]:  # type: ignore[name-defined]
+) -> Generator[tuple[int, np.ndarray], None, None]:
     """Yield (frame_id, BGR frame) tuples from a video file.
 
     Args:
@@ -156,7 +160,7 @@ def frames_from_video(
 
 def frames_from_folder(
     folder_path: Path,
-) -> Generator[tuple[int, "np.ndarray"], None, None]:  # type: ignore[name-defined]
+) -> Generator[tuple[int, np.ndarray], None, None]:
     """Yield (frame_id, BGR frame) tuples from an image folder.
 
     Args:
@@ -185,10 +189,10 @@ def frames_from_folder(
 
 
 def draw_detections(
-    frame: "np.ndarray",  # type: ignore[name-defined]
+    frame: np.ndarray,
     detections: list[dict],
     class_names: dict[int, str],
-) -> "np.ndarray":  # type: ignore[name-defined]
+) -> np.ndarray:
     """Draw bounding boxes and labels on a BGR frame.
 
     Args:
@@ -206,13 +210,13 @@ def draw_detections(
 
     # Class-specific colors (BGR)
     safety_colors = {
-        "knife": (0, 0, 255),       # Red
-        "stove": (0, 128, 255),     # Orange
-        "gas_cylinder": (0, 0, 200), # Dark red
-        "wire": (0, 0, 255),        # Red
-        "wet_floor": (0, 165, 255), # Orange
+        "knife": (0, 0, 255),  # Red
+        "stove": (0, 128, 255),  # Orange
+        "gas_cylinder": (0, 0, 200),  # Dark red
+        "wire": (0, 0, 255),  # Red
+        "wet_floor": (0, 165, 255),  # Orange
         "medicine_strip": (255, 0, 255),  # Magenta
-        "medicine_bottle": (255, 0, 200), # Pink
+        "medicine_bottle": (255, 0, 200),  # Pink
     }
     default_color = (0, 255, 0)  # Green
 
@@ -231,10 +235,14 @@ def draw_detections(
         (tw, th), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, 1)
         cv2.rectangle(frame, (x1, y1 - th - baseline - 4), (x1 + tw, y1), color, -1)
         cv2.putText(
-            frame, label,
+            frame,
+            label,
             (x1, y1 - baseline - 2),
-            cv2.FONT_HERSHEY_SIMPLEX, font_scale,
-            (255, 255, 255), 1, cv2.LINE_AA,
+            cv2.FONT_HERSHEY_SIMPLEX,
+            font_scale,
+            (255, 255, 255),
+            1,
+            cv2.LINE_AA,
         )
 
     return frame
@@ -254,7 +262,7 @@ def run_inference(args: argparse.Namespace) -> int:
     """
     try:
         import cv2  # type: ignore[import]
-        import numpy as np  # type: ignore[import]
+        import numpy  # noqa: F401 — availability check only
     except ImportError:
         logger.error("OpenCV is required. Install with: pip install opencv-python")
         return 1
@@ -360,22 +368,28 @@ def run_inference(args: argparse.Namespace) -> int:
                     cname = class_names.get(cid, f"class_{cid}")
                     xyxy = box.xyxy[0].tolist()
 
-                    frame_dets.append({
-                        "class_id": cid,
-                        "class_name": cname,
-                        "confidence": round(conf, 4),
-                        "x1": int(xyxy[0]), "y1": int(xyxy[1]),
-                        "x2": int(xyxy[2]), "y2": int(xyxy[3]),
-                    })
+                    frame_dets.append(
+                        {
+                            "class_id": cid,
+                            "class_name": cname,
+                            "confidence": round(conf, 4),
+                            "x1": int(xyxy[0]),
+                            "y1": int(xyxy[1]),
+                            "x2": int(xyxy[2]),
+                            "y2": int(xyxy[3]),
+                        }
+                    )
 
                     class_counts[cname] = class_counts.get(cname, 0) + 1
 
-            frame_results.append({
-                "frame_id": frame_id,
-                "latency_ms": round(latency_ms, 2),
-                "fps": round(fps, 1),
-                "detections": frame_dets,
-            })
+            frame_results.append(
+                {
+                    "frame_id": frame_id,
+                    "latency_ms": round(latency_ms, 2),
+                    "fps": round(fps, 1),
+                    "detections": frame_dets,
+                }
+            )
 
             # Annotate frame
             if args.output_dir or not args.no_display:
@@ -389,8 +403,7 @@ def run_inference(args: argparse.Namespace) -> int:
                     out_video_path = output_dir / "annotated_output.mp4"
                     fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore[attr-defined]
                     video_writer = cv2.VideoWriter(
-                        str(out_video_path), fourcc, 15.0,
-                        (frame.shape[1], frame.shape[0])
+                        str(out_video_path), fourcc, 15.0, (frame.shape[1], frame.shape[0])
                     )
                     logger.info(f"Writing annotated video: {out_video_path}")
                 video_writer.write(annotated)
@@ -399,8 +412,13 @@ def run_inference(args: argparse.Namespace) -> int:
             if not args.no_display:
                 overlay = annotated.copy()
                 cv2.putText(
-                    overlay, f"FPS: {fps:.1f}  |  {len(frame_dets)} det",
-                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2
+                    overlay,
+                    f"FPS: {fps:.1f}  |  {len(frame_dets)} det",
+                    (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.8,
+                    (0, 255, 0),
+                    2,
                 )
                 cv2.imshow("YOLO Inference — Elderly Assistant", overlay)
                 if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -423,8 +441,8 @@ def run_inference(args: argparse.Namespace) -> int:
         if not args.no_display:
             try:
                 cv2.destroyAllWindows()
-            except Exception:
-                pass
+            except Exception as e:  # noqa: S110 — window teardown is best-effort
+                logger.debug(f"cv2.destroyAllWindows failed: {e}")
 
     # ── Summary ───────────────────────────────────────────────────────────────
     total_frames = len(frame_results)
@@ -456,7 +474,10 @@ def run_inference(args: argparse.Namespace) -> int:
     logger.info(f"  Total frames:    {total_frames}")
     logger.info(f"  Average FPS:     {summary['avg_fps']:.1f}")
     logger.info(f"  Avg latency:     {summary['avg_latency_ms']:.1f} ms")
-    logger.info(f"  Min/Max latency: {summary['min_latency_ms']:.1f} / {summary['max_latency_ms']:.1f} ms")
+    logger.info(
+        f"  Min/Max latency: {summary['min_latency_ms']:.1f} / "
+        f"{summary['max_latency_ms']:.1f} ms"
+    )
     logger.info(f"  Total dets:      {summary['total_detections']}")
     if class_counts:
         top = sorted(class_counts.items(), key=lambda x: -x[1])[:5]
@@ -547,4 +568,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     import json
+
     sys.exit(main())

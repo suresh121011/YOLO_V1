@@ -41,7 +41,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from src.utils.config_helpers import load_training_config, load_data_config, resolve_device
+from src.utils.config_helpers import load_data_config, load_training_config, resolve_device
 from src.utils.report_utils import timestamp_str
 
 logging.basicConfig(
@@ -154,7 +154,7 @@ def run_training(args: argparse.Namespace) -> int:
         return 1
 
     try:
-        data_cfg = load_data_config(args.data)
+        load_data_config(args.data)  # validation only — Ultralytics reads the YAML itself
     except (FileNotFoundError, ValueError) as e:
         logger.error(f"Data config error: {e}")
         return 1
@@ -274,16 +274,18 @@ def run_training(args: argparse.Namespace) -> int:
 
     # Extract and save metrics
     metrics = extract_metrics(results)
-    metrics.update({
-        "timestamp": timestamp_str(),
-        "model_base": model_base,
-        "epochs_trained": epochs,
-        "batch_size": batch,
-        "imgsz": imgsz,
-        "device": device,
-        "training_time_hours": round(elapsed / 3600, 3),
-        "run_name": run_name,
-    })
+    metrics.update(
+        {
+            "timestamp": timestamp_str(),
+            "model_base": model_base,
+            "epochs_trained": epochs,
+            "batch_size": batch,
+            "imgsz": imgsz,
+            "device": device,
+            "training_time_hours": round(elapsed / 3600, 3),
+            "run_name": run_name,
+        }
+    )
 
     results_dir = Path(project) / name / "results"
     save_metrics_json(metrics, results_dir)

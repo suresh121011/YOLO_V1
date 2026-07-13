@@ -29,7 +29,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 
@@ -109,7 +109,7 @@ class SystemConfig:
         cls,
         flags_path: str = "configs/feature_flags.yaml",
         thresholds_path: str = "configs/class_thresholds.yaml",
-    ) -> "SystemConfig":
+    ) -> SystemConfig:
         """Load configuration from YAML files.
 
         Args:
@@ -140,9 +140,7 @@ class SystemConfig:
                 thresh_data: dict[str, Any] = yaml.safe_load(f) or {}
             class_thresholds.update(thresh_data.get("class_thresholds", {}))
         else:
-            logger.warning(
-                f"Class thresholds config not found: {thresholds_path} — using defaults"
-            )
+            logger.warning(f"Class thresholds config not found: {thresholds_path} — using defaults")
 
         # Merge runtime defaults with YAML values
         runtime = dict(_DEFAULT_RUNTIME)

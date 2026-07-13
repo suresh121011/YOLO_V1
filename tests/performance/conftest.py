@@ -16,6 +16,5 @@ Budget targets (Pi 5 CPU-only — worst case hardware):
 All performance tests require model weights and real hardware.
 Skip on CI with: @pytest.mark.skipif(os.environ.get("CI"), reason="No model on CI")
 """
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations

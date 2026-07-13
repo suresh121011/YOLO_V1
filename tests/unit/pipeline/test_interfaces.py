@@ -6,11 +6,12 @@ defined in src/pipeline/__init__.py.
 
 These tests validate the data contract layer only — no ML model required.
 """
+
 from __future__ import annotations
 
 import pytest
 
-from src.pipeline import Alert, BoundingBox, Detection, FrameResult, PipelineMetrics, Severity
+from src.pipeline import BoundingBox, Detection, Severity
 
 
 class TestSeverity:

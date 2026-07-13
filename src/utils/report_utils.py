@@ -194,7 +194,9 @@ def format_table(headers: list[str], rows: list[list[Any]]) -> str:
     header_line = "| " + " | ".join(pad(h, widths[i]) for i, h in enumerate(headers)) + " |"
     separator = "| " + " | ".join("-" * widths[i] for i in range(len(headers))) + " |"
     data_lines = [
-        "| " + " | ".join(pad(row[i] if i < len(row) else "", widths[i]) for i in range(len(headers))) + " |"
+        "| "
+        + " | ".join(pad(row[i] if i < len(row) else "", widths[i]) for i in range(len(headers)))
+        + " |"
         for row in str_rows
     ]
 
@@ -269,7 +271,9 @@ def write_all_formats(
     paths = {
         "json": save_json_report(report_data, output_dir / f"{base_name}.json"),
         "csv": save_csv_report(csv_rows, output_dir / f"{base_name}.csv", csv_fieldnames),
-        "markdown": save_markdown_report(md_title, md_sections, output_dir / f"{base_name}.md", md_metadata),
+        "markdown": save_markdown_report(
+            md_title, md_sections, output_dir / f"{base_name}.md", md_metadata
+        ),
     }
 
     return paths

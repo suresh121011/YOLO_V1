@@ -1,6 +1,7 @@
 """
 Unit tests for scripts.qa.check_annotations.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -10,12 +11,11 @@ import pytest
 from scripts.qa.check_annotations import (
     QAIssue,
     QAResults,
+    build_qa_reports,
     check_annotation_format,
     check_file_pairs,
     check_split_leakage,
-    build_qa_reports,
 )
-
 
 # ─── QAResults ───────────────────────────────────────────────────────────────
 
@@ -61,13 +61,36 @@ def _make_dataset(tmp_path: Path, split: str = "train") -> tuple[Path, Path]:
     return img_dir, lbl_dir
 
 
-CLASS_NAMES = {i: name for i, name in enumerate([
-    "person", "face", "medicine_strip", "medicine_bottle", "water_bottle",
-    "knife", "stove", "gas_cylinder", "passport", "book",
-    "charger", "wire", "laptop", "monitor", "cupboard",
-    "door", "chair", "bed", "toilet", "sink",
-    "wet_floor", "walking_stick", "support_handle",
-])}
+CLASS_NAMES = {
+    i: name
+    for i, name in enumerate(
+        [
+            "person",
+            "face",
+            "medicine_strip",
+            "medicine_bottle",
+            "water_bottle",
+            "knife",
+            "stove",
+            "gas_cylinder",
+            "passport",
+            "book",
+            "charger",
+            "wire",
+            "laptop",
+            "monitor",
+            "cupboard",
+            "door",
+            "chair",
+            "bed",
+            "toilet",
+            "sink",
+            "wet_floor",
+            "walking_stick",
+            "support_handle",
+        ]
+    )
+}
 NUM_CLASSES = 23
 
 

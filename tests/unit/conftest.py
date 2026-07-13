@@ -8,19 +8,15 @@ Unit test rules:
     - No real TTS (mock PiperTTS)
     - All tests complete in < 100ms
 """
+
 from __future__ import annotations
 
 import pytest
 
 from src.pipeline import (
-    Alert,
     BoundingBox,
     Detection,
-    MemoryEntry,
-    PipelineMetrics,
-    Severity,
 )
-
 
 # ─── Sample Data Fixtures ─────────────────────────────────────────────────────
 

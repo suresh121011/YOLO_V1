@@ -15,11 +15,10 @@ import re
 import threading
 import time
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
-from . import Alert, Detection, Severity, SceneContext
+from . import Alert, Detection, SceneContext, Severity
 from .event_memory import EventMemory
 
 logger = logging.getLogger(__name__)
@@ -73,8 +72,8 @@ class RuleEngine:
         self,
         detections: list[Detection],
         memory: EventMemory,
-        context: Optional[SceneContext] = None,
-        current_fps: Optional[float] = None,
+        context: SceneContext | None = None,
+        current_fps: float | None = None,
     ) -> list[Alert]:
         """Evaluate all rules against the current pipeline state.
 
@@ -171,16 +170,14 @@ class RuleEngine:
         if " AND " in condition:
             parts = condition.split(" AND ")
             return all(
-                self._evaluate_condition(p.strip(), detected_names, memory, fps)
-                for p in parts
+                self._evaluate_condition(p.strip(), detected_names, memory, fps) for p in parts
             )
 
         # Split on OR
         if " OR " in condition:
             parts = condition.split(" OR ")
             return any(
-                self._evaluate_condition(p.strip(), detected_names, memory, fps)
-                for p in parts
+                self._evaluate_condition(p.strip(), detected_names, memory, fps) for p in parts
             )
 
         # NOT detected(class)

@@ -14,11 +14,9 @@ Design constraints:
 from __future__ import annotations
 
 import threading
-import time
 from collections import deque
-from typing import Optional
 
-from . import BoundingBox, Detection, MemoryEntry
+from . import Detection, MemoryEntry
 
 
 class EventMemory:
@@ -110,7 +108,7 @@ class EventMemory:
     def frames_since_seen_by_name(self, class_name: str) -> int:
         """Convenience: frames since seen by class name."""
         with self._lock:
-            for cid, entry in self._entries.items():
+            for entry in self._entries.values():
                 if entry.class_name == class_name:
                     return self._frame_counter - entry.last_seen_frame
         return self._window
@@ -139,7 +137,7 @@ class EventMemory:
                     break
             return count
 
-    def get_entry(self, class_id: int) -> Optional[MemoryEntry]:
+    def get_entry(self, class_id: int) -> MemoryEntry | None:
         """Retrieve the full tracking entry for a class."""
         return self._entries.get(class_id)
 

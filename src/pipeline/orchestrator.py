@@ -21,22 +21,20 @@ Rules loaded from:         configs/risk_rules.yaml
 from __future__ import annotations
 
 import logging
-import queue
 import threading
 import time
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
+from ..logging.structured_logger import StructuredLogger
+from . import PipelineMetrics, Severity
 from .confidence_fusion import ConfidenceFusion
 from .detector import YOLODetector
 from .event_memory import EventMemory
 from .rule_engine import RuleEngine
 from .scene_analyzer import SmolVLM2Analyzer
 from .tts_engine import PiperTTS
-from . import Alert, PipelineMetrics, Severity
-from ..logging.structured_logger import StructuredLogger
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +94,7 @@ class ElderlyAssistantPipeline:
         # ── SmolVLM2 Analyzer (optional) ─────────────────────────────────
         vlm_enabled = self._flags.get("vlm_enabled", True)
         if vlm_enabled:
-            self._analyzer: Optional[SmolVLM2Analyzer] = SmolVLM2Analyzer(vlm_model)
+            self._analyzer: SmolVLM2Analyzer | None = SmolVLM2Analyzer(vlm_model)
         else:
             self._analyzer = None
             logger.info("SmolVLM2 disabled via feature flag")
@@ -186,9 +184,7 @@ class ElderlyAssistantPipeline:
         # ── 5. Rule Engine ────────────────────────────────────────────
         t4 = time.perf_counter()
         try:
-            alerts = self._rule_engine.evaluate(
-                detections, self._memory, context, self._target_fps
-            )
+            alerts = self._rule_engine.evaluate(detections, self._memory, context, self._target_fps)
         except Exception as e:
             self._logger.log_error(e, context="rule_engine")
             alerts = []
@@ -213,7 +209,7 @@ class ElderlyAssistantPipeline:
         total_ms = (time.perf_counter() - t0) * 1000
         metrics = PipelineMetrics(
             frame_id=frame_id,
-            capture_ms=0.0,         # Measured outside this method
+            capture_ms=0.0,  # Measured outside this method
             detection_ms=detection_ms,
             memory_update_ms=memory_ms,
             vlm_ms=vlm_ms,
@@ -264,10 +260,18 @@ class ElderlyAssistantPipeline:
     def _get_ram_mb(self) -> float:
         try:
             import os
+
             import psutil
+
             return psutil.Process(os.getpid()).memory_info().rss / 1e6
         except Exception:
             return 0.0
 
     def _empty_result(self, frame_id: int) -> dict:
-        return {"frame_id": frame_id, "detections": [], "alerts": [], "mode": "error", "metrics": None}
+        return {
+            "frame_id": frame_id,
+            "detections": [],
+            "alerts": [],
+            "mode": "error",
+            "metrics": None,
+        }

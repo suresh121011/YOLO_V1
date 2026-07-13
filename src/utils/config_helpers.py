@@ -105,9 +105,7 @@ def load_data_config(path: str | Path = "configs/data.yaml") -> dict[str, Any]:
     required = ["nc", "names"]
     missing = [k for k in required if k not in config]
     if missing:
-        raise ValueError(
-            f"data.yaml at '{path}' is missing required keys: {missing}"
-        )
+        raise ValueError(f"data.yaml at '{path}' is missing required keys: {missing}")
 
     logger.info(f"Data config loaded: {config.get('nc', 0)} classes from {path}")
     return config
@@ -131,7 +129,7 @@ def resolve_device(device_str: str) -> str:
         return device_str
 
     try:
-        import torch  # type: ignore[import]
+        import torch  # optional dependency; pyproject mypy override covers absence
 
         if torch.cuda.is_available():
             logger.info("Auto device: CUDA selected")

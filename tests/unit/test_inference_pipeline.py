@@ -6,17 +6,17 @@ are mocked throughout. Tests validate source type detection, FPS logic,
 output path generation, and threshold validation without requiring
 GPU or actual video input.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 from scripts.inference.test_video import (
     resolve_source_type,
 )
-
 
 # ─── resolve_source_type ─────────────────────────────────────────────────────
 
@@ -78,6 +78,7 @@ class TestFramesFromFolder:
             mock_find.return_value = sorted(tmp_path.glob("*.jpg"))
             with patch("cv2.imread", return_value=fake_frame):
                 from scripts.inference.test_video import frames_from_folder
+
                 frames = list(frames_from_folder(tmp_path))
 
         assert len(frames) == 3
@@ -94,8 +95,8 @@ class TestDrawDetections:
     def test_returns_frame_without_crash(self) -> None:
         """draw_detections should not crash with empty detections or real boxes."""
         try:
-            import numpy as np
             import cv2  # noqa: F401
+            import numpy as np
         except ImportError:
             pytest.skip("OpenCV/numpy not installed")
 
@@ -103,8 +104,15 @@ class TestDrawDetections:
 
         frame = np.zeros((480, 640, 3), dtype=np.uint8)
         detections = [
-            {"class_id": 5, "class_name": "knife", "confidence": 0.85,
-             "x1": 100, "y1": 100, "x2": 200, "y2": 200},
+            {
+                "class_id": 5,
+                "class_name": "knife",
+                "confidence": 0.85,
+                "x1": 100,
+                "y1": 100,
+                "x2": 200,
+                "y2": 200,
+            },
         ]
 
         result = draw_detections(frame.copy(), detections, {5: "knife"})
@@ -112,8 +120,8 @@ class TestDrawDetections:
 
     def test_empty_detections_no_crash(self) -> None:
         try:
-            import numpy as np
             import cv2  # noqa: F401
+            import numpy as np
         except ImportError:
             pytest.skip("OpenCV/numpy not installed")
 
@@ -159,7 +167,7 @@ class TestFpsCalculation:
 
         avg = sum(window) / len(window)
         fps = 1000.0 / max(avg, 1.0)
-        assert fps == pytest.approx(1000.0 / (200/3), rel=0.01)
+        assert fps == pytest.approx(1000.0 / (200 / 3), rel=0.01)
 
 
 # ─── Output path generation ───────────────────────────────────────────────────

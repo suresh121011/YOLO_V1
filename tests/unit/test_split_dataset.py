@@ -1,9 +1,9 @@
 """
 Unit tests for scripts.dataset.split_dataset.
 """
+
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 
 import pytest
@@ -16,7 +16,9 @@ from scripts.dataset.split_dataset import (
 from src.utils.dataset_utils import group_files_by_key
 
 
-def _create_test_dataset(tmp_path: Path, n_groups: int = 10, images_per_group: int = 3) -> tuple[Path, Path]:
+def _create_test_dataset(
+    tmp_path: Path, n_groups: int = 10, images_per_group: int = 3
+) -> tuple[Path, Path]:
     """Create a minimal synthetic dataset for testing."""
     img_dir = tmp_path / "images"
     lbl_dir = tmp_path / "labels"
@@ -91,6 +93,7 @@ class TestCopySplitFiles:
         out_dir = tmp_path / "output"
 
         from src.utils.dataset_utils import find_image_files
+
         all_images = find_image_files(img_dir)
         groups = group_files_by_key(all_images)
         assignments = compute_split_assignments(groups, 0.6, 0.2, 0.2, seed=42)
@@ -105,6 +108,7 @@ class TestCopySplitFiles:
         out_dir = tmp_path / "output"
 
         from src.utils.dataset_utils import find_image_files
+
         all_images = find_image_files(img_dir)
         groups = group_files_by_key(all_images)
         assignments = compute_split_assignments(groups, 0.6, 0.2, 0.2, seed=42)

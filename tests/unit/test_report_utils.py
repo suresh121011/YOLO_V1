@@ -1,6 +1,7 @@
 """
 Unit tests for src.utils.report_utils.
 """
+
 from __future__ import annotations
 
 import csv
@@ -106,13 +107,15 @@ class TestSaveMarkdownReport:
         assert "Hello world" in content
 
     def test_table_section(self, tmp_path: Path) -> None:
-        sections = [{
-            "heading": "Table",
-            "table": {
-                "headers": ["Class", "Count"],
-                "rows": [["knife", "42"], ["stove", "15"]],
-            },
-        }]
+        sections = [
+            {
+                "heading": "Table",
+                "table": {
+                    "headers": ["Class", "Count"],
+                    "rows": [["knife", "42"], ["stove", "15"]],
+                },
+            }
+        ]
         path = save_markdown_report("T", sections, tmp_path / "r.md")
         content = path.read_text()
         assert "knife" in content
@@ -120,8 +123,7 @@ class TestSaveMarkdownReport:
 
     def test_metadata_included(self, tmp_path: Path) -> None:
         path = save_markdown_report(
-            "T", [], tmp_path / "r.md",
-            metadata={"Key": "Value", "Number": 99}
+            "T", [], tmp_path / "r.md", metadata={"Key": "Value", "Number": 99}
         )
         content = path.read_text()
         assert "**Key:**" in content
@@ -148,13 +150,16 @@ class TestFormatTable:
 
 @pytest.mark.unit
 class TestFormatSeverityBadge:
-    @pytest.mark.parametrize("severity,expected_start", [
-        ("CRITICAL", "🔴"),
-        ("WARNING", "🟡"),
-        ("INFO", "🔵"),
-        ("PASS", "✅"),
-        ("UNKNOWN", "UNKNOWN"),
-    ])
+    @pytest.mark.parametrize(
+        "severity,expected_start",
+        [
+            ("CRITICAL", "🔴"),
+            ("WARNING", "🟡"),
+            ("INFO", "🔵"),
+            ("PASS", "✅"),
+            ("UNKNOWN", "UNKNOWN"),
+        ],
+    )
     def test_badge_format(self, severity: str, expected_start: str) -> None:
         badge = format_severity_badge(severity)
         assert badge.startswith(expected_start)

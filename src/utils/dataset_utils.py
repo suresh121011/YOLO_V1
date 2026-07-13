@@ -76,9 +76,7 @@ def find_image_files(directory: Path) -> list[Path]:
         logger.warning(f"Image directory does not exist: {directory}")
         return []
 
-    files = sorted(
-        p for p in directory.rglob("*") if p.suffix.lower() in IMAGE_EXTENSIONS
-    )
+    files = sorted(p for p in directory.rglob("*") if p.suffix.lower() in IMAGE_EXTENSIONS)
     logger.debug(f"Found {len(files)} image files in {directory}")
     return files
 

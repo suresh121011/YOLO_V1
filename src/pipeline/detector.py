@@ -13,7 +13,6 @@ import hashlib
 import logging
 import time
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 
@@ -55,8 +54,8 @@ class YOLODetector:
         self,
         model_path: str,
         conf_threshold: float = DEFAULT_CONF,
-        class_thresholds: Optional[dict[str, float]] = None,
-        expected_hash: Optional[str] = None,
+        class_thresholds: dict[str, float] | None = None,
+        expected_hash: str | None = None,
         device: str = "cpu",
     ) -> None:
         """
@@ -97,13 +96,14 @@ class YOLODetector:
         suffix = self.model_path.suffix.lower()
         try:
             from ultralytics import YOLO
+
             model = YOLO(str(self.model_path))
             logger.info(f"Model loaded via Ultralytics (format: {suffix})")
             return model
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "ultralytics is required. Install with: pip install ultralytics"
-            )
+            ) from e
 
     def warmup(self, n: int = 3) -> None:
         """Run inference on dummy frames to initialize GPU/NPU kernels.
@@ -111,7 +111,7 @@ class YOLODetector:
         Call once after loading, before real-time inference begins.
         """
         dummy = np.zeros((640, 640, 3), dtype=np.uint8)
-        for i in range(n):
+        for _ in range(n):
             self.model.predict(dummy, verbose=False)
         logger.info(f"YOLO warmup complete ({n} frames)")
 
@@ -153,13 +153,15 @@ class YOLODetector:
                 w = xyxy[2] - xyxy[0]
                 h = xyxy[3] - xyxy[1]
 
-                detections.append(Detection(
-                    class_id=class_id,
-                    class_name=class_name,
-                    confidence=conf,
-                    bbox=BoundingBox(cx=cx, cy=cy, w=w, h=h),
-                    frame_id=frame_id,
-                    timestamp_ms=timestamp_ms,
-                ))
+                detections.append(
+                    Detection(
+                        class_id=class_id,
+                        class_name=class_name,
+                        confidence=conf,
+                        bbox=BoundingBox(cx=cx, cy=cy, w=w, h=h),
+                        frame_id=frame_id,
+                        timestamp_ms=timestamp_ms,
+                    )
+                )
 
         return detections

@@ -19,30 +19,31 @@ where:
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
-from . import BoundingBox, Detection, SceneContext
+from . import Detection, SceneContext
 
 logger = logging.getLogger(__name__)
 
 
 # Safety-critical classes eligible for confidence fusion.
 # Non-safety classes are not fused (VLM rarely comments on them).
-SAFETY_CLASSES = frozenset({
-    "knife",
-    "stove",
-    "gas_cylinder",
-    "wet_floor",
-    "wire",
-    "medicine_strip",
-    "medicine_bottle",
-})
+SAFETY_CLASSES = frozenset(
+    {
+        "knife",
+        "stove",
+        "gas_cylinder",
+        "wet_floor",
+        "wire",
+        "medicine_strip",
+        "medicine_bottle",
+    }
+)
 
 # Map from VLM severity string to numeric score
 VLM_RISK_SCORE: dict[str, float] = {
-    "low":      0.3,
-    "medium":   0.5,
-    "high":     0.8,
+    "low": 0.3,
+    "medium": 0.5,
+    "high": 0.8,
     "critical": 1.0,
 }
 
@@ -67,7 +68,7 @@ class ConfidenceFusion:
     def fuse(
         self,
         detections: list[Detection],
-        context: Optional[SceneContext],
+        context: SceneContext | None,
     ) -> list[Detection]:
         """Return detections with fused confidence scores.
 
@@ -116,13 +117,15 @@ class ConfidenceFusion:
                     f"(vlm_score={vlm_score:.2f})"
                 )
 
-            fused.append(Detection(
-                class_id=det.class_id,
-                class_name=det.class_name,
-                confidence=new_conf,
-                bbox=det.bbox,
-                frame_id=det.frame_id,
-                timestamp_ms=det.timestamp_ms,
-            ))
+            fused.append(
+                Detection(
+                    class_id=det.class_id,
+                    class_name=det.class_name,
+                    confidence=new_conf,
+                    bbox=det.bbox,
+                    frame_id=det.frame_id,
+                    timestamp_ms=det.timestamp_ms,
+                )
+            )
 
         return fused

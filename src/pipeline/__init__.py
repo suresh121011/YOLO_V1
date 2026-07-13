@@ -21,8 +21,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Optional
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    import numpy as np
 
 # ─── Enumerations ─────────────────────────────────────────────────────────────
 
@@ -78,7 +80,7 @@ class BoundingBox:
         y2 = self.cy + self.h / 2
         return x1, y1, x2, y2
 
-    def iou(self, other: "BoundingBox") -> float:
+    def iou(self, other: BoundingBox) -> float:
         """Compute intersection-over-union with another bounding box."""
         ax1, ay1, ax2, ay2 = self.to_xyxy()
         bx1, by1, bx2, by2 = other.to_xyxy()
@@ -183,7 +185,7 @@ class Alert:
     rule_id: str
     severity: Severity
     message: str
-    message_hi: Optional[str]  # Hindi translation (V2)
+    message_hi: str | None  # Hindi translation (V2)
     triggering_detections: list[Detection]
     timestamp_ms: float
     cooldown_seconds: int
@@ -250,9 +252,9 @@ class PipelineMetrics:
     capture_ms: float
     detection_ms: float
     memory_update_ms: float
-    vlm_ms: Optional[float]  # None when VLM not invoked
+    vlm_ms: float | None  # None when VLM not invoked
     rule_eval_ms: float
-    tts_queue_ms: Optional[float]  # None when no alert generated
+    tts_queue_ms: float | None  # None when no alert generated
     total_ms: float
     fps: float
     ram_mb: float
@@ -281,7 +283,7 @@ class FrameResult:
     frame_id: int
     timestamp_ms: float
     detections: list[Detection]
-    context: Optional[SceneContext]
+    context: SceneContext | None
     alerts: list[Alert]
     metrics: PipelineMetrics
     mode: str  # "full" | "yolo_only" | "degraded"
@@ -291,10 +293,11 @@ class FrameResult:
 # These define the expected interface for each pipeline component.
 # Concrete implementations live in their respective module files.
 
+
 class BaseDetector:
     """Abstract interface for object detectors."""
 
-    def detect(self, frame: "np.ndarray") -> list[Detection]:  # type: ignore[name-defined]
+    def detect(self, frame: np.ndarray) -> list[Detection]:
         """Run inference on a single BGR frame."""
         raise NotImplementedError
 
@@ -326,7 +329,7 @@ class BaseMemory:
         """How many seconds ago was this class last detected?"""
         raise NotImplementedError
 
-    def get_entry(self, class_id: int) -> Optional[MemoryEntry]:
+    def get_entry(self, class_id: int) -> MemoryEntry | None:
         """Return the MemoryEntry for a class, or None if never seen."""
         raise NotImplementedError
 
@@ -340,7 +343,7 @@ class BaseAnalyzer:
 
     def analyze(
         self,
-        frame: "np.ndarray",  # type: ignore[name-defined]
+        frame: np.ndarray,
         detections: list[Detection],
     ) -> SceneContext:
         """Analyze the scene and return structured context."""
@@ -358,7 +361,7 @@ class BaseRuleEngine:
         self,
         detections: list[Detection],
         memory: BaseMemory,
-        context: Optional[SceneContext] = None,
+        context: SceneContext | None = None,
     ) -> list[Alert]:
         """Evaluate all rules and return triggered alerts."""
         raise NotImplementedError

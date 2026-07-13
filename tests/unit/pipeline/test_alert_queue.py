@@ -1,14 +1,14 @@
 """
 Unit tests for src.pipeline.alert_queue.
 """
+
 from __future__ import annotations
 
 import time
-import threading
 
 import pytest
 
-from src.pipeline import Alert, BoundingBox, Detection, Severity
+from src.pipeline import Alert, Severity
 from src.pipeline.alert_queue import AlertQueue
 
 

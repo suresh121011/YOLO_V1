@@ -5,6 +5,7 @@ Note: Actual YOLO training is not executed in unit tests.
 The model.train() call is mocked to avoid requiring GPU, weights files,
 or a full dataset.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -13,8 +14,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import yaml
 
-from src.utils.config_helpers import resolve_device, load_training_config
-
+from src.utils.config_helpers import load_training_config, resolve_device
 
 # ─── Training config loading ──────────────────────────────────────────────────
 
@@ -81,6 +81,7 @@ class TestResolveDevice:
     def test_auto_falls_back_to_cpu_without_torch(self) -> None:
         """When torch is not importable, 'auto' should fall back to 'cpu'."""
         import sys
+
         original_torch = sys.modules.get("torch")
         sys.modules["torch"] = None  # type: ignore[assignment]
         try:
@@ -141,11 +142,12 @@ class TestExtractMetrics:
 @pytest.mark.unit
 class TestSaveMetricsJson:
     def test_writes_json_file(self, tmp_path: Path) -> None:
-        from scripts.training.train_yolo import save_metrics_json
         import json
 
+        from scripts.training.train_yolo import save_metrics_json
+
         metrics = {"mAP50": 0.82, "precision": 0.85}
-        path = save_metrics_json(metrics, tmp_path)
+        save_metrics_json(metrics, tmp_path)
 
         assert (tmp_path / "metrics.json").exists()
         loaded = json.loads((tmp_path / "metrics.json").read_text())
