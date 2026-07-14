@@ -53,6 +53,16 @@ data/processed/split_report/
 data/qa_reports/*
 !data/qa_reports/annotation_qa_report.json
 
+# ─── Custom Capture Workflow (Phase-3) ────────────────────────────────────────
+# Staging inbox for raw phone photos — transient, never tracked
+data/capture_inbox/
+# Locked real-home eval set — tracked via DVC (ingest_eval_set stage), not git
+data/eval/
+# Consent records are LOCAL-ONLY: never in git, never a DVC out (no PII in
+# the repo or on S3 — see data/consent/README.md)
+data/consent/*
+!data/consent/README.md
+
 # ─── Local agent tooling (not project code) ──────────────────────────────────
 .agents/
 
