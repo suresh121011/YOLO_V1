@@ -35,9 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `src/config/config_loader.py`; `psutil` added to stub overrides
 
 ### Changed
-- DVC: default S3 remote `storage` configured in `.dvc/config` (placeholder
-  bucket URL; activation runbook in docs/04 §6); `dvc` dependency now
-  installs the S3 extra (`dvc[s3]`)
+- DVC: default S3 remote `storage` configured in `.dvc/config`
+  (`s3://elderly-assistant-mlops/datasets/yolo_v1`; activation runbook in
+  docs/04 §6); `dvc` dependency now installs the S3 extra (`dvc[s3]`)
 - CI: test matrix expanded to ubuntu+windows × py3.10/3.12; coverage gate
   enabled (`fail_under = 40`, ratchet-only); mypy widened to
   `src/dataset src/utils src/config src/logging` (`src/pipeline` joins in

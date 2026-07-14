@@ -90,11 +90,12 @@ The taxonomy includes direct PII/health signals: `passport` (ID document),
   `dvc cache dir --local <path-outside-synced-tree>` (writes `.dvc/config.local`, gitignored).
   Cloud sync on the cache causes corruption/thrash; excluding `data/` from sync is also
   recommended.
-- **DVC remote (`storage`)**: an S3/S3-compatible remote is configured as the default in
-  `.dvc/config` with a placeholder bucket URL. One-time activation, run on the machine
-  that holds the smoke data:
-  1. Create the bucket (any S3-compatible store; set `endpointurl` for R2/B2/MinIO) and
-     put the final URL in `.dvc/config` (`dvc remote modify storage url s3://<bucket>/<prefix>`).
+- **DVC remote (`storage`)**: an S3 remote is configured as the default in
+  `.dvc/config` at `s3://elderly-assistant-mlops/datasets/yolo_v1`. Activation
+  steps (run on the machine that holds the smoke data):
+  1. Create the S3 bucket `elderly-assistant-mlops` (or update the URL via
+     `dvc remote modify storage url s3://<bucket>/<prefix>` for S3-compatible providers;
+     set `endpointurl` for R2/B2/MinIO).
   2. `pip install "dvc[s3]"` and export credentials (see `.env.example`); credentials must
      never enter tracked config — use env vars, an AWS profile, or
      `dvc remote modify --local` (writes gitignored `.dvc/config.local`).

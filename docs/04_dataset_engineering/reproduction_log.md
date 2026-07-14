@@ -74,7 +74,7 @@ G0 is **partially satisfied**; full satisfaction requires either
 
 ```bash
 git clone --branch wp3.0-platform-remediation <repo> repro-test && cd repro-test
-python -m venv venv && venv/bin/pip install "dvc[s3]>=3.50,<4.0" pyyaml requests pillow numpy opencv-python-headless
+python -m venv .venv && .venv/bin/pip install "dvc[s3]>=3.50,<4.0" pyyaml requests pillow numpy opencv-python-headless
 dvc repro download_openimages download_roboflow            # network-allowed acquisition
 # local-only deviation: coco/wider_face/negatives enabled:false + mkdir empty raw dirs
 dvc repro --single-item remap_classes
