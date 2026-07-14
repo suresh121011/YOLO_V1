@@ -69,6 +69,11 @@ from src.dataset.capture.ingest import (
     rebuild_aggregate_manifest,
     verify_captures_tree,
 )
+from src.dataset.capture.progress import (
+    ProgressReport,
+    build_progress_report,
+    write_progress_report,
+)
 
 __all__ = [
     "AgreementReport",
@@ -83,9 +88,11 @@ __all__ = [
     "ImageRequirements",
     "IngestResult",
     "LabelValidation",
+    "ProgressReport",
     "SessionMeta",
     "YoloExport",
     "agreement_verdict",
+    "build_progress_report",
     "compare_annotators",
     "compute_iou",
     "finalize_annotations",
@@ -111,4 +118,5 @@ __all__ = [
     "verify_captures_tree",
     "verify_class_order",
     "verify_consent",
+    "write_progress_report",
 ]

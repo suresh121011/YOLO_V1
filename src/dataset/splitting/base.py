@@ -22,14 +22,19 @@ class SplitContext:
     """Everything a split strategy may need.
 
     Attributes:
-        groups:      Capture-group key → list of image Paths.
-        train_ratio: Target train fraction.
-        val_ratio:   Target val fraction.
-        test_ratio:  Target test fraction.
-        seed:        Determinism seed.
-        labels_dir:  Root of YOLO labels (required by stratified
-                     strategies for per-group class histograms).
-        num_classes: Taxonomy size (for histogram sizing).
+        groups:         Capture-group key → list of image Paths.
+        train_ratio:    Target train fraction.
+        val_ratio:      Target val fraction.
+        test_ratio:     Target test fraction.
+        seed:           Determinism seed.
+        labels_dir:     Root of YOLO labels (required by stratified
+                        strategies for per-group class histograms).
+        num_classes:    Taxonomy size (for histogram sizing).
+        house_pattern:  Regex with one capture group extracting a house ID
+                        from a group key (leave_one_house_out). Group keys
+                        without a match form their own super-group.
+        holdout_houses: House IDs forced entirely into the test split
+                        (leave_one_house_out).
     """
 
     groups: dict[str, list[Path]] = field(default_factory=dict)
@@ -39,6 +44,8 @@ class SplitContext:
     seed: int = 42
     labels_dir: Path | None = None
     num_classes: int = 23
+    house_pattern: str = r"(?:^|_)(h\d{2,})(?=_)"
+    holdout_houses: tuple[str, ...] = ()
 
     def validate(self) -> None:
         """Raise ValueError if ratios do not sum to 1.0."""

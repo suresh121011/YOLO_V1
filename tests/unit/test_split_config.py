@@ -68,6 +68,20 @@ split:
         assert settings.strategy == "group_aware"
         assert abs(settings.train_ratio + settings.val_ratio + settings.test_ratio - 1.0) < 1e-6
 
+    def test_house_settings_default(self, tmp_path: Path) -> None:
+        settings = load_split_settings(tmp_path / "missing.yaml")
+        assert settings.house_pattern == r"(?:^|_)(h\d{2,})(?=_)"
+        assert settings.holdout_houses == ()
+
+    def test_house_settings_from_yaml(self, tmp_path: Path) -> None:
+        path = _write_config(
+            tmp_path,
+            "split:\n  strategy: leave_one_house_out\n  holdout_houses: [h02, h03]\n",
+        )
+        settings = load_split_settings(path)
+        assert settings.strategy == "leave_one_house_out"
+        assert settings.holdout_houses == ("h02", "h03")
+
 
 @pytest.mark.unit
 class TestWithOverrides:
@@ -95,3 +109,9 @@ class TestWithOverrides:
         assert resolved.strategy == "stratified_group"
         # base is frozen and unchanged
         assert base.seed == 42
+
+    def test_house_settings_preserved_across_overrides(self) -> None:
+        base = SplitSettings(house_pattern="custom", holdout_houses=("h01",))
+        resolved = base.with_overrides(seed=1)
+        assert resolved.house_pattern == "custom"
+        assert resolved.holdout_houses == ("h01",)
