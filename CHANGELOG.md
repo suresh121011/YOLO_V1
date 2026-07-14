@@ -10,6 +10,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- WP3.0 platform remediation (Phase-2 closure review follow-up)
+  - `tests/unit/test_downloaders.py` + `tests/unit/test_downloaders_parsers.py` —
+    40 offline unit tests for the acquisition framework (fetch_url retry/resume/
+    atomicity, download() template + manifests, COCO/Open Images/WIDER FACE
+    parsers, negatives selection, Roboflow skip contract, CLI exit codes);
+    downloader package coverage 0% → ~93%, overall 43% → 65%
+  - `.env.example` documenting `ROBOFLOW_API_KEY` (graceful-skip semantics)
+
+### Fixed
+- Roboflow cross-dataset image budget decremented by *distinct class count*
+  instead of images copied (`_consolidate_export` now returns the copied
+  count; regression-tested)
+- QA reports no longer embed absolute machine paths: `data_dir` and issue
+  file paths are written cwd-relative with posix separators
+  (`portable_path` in `scripts/qa/check_annotations.py`)
+- Machine-specific Windows cache path removed from the tracked
+  `.dvc/config`; per-machine relocation now documented via
+  `dvc cache dir --local` (docs/04 §6)
+- `generate_splits.py` docstring falsely claimed to be the DVC stage entry
+  point (the stage runs `split_dataset.py`); clarified as a convenience
+  wrapper
+- 4 mypy errors in `src/logging/structured_logger.py` /
+  `src/config/config_loader.py`; `psutil` added to stub overrides
+
+### Changed
+- DVC: default S3 remote `storage` configured in `.dvc/config` (placeholder
+  bucket URL; activation runbook in docs/04 §6); `dvc` dependency now
+  installs the S3 extra (`dvc[s3]`)
+- CI: test matrix expanded to ubuntu+windows × py3.10/3.12; coverage gate
+  enabled (`fail_under = 40`, ratchet-only); mypy widened to
+  `src/dataset src/utils src/config src/logging` (`src/pipeline` joins in
+  Phase-6); dev tooling installs use requirements.txt-matching bounds
+- `run_workflow.sh` now wraps `dvc repro` — the DVC DAG is the single
+  orchestration path (previously drove a divergent script chain plus
+  webcam inference)
+
 - Stage 2: Dataset Collection & Dataset Engineering (Phase-2)
   - `src/dataset/` — dataset engineering library: provenance manifests
     (source / capture-session / merged), acquisition config loader with

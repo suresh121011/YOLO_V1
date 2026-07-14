@@ -75,6 +75,7 @@ outputs/benchmarks/
 # ─── Secrets & Environment ────────────────────────────────────────────────────
 .env
 .env.*
+!.env.example
 *.secret
 *_secret*
 secrets/

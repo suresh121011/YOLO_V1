@@ -28,6 +28,7 @@ import json
 import logging
 import time
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -75,9 +76,9 @@ class StructuredLogger:
     def log_frame(
         self,
         frame_id: int,
-        detections: list,
-        alerts: list,
-        metrics,
+        detections: list[Any],
+        alerts: list[Any],
+        metrics: Any,
         mode: str = "full",
     ) -> None:
         """Log a processed frame summary.
@@ -156,7 +157,7 @@ class StructuredLogger:
                 },
             )
 
-    def log_alert(self, alert) -> None:
+    def log_alert(self, alert: Any) -> None:
         """Log a fired alert with full explanation for debugging."""
         self._alert_count += 1
         self._write(
