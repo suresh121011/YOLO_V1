@@ -432,6 +432,8 @@ def main() -> int:
                 test_ratio=args.test,
                 seed=args.seed,
                 labels_dir=labels_dir,
+                house_pattern=settings.house_pattern,
+                holdout_houses=settings.holdout_houses,
             )
         )
     except (ValueError, NotImplementedError) as e:

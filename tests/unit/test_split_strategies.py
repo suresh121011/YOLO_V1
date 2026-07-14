@@ -8,6 +8,7 @@ import pytest
 
 from src.dataset.splitting import SplitContext, available_strategies, get_strategy
 from src.dataset.splitting.group_aware import GroupAwareStrategy
+from src.dataset.splitting.leave_one_house_out import LeaveOneHouseOutStrategy
 from src.dataset.splitting.stratified_group import StratifiedGroupStrategy
 
 
@@ -25,12 +26,11 @@ class TestRegistry:
     def test_implemented_strategies_resolve(self) -> None:
         assert isinstance(get_strategy("group_aware"), GroupAwareStrategy)
         assert isinstance(get_strategy("stratified_group"), StratifiedGroupStrategy)
+        assert isinstance(get_strategy("leave_one_house_out"), LeaveOneHouseOutStrategy)
 
     def test_reserved_strategies_raise_not_implemented(self) -> None:
         with pytest.raises(NotImplementedError, match="future phase"):
             get_strategy("kfold")
-        with pytest.raises(NotImplementedError, match="house_id"):
-            get_strategy("leave_one_house_out")
 
     def test_unknown_strategy_raises_value_error(self) -> None:
         with pytest.raises(ValueError, match="Unknown split strategy"):
@@ -124,3 +124,85 @@ class TestStratifiedGroupStrategy:
         groups, labels_dir = self._make_labeled_dataset(tmp_path)
         ctx = SplitContext(groups=groups, labels_dir=labels_dir, seed=42)
         assert StratifiedGroupStrategy().assign(ctx) == StratifiedGroupStrategy().assign(ctx)
+
+
+def _house_groups() -> dict[str, list[Path]]:
+    """3 houses × 2 sessions × 3 images, plus 5 solo (public-source) groups."""
+    groups: dict[str, list[Path]] = {}
+    for house in ("h01", "h02", "h03"):
+        for session in ("s001", "s002"):
+            key = f"custom_captures_{house}_kitchen_{session}"
+            groups[key] = [Path(f"{key}_{i:04d}.jpg") for i in range(3)]
+    for i in range(5):
+        key = f"coco_img{i:03d}"
+        groups[key] = [Path(f"{key}.jpg")]
+    return groups
+
+
+@pytest.mark.unit
+class TestLeaveOneHouseOutStrategy:
+    """House-level split integrity."""
+
+    def test_all_groups_assigned_exactly_once(self) -> None:
+        groups = _house_groups()
+        assignments = LeaveOneHouseOutStrategy().assign(SplitContext(groups=groups))
+        assigned = [k for keys in assignments.values() for k in keys]
+        assert sorted(assigned) == sorted(groups)
+
+    def test_house_sessions_never_split_across_splits(self) -> None:
+        groups = _house_groups()
+        assignments = LeaveOneHouseOutStrategy().assign(SplitContext(groups=groups, seed=3))
+        key_to_split = {k: split for split, keys in assignments.items() for k in keys}
+        for house in ("h01", "h02", "h03"):
+            house_keys = [k for k in groups if f"_{house}_" in k]
+            splits = {key_to_split[k] for k in house_keys}
+            assert len(splits) == 1, f"{house} sessions landed in multiple splits: {splits}"
+
+    def test_holdout_house_goes_entirely_to_test(self) -> None:
+        groups = _house_groups()
+        assignments = LeaveOneHouseOutStrategy().assign(
+            SplitContext(groups=groups, holdout_houses=("h02",))
+        )
+        h02_keys = [k for k in groups if "_h02_" in k]
+        assert set(h02_keys).issubset(set(assignments["test"]))
+        assert not set(h02_keys) & set(assignments["train"])
+        assert not set(h02_keys) & set(assignments["val"])
+
+    def test_missing_holdout_house_warns_and_continues(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        groups = _house_groups()
+        with caplog.at_level("WARNING"):
+            assignments = LeaveOneHouseOutStrategy().assign(
+                SplitContext(groups=groups, holdout_houses=("h99",))
+            )
+        assert any("h99" in r.message for r in caplog.records)
+        assigned = [k for keys in assignments.values() for k in keys]
+        assert sorted(assigned) == sorted(groups)
+
+    def test_solo_public_groups_behave_like_group_aware(self) -> None:
+        # A dataset with ONLY public-source (no house_pattern match) groups
+        # must split exactly like group_aware (each key is its own super-group).
+        groups = {f"coco_img{i:03d}": [Path(f"coco_img{i:03d}.jpg")] for i in range(20)}
+        loho = LeaveOneHouseOutStrategy().assign(SplitContext(groups=groups, seed=11))
+        aware = GroupAwareStrategy().assign(SplitContext(groups=groups, seed=11))
+        assert loho == aware
+
+    def test_deterministic_for_seed(self) -> None:
+        groups = _house_groups()
+        first = LeaveOneHouseOutStrategy().assign(SplitContext(groups=groups, seed=5))
+        second = LeaveOneHouseOutStrategy().assign(SplitContext(groups=groups, seed=5))
+        assert first == second
+
+    def test_bad_ratios_raise(self) -> None:
+        with pytest.raises(ValueError):
+            LeaveOneHouseOutStrategy().assign(
+                SplitContext(groups=_house_groups(), train_ratio=0.9, val_ratio=0.2)
+            )
+
+    def test_custom_class_prefix_does_not_collide_with_house_id(self) -> None:
+        # "custom_captures" itself must never be mistaken for a house token.
+        groups = {"custom_captures_h01_hall_s001": [Path("x_0001.jpg")]}
+        assignments = LeaveOneHouseOutStrategy().assign(SplitContext(groups=groups))
+        assigned = [k for keys in assignments.values() for k in keys]
+        assert assigned == ["custom_captures_h01_hall_s001"]

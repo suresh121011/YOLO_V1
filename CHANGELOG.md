@@ -10,6 +10,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Phase-3: Custom Dataset Collection & Annotation tooling
+  - `src/dataset/capture/` — collection/annotation library: typed capture
+    config (`configs/capture_config.yaml`), PII-free consent verification
+    against a local-only registry, EXIF/GPS metadata stripping, inbox→session
+    ingest (corruption/size/duplicate gates, session manifests, aggregate
+    manifest rebuild), CVAT-compatible YOLO-export import with class-order
+    verification (the CVAT footgun: a subset/reordered label list silently
+    shifts every class ID) and session-scoped label validation, staging +
+    finalize, inter-annotator agreement (greedy IoU matching, per-class
+    gates incl. a `wet_floor` R24 override), and governance-target progress
+    tracking (per-class counts, houses/rooms/lighting coverage, withdrawn-
+    consent flags)
+  - `scripts/dataset/08_ingest_capture_session.py`,
+    `09_import_annotations.py`, `10_capture_progress.py` — CLIs (ingest,
+    stage/compare/finalize, progress), consistent exit 0/1/2 contract
+  - `src/dataset/splitting/leave_one_house_out.py` — house-level split
+    strategy (all sessions of one house share a split; `holdout_houses`
+    forces named houses into test — the eval-set leakage-prevention
+    mechanism); public-source images without a house match degrade to
+    `group_aware` behavior
+  - `scripts/qa/run_full_qa.py`: eval-set overlap guard (exact SHA-256 +
+    flip-robust perceptual near-duplicate against train-facing data,
+    CRITICAL) and house-exclusivity check (train/eval house overlap,
+    WARNING); both opportunistic (`{"available": false}` pre-Phase-3)
+  - `dvc.yaml`: `ingest_custom_captures` / `ingest_eval_set` frozen stages
+    — human-in-the-loop data enters `dvc.lock` via `dvc commit -f`, never
+    via `dvc repro` (which would delete-then-regenerate real photos as
+    empty on any machine without the capture inbox); `merge_datasets`
+    gains a dependency on `data/raw/custom_captures`
+  - `docs/04_dataset_engineering/capture_annotation_runbook.md` — full
+    operational SOP (consent → capture → ingest → CVAT annotation → IAA →
+    finalize → DVC recording → eval-set locking → wet_floor R24 pilot gate
+    → Roboflow slug checklist → dataset-v1.0.0 release checklist);
+    `docs/03_engineering_appendix/consent_form_template.md`;
+    `data/consent/README.md`
+  - Risk register: R24 (`wet_floor` taxonomy risk) added with a measurable
+    gate (docs/01 `risk_register.md`)
+  - 129 new unit tests + 1 end-to-end integration test simulating the full
+    human workflow on synthetic data (inbox → ingest → dual-annotator CVAT
+    export → IAA → finalize → merge → split → QA → eval-set overlap →
+    lock)
+
 - WP3.0 platform remediation (Phase-2 closure review follow-up)
   - `tests/unit/test_downloaders.py` + `tests/unit/test_downloaders_parsers.py` —
     40 offline unit tests for the acquisition framework (fetch_url retry/resume/

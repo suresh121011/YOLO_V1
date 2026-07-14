@@ -1,0 +1,69 @@
+# ─── Custom Capture & Annotation Configuration ────────────────────────────────
+# Elderly Assistant System — Phase-3 Custom Dataset Collection Settings
+#
+# Read by: src/dataset/capture/config.py
+# (consumed by scripts/dataset/08_ingest_capture_session.py,
+#  scripts/dataset/09_import_annotations.py and
+#  scripts/dataset/10_capture_progress.py; explicit CLI flags override YAML)
+#
+# Governance: docs/01_executive_implementation_plan/dataset_governance.md
+# Operations: docs/04_dataset_engineering/capture_annotation_runbook.md
+# ─────────────────────────────────────────────────────────────────────────────
+
+capture:
+  # Staging inbox for raw phone photos. Gitignored and never DVC-tracked —
+  # use a LOCAL (non-OneDrive-synced) directory via the --inbox CLI flag when
+  # ingesting large sessions to avoid cloud-sync thrash.
+  inbox_dir: data/capture_inbox
+
+  # MUST match sources.custom_captures.output_dir in dataset_sources.yaml
+  # (cross-checked at load time — drift logs a warning).
+  captures_root: data/raw/custom_captures
+
+  # Locked real-home evaluation set (never merged into train/val/test).
+  eval_root: data/eval/indian_home_v0
+
+  # Session ID grammar: h{NN}_{room}_s{NNN}, e.g. h01_kitchen_s001.
+  # house_id ("h01") and room ("kitchen") are parsed from it. The trailing
+  # sequence number added per image keeps split group-integrity working
+  # (see src/utils/dataset_utils.py group patterns).
+  session_id_pattern: "^h\\d{2}_[a-z_]+_s\\d{3}$"
+
+  rooms:
+    [kitchen, bedroom, bathroom, hall, balcony, corridor, pooja_room, staircase]
+
+  lighting:
+    [daylight, tubelight, dim, night_flash, mixed]
+
+  image:
+    min_dim: 480                 # reject images smaller than this (px, either side)
+    allowed_extensions: [.jpg, .jpeg, .png]
+    strip_metadata: true         # EXIF/GPS removal at ingest — privacy requirement
+    max_file_mb: 25              # reject implausibly large files
+
+consent:
+  # Local-only registry (gitignored; NEVER a DVC out — must not reach S3).
+  # Maps consent_id → {house_id, granted_on, scope, withdrawn}. Even the
+  # registry holds no PII; signed forms live offline (see data/consent/README.md).
+  registry_path: data/consent/consent_registry.yaml
+  reference_pattern: "^CONSENT-h\\d{2}-\\d{4}-\\d{3}$"   # CONSENT-h01-2026-001
+  required: true
+
+annotation:
+  # Where CVAT (YOLO 1.1) exports are staged per annotator before finalize.
+  staging_dir: data/capture_inbox/annotations
+  # Fraction of a session's images that must have label files at import.
+  min_labeled_fraction: 0.95
+  iaa:
+    iou_threshold: 0.50          # box match threshold for dual-annotator compare
+    min_agreement: 0.75          # per-class agreement gate (exit 2 below)
+    wet_floor_min_agreement: 0.60  # R24 pilot gate — see docs/04 §8
+
+targets:
+  # Phase-3 acceptance targets (dataset_governance.md).
+  total_images: 2000
+  min_instances_per_class: 200
+  custom_classes:
+    [gas_cylinder, medicine_strip, wet_floor, walking_stick,
+     support_handle, stove, passport, cupboard]
+  min_houses: 3

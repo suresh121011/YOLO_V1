@@ -89,6 +89,7 @@ All documentation is in [`docs/`](./docs/README.md):
 - **[02 Technical Architecture Specification](./docs/02_technical_architecture_specification/README.md)** — System design, data contracts, threading model
 - **[03 Engineering Appendix](./docs/03_engineering_appendix/README.md)** — YAML examples, Python examples, QA pipeline, DVC pipeline
 - **[04 Dataset Engineering & Governance](./docs/04_dataset_engineering/README.md)** — Phase-2 pipeline, license register, label-completeness policy, split governance
+- **[Capture & Annotation Runbook](./docs/04_dataset_engineering/capture_annotation_runbook.md)** — Phase-3 custom Indian-home data collection SOP
 
 ### Dataset pipeline (Phase-2)
 
@@ -100,6 +101,22 @@ dvc metrics show     # QA verdict (data/qa_reports/annotation_qa_report.json)
 The full dataset build is one command: set `mode: full` in
 `configs/dataset_sources.yaml`, then `dvc repro`. Roboflow sources need
 `ROBOFLOW_API_KEY` and dataset slugs configured (skipped gracefully otherwise).
+
+### Custom capture & annotation (Phase-3)
+
+8 of the 23 classes (`gas_cylinder`, `medicine_strip`, `wet_floor`,
+`walking_stick`, `support_handle`, Indian `stove`/`cupboard`, `passport`)
+have no adequate public-dataset coverage and require custom Indian-home
+capture. The collection/annotation/QA tooling is built:
+
+```bash
+python scripts/dataset/08_ingest_capture_session.py   # inbox → validated session
+python scripts/dataset/09_import_annotations.py       # CVAT export → stage/compare/finalize
+python scripts/dataset/10_capture_progress.py         # progress vs governance targets
+```
+
+Full SOP (consent, capture guidelines, dual-annotator CVAT workflow, DVC
+recording, eval-set locking): [capture_annotation_runbook.md](./docs/04_dataset_engineering/capture_annotation_runbook.md).
 
 ---
 

@@ -39,6 +39,9 @@ class SplitSettings:
     group_by_capture: bool = True
     source_dir: Path = Path("data/processed")
     output_dir: Path = Path("data/processed")
+    # leave_one_house_out settings (ignored by other strategies)
+    house_pattern: str = r"(?:^|_)(h\d{2,})(?=_)"
+    holdout_houses: tuple[str, ...] = ()
 
     def with_overrides(
         self,
@@ -60,6 +63,8 @@ class SplitSettings:
             group_by_capture=self.group_by_capture,
             source_dir=self.source_dir if source_dir is None else source_dir,
             output_dir=self.output_dir if output_dir is None else output_dir,
+            house_pattern=self.house_pattern,
+            holdout_houses=self.holdout_houses,
         )
 
 
@@ -103,6 +108,8 @@ def load_split_settings(path: Path | None = None) -> SplitSettings:
         group_by_capture=bool(section.get("group_by_capture", defaults.group_by_capture)),
         source_dir=Path(section.get("source_dir", defaults.source_dir)),
         output_dir=Path(section.get("output_dir", defaults.output_dir)),
+        house_pattern=str(section.get("house_pattern", defaults.house_pattern)),
+        holdout_houses=tuple(section.get("holdout_houses", []) or []),
     )
 
     total = settings.train_ratio + settings.val_ratio + settings.test_ratio

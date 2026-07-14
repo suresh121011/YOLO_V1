@@ -128,6 +128,12 @@ dvc-status:  ## Show DVC pipeline status
 dvc-metrics:  ## Show training metrics comparison
 	dvc metrics diff
 
+# ─── Phase-3 Custom Capture ───────────────────────────────────────────────────
+
+.PHONY: capture-progress
+capture-progress:  ## Report custom-capture collection progress vs targets
+	python scripts/dataset/10_capture_progress.py
+
 # ─── Utilities ────────────────────────────────────────────────────────────────
 
 .PHONY: clean

@@ -6,13 +6,19 @@ Every dataset artifact in the pipeline carries a manifest describing where
 it came from, under what license, and what it contains. Manifests are the
 lineage backbone of the dataset factory:
 
-    data/raw/<source>/manifest.json          ← SourceManifest (downloaders)
-    data/raw/custom_captures/<session>/manifest.json
+    data/raw/<source>/manifest.json          ← SourceManifest (downloaders;
+                                               for custom_captures this is the
+                                               per-source AGGREGATE rebuilt by
+                                               src/dataset/capture/ingest.py)
+    data/raw/custom_captures/manifests/<session_id>.json
                                              ← CaptureSessionManifest (Phase-3)
     data/merged/merged_manifest.json         ← MergedManifest (merge stage)
 
 Privacy rule: manifests must never embed PII. Capture sessions reference an
 externally stored consent record by ID only (``consent_reference``).
+
+Schema evolution: new fields are added with defaults and ``load()`` ignores
+unknown keys, so additive changes do not bump ``SCHEMA_VERSION``.
 """
 
 from __future__ import annotations
@@ -29,6 +35,9 @@ MANIFEST_FILENAME = "manifest.json"
 MERGED_MANIFEST_FILENAME = "merged_manifest.json"
 
 _T = TypeVar("_T", bound="_JsonManifest")
+
+#: Annotation lifecycle of a capture session (see src/dataset/capture/).
+VALID_ANNOTATION_STATUSES = ("unannotated", "staged", "finalized")
 
 
 def utc_now_iso() -> str:
@@ -125,6 +134,8 @@ class CaptureSessionManifest(SourceManifest):
     from one session must land in the same dataset split.
 
     Attributes:
+        session_id:        Session identifier, ``h{NN}_{room}_s{NNN}``
+                           (grammar in configs/capture_config.yaml).
         house_id:          Pseudonymous house identifier (never an address).
         room:              Room type (kitchen, bedroom, bathroom, hall, …).
         capture_device:    Camera/phone model used.
@@ -132,14 +143,24 @@ class CaptureSessionManifest(SourceManifest):
         captured_at:       ISO-8601 date of the session.
         consent_reference: ID of the externally stored, signed consent
                            record. PII must never be embedded here.
+        annotation_status: One of :data:`VALID_ANNOTATION_STATUSES`.
+        annotators:        Pseudonymous annotator handles that produced
+                           staged/finalized labels for this session.
+        iaa_agreement:     Overall dual-annotator agreement from the last
+                           ``09_import_annotations.py --compare`` run;
+                           -1.0 until measured.
     """
 
+    session_id: str = ""
     house_id: str = ""
     room: str = ""
     capture_device: str = ""
     lighting: str = ""
     captured_at: str = ""
     consent_reference: str = ""
+    annotation_status: str = "unannotated"
+    annotators: list[str] = field(default_factory=list)
+    iaa_agreement: float = -1.0
 
 
 @dataclass

@@ -6,10 +6,17 @@
 
 split:
   # Split strategy (see src/dataset/splitting/registry.py):
-  #   group_aware      — groups stay together (default; prevents leakage)
-  #   stratified_group — group-aware + per-class balance across splits
-  #   kfold, leave_one_house_out — reserved for future phases
+  #   group_aware         — groups stay together (default; prevents leakage)
+  #   stratified_group    — group-aware + per-class balance across splits
+  #   leave_one_house_out — house-level integrity for Phase-3 custom captures
+  #                         (all sessions of one house share a split)
+  #   kfold               — reserved for a future phase
   strategy: group_aware
+
+  # leave_one_house_out only: regex (one capture group) extracting the house
+  # ID from a group key, and houses forced entirely into the test split.
+  # house_pattern: "(?:^|_)(h\\d{2,})(?=_)"
+  # holdout_houses: [h03]
 
   # Fraction of images assigned to each split (must sum to 1.0)
   train_ratio: 0.80

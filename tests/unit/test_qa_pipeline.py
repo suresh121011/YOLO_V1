@@ -257,3 +257,133 @@ class TestBuildQaReports:
 
         json_report, _, _ = build_qa_reports(results, Path("."), 23)
         assert len(json_report["issues"]) == 5
+
+
+# ─── Phase-3 eval-set guards (scripts.qa.run_full_qa) ─────────────────────────
+
+PIL = pytest.importorskip("PIL", reason="Pillow required for eval-overlap tests")
+
+from PIL import Image  # noqa: E402
+
+from scripts.qa.run_full_qa import check_eval_overlap, check_house_exclusivity  # noqa: E402
+from src.dataset.manifest import CaptureSessionManifest  # noqa: E402
+
+
+def _block_image(path: Path, seed: int, size: tuple[int, int] = (64, 64)) -> None:
+    """Deterministic 8x8 block-pattern image (distinct aHash per seed)."""
+    import random
+
+    from PIL import ImageDraw
+
+    rng = random.Random(seed)  # noqa: S311
+    img = Image.new("RGB", size)
+    draw = ImageDraw.Draw(img)
+    bw, bh = size[0] // 8, size[1] // 8
+    for by in range(8):
+        for bx in range(8):
+            val = 255 if rng.random() > 0.5 else 0
+            draw.rectangle(
+                (bx * bw, by * bh, (bx + 1) * bw - 1, (by + 1) * bh - 1), fill=(val, val, val)
+            )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    img.save(path)
+
+
+@pytest.mark.unit
+class TestCheckEvalOverlap:
+    """Eval-set leakage guard (exact + flip-robust perceptual)."""
+
+    def test_absent_eval_dir_is_not_available(self, tmp_path: Path) -> None:
+        report, critical = check_eval_overlap(
+            tmp_path / "eval", tmp_path / "processed", tmp_path / "merged"
+        )
+        assert report == {"available": False}
+        assert critical is False
+
+    def test_no_overlap_passes(self, tmp_path: Path) -> None:
+        _block_image(tmp_path / "merged" / "images" / "train1.jpg", seed=1)
+        _block_image(tmp_path / "processed" / "images" / "train" / "train2.jpg", seed=2)
+        _block_image(tmp_path / "eval" / "images" / "eval1.jpg", seed=99)
+
+        report, critical = check_eval_overlap(
+            tmp_path / "eval", tmp_path / "processed", tmp_path / "merged"
+        )
+        assert critical is False
+        assert report["exact_overlap_count"] == 0
+        assert report["near_overlap_count"] == 0
+        assert report["eval_image_count"] == 1
+
+    def test_exact_duplicate_is_critical(self, tmp_path: Path) -> None:
+        _block_image(tmp_path / "merged" / "images" / "train1.jpg", seed=5)
+        eval_path = tmp_path / "eval" / "images" / "eval1.jpg"
+        eval_path.parent.mkdir(parents=True)
+        eval_path.write_bytes((tmp_path / "merged" / "images" / "train1.jpg").read_bytes())
+
+        report, critical = check_eval_overlap(
+            tmp_path / "eval", tmp_path / "processed", tmp_path / "merged"
+        )
+        assert critical is True
+        assert report["exact_overlap_count"] == 1
+
+    def test_flipped_duplicate_is_near_overlap(self, tmp_path: Path) -> None:
+        # Same seed but mirrored → different bytes, but flip-robust hash matches.
+        train_path = tmp_path / "merged" / "images" / "train1.jpg"
+        _block_image(train_path, seed=7)
+        with Image.open(train_path) as img:
+            flipped = img.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+            eval_path = tmp_path / "eval" / "images" / "eval1.jpg"
+            eval_path.parent.mkdir(parents=True)
+            flipped.save(eval_path)
+
+        report, critical = check_eval_overlap(
+            tmp_path / "eval", tmp_path / "processed", tmp_path / "merged"
+        )
+        assert critical is True
+        assert report["near_overlap_count"] == 1
+        assert report["exact_overlap_count"] == 0
+
+    def test_eval_internal_duplicates_are_not_flagged(self, tmp_path: Path) -> None:
+        # Two eval images identical to EACH OTHER but not to any train image
+        # must not be reported as leakage.
+        _block_image(tmp_path / "merged" / "images" / "train1.jpg", seed=1)
+        _block_image(tmp_path / "eval" / "images" / "eval1.jpg", seed=50)
+        eval2 = tmp_path / "eval" / "images" / "eval2.jpg"
+        eval2.write_bytes((tmp_path / "eval" / "images" / "eval1.jpg").read_bytes())
+
+        report, critical = check_eval_overlap(
+            tmp_path / "eval", tmp_path / "processed", tmp_path / "merged"
+        )
+        assert critical is False
+        assert report["exact_overlap_count"] == 0
+
+
+@pytest.mark.unit
+class TestCheckHouseExclusivity:
+    """House-sharing WARNING between training captures and the eval set."""
+
+    @staticmethod
+    def _house_session(root: Path, session_id: str, house_id: str) -> None:
+        manifests_dir = root / "manifests"
+        manifests_dir.mkdir(parents=True, exist_ok=True)
+        CaptureSessionManifest(
+            source="custom_captures", session_id=session_id, house_id=house_id, room="kitchen"
+        ).save(manifests_dir / f"{session_id}.json")
+
+    def test_no_manifests_is_not_available(self, tmp_path: Path) -> None:
+        report = check_house_exclusivity(tmp_path / "captures", tmp_path / "eval")
+        assert report == {"available": False}
+
+    def test_disjoint_houses_no_warning(self, tmp_path: Path) -> None:
+        self._house_session(tmp_path / "captures", "h01_kitchen_s001", "h01")
+        self._house_session(tmp_path / "eval", "h02_kitchen_s001", "h02")
+        report = check_house_exclusivity(tmp_path / "captures", tmp_path / "eval")
+        assert report["available"] is True
+        assert report["shared_houses"] == []
+
+    def test_shared_house_is_flagged(self, tmp_path: Path) -> None:
+        self._house_session(tmp_path / "captures", "h01_kitchen_s001", "h01")
+        self._house_session(tmp_path / "eval", "h01_hall_s001", "h01")
+        report = check_house_exclusivity(tmp_path / "captures", tmp_path / "eval")
+        assert report["shared_houses"] == ["h01"]
+        assert report["train_houses"] == ["h01"]
+        assert report["eval_houses"] == ["h01"]
