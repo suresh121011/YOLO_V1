@@ -11,11 +11,20 @@
 # Download caches (archives/CSV indexes) live in data/downloads_cache/,
 # OUTSIDE the stage outs, so repro never re-downloads them.
 #
+# Custom captures (Phase-3): ingest_custom_captures / ingest_eval_set are
+# FROZEN — dvc repro skips them so it never overwrites human-collected
+# photos with an empty re-run on a fresh machine. They exist only so the
+# data is tracked in dvc.lock like every other stage output; humans run
+# 08_ingest_capture_session.py and `dvc commit -f <stage>` directly. See
+# docs/04_dataset_engineering/capture_annotation_runbook.md.
+#
 # Usage:
-#   dvc repro                 — reproduce all stages
+#   dvc repro                 — reproduce all non-frozen stages
 #   dvc repro qa_check        — reproduce up to QA
 #   dvc dag                   — view the pipeline DAG
 #   dvc metrics show          — show the QA metric
+#   dvc commit -f ingest_custom_captures   — record a freshly ingested session
+#   dvc commit -f ingest_eval_set          — record the locked eval set
 
 stages:
   # ─── Acquisition (Phase-2) ──────────────────────────────────────────────────
@@ -93,6 +102,25 @@ stages:
     outs:
       - data/raw/negatives
 
+  # ─── Custom captures (Phase-3, human-in-the-loop) ───────────────────────────
+  # Frozen: dvc repro NEVER runs these (repro deletes stage outs before
+  # re-running, which would wipe real ingested photos on any other machine).
+  # Human loop: run 08_ingest_capture_session.py, then annotate via
+  # 09_import_annotations.py, then `dvc commit -f <stage>` + `git commit
+  # dvc.lock` + `dvc push`. See docs/04 capture_annotation_runbook.md.
+
+  ingest_custom_captures:
+    frozen: true
+    cmd: python scripts/dataset/08_ingest_capture_session.py --verify-all
+    outs:
+      - data/raw/custom_captures
+
+  ingest_eval_set:
+    frozen: true
+    cmd: python scripts/dataset/08_ingest_capture_session.py --verify-all --dataset eval
+    outs:
+      - data/eval/indian_home_v0
+
   # ─── Processing ─────────────────────────────────────────────────────────────
 
   remap_classes:
@@ -126,6 +154,7 @@ stages:
       - data/raw/roboflow_imports
       - data/raw/wider_face
       - data/raw/negatives
+      - data/raw/custom_captures
       - data/interim
     params:
       - configs/dataset_sources.yaml:
@@ -133,6 +162,7 @@ stages:
           - allow_noncommercial
           - dedup
           - indoor_filter
+          - sources.custom_captures
     outs:
       - data/merged
 

@@ -118,7 +118,11 @@ sources:
     trusted_classes: []       # special case: verified absence of all classes
 
   custom_captures:
-    enabled: false            # Phase-3 human task — ingest path ships ready
+    enabled: false            # flip to true after the first session is
+                              # finalized (scripts/dataset/09_import_annotations.py
+                              # --finalize prints a reminder). Ingested via
+                              # scripts/dataset/08_ingest_capture_session.py;
+                              # see docs/04 capture_annotation_runbook.md.
     output_dir: data/raw/custom_captures
     license: "proprietary (consent-gated; see CaptureSessionManifest)"
     trusted_classes: []       # set per capture session
