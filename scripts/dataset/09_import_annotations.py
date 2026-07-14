@@ -14,13 +14,17 @@ Usage:
         --session h01_kitchen_s001 --stage --export exports/asha.zip \\
         --annotator asha
 
+    # Compare the two staged annotators (IAA, writes data/qa_reports/iaa_*)
+    python scripts/dataset/09_import_annotations.py \\
+        --session h01_kitchen_s001 --compare
+
     # Promote one annotator's staged labels to the session's final labels
     python scripts/dataset/09_import_annotations.py \\
         --session h01_kitchen_s001 --finalize --from asha
 
 Exit codes: 0 = success, 1 = critical (class order, orphan labels,
 under-coverage, format errors, missing staged labels), 2 = warnings
-(declared class with zero boxes).
+(declared class with zero boxes; --compare below the agreement gate).
 
 DVC integration:
     Runs between ingest (08) and ``dvc commit -f ingest_custom_captures``;
@@ -36,6 +40,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from src.dataset.capture.agreement import (
+    agreement_verdict,
+    compare_annotators,
+    load_staged_labels,
+    report_as_dict,
+)
 from src.dataset.capture.annotations import (
     finalize_annotations,
     read_yolo_export,
@@ -48,6 +58,7 @@ from src.dataset.capture.annotations import (
 from src.dataset.capture.config import load_capture_config
 from src.dataset.manifest import CaptureSessionManifest
 from src.utils.config_helpers import get_class_names_from_data_yaml, load_data_config
+from src.utils.report_utils import save_json_report, save_markdown_report
 
 logging.basicConfig(
     level=logging.INFO,
@@ -88,6 +99,11 @@ def parse_args() -> argparse.Namespace:
         "--stage", action="store_true", help="Validate an export and stage it per annotator."
     )
     mode.add_argument(
+        "--compare",
+        action="store_true",
+        help="Compute dual-annotator agreement (IAA) over the staged labels.",
+    )
+    mode.add_argument(
         "--finalize",
         action="store_true",
         help="Promote one annotator's staged labels to final session labels.",
@@ -98,9 +114,19 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--annotator", help="Annotator handle (pseudonymous) for --stage.")
     parser.add_argument(
+        "--annotators",
+        help="Comma-separated pair for --compare (default: the two staged annotators).",
+    )
+    parser.add_argument(
         "--from",
         dest="from_annotator",
         help="Annotator whose staged labels to finalize (--finalize).",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path("data/qa_reports"),
+        help="Report directory for --compare.",
     )
     return parser.parse_args()
 
@@ -166,6 +192,110 @@ def _stage(args: argparse.Namespace) -> int:
     return 2 if validation.warnings else 0
 
 
+def _compare(args: argparse.Namespace) -> int:
+    """--compare: dual-annotator agreement over staged labels."""
+    config = load_capture_config(args.config)
+    root = config.eval_root if args.dataset == "eval" else config.captures_root
+    staging = config.annotation.staging_dir
+
+    if args.annotators:
+        pair = [a.strip() for a in args.annotators.split(",") if a.strip()]
+    else:
+        pair = staged_annotators(staging, args.session)
+    if len(pair) != 2:
+        logger.error(
+            f"--compare needs exactly two staged annotators for '{args.session}', "
+            f"found {pair or 'none'} — stage both exports first or pass --annotators a,b"
+        )
+        return 1
+
+    try:
+        class_names = get_class_names_from_data_yaml(load_data_config(args.data_config))
+        labels_a = load_staged_labels(staging, args.session, pair[0])
+        labels_b = load_staged_labels(staging, args.session, pair[1])
+    except (FileNotFoundError, ValueError) as e:
+        logger.error(str(e))
+        return 1
+
+    report = compare_annotators(
+        labels_a,
+        labels_b,
+        config.annotation.iaa.iou_threshold,
+        class_names,
+        annotator_a=pair[0],
+        annotator_b=pair[1],
+    )
+    verdict, failures = agreement_verdict(report, config.annotation.iaa)
+    payload = report_as_dict(report, verdict, failures)
+
+    save_json_report(payload, args.output / f"iaa_{args.session}.json")
+    save_markdown_report(
+        title=f"Inter-Annotator Agreement — {args.session}",
+        sections=[
+            {
+                "heading": "Per-class agreement",
+                "table": {
+                    "headers": [
+                        "Class",
+                        "Matched",
+                        f"Only {pair[0]}",
+                        f"Only {pair[1]}",
+                        "Agreement",
+                        "Mean IoU",
+                    ],
+                    "rows": [
+                        [
+                            name,
+                            c["matched"],
+                            c["only_a"],
+                            c["only_b"],
+                            f"{c['agreement']:.2f}",
+                            f"{c['mean_iou']:.2f}",
+                        ]
+                        for name, c in payload["per_class"].items()  # type: ignore[union-attr]
+                    ],
+                },
+            },
+            {
+                "heading": "Verdict",
+                "content": (
+                    f"**{verdict.upper()}** — overall agreement "
+                    f"{report.overall_agreement:.2f} over {report.images_compared} images."
+                    + ("\n\n" + "\n".join(f"- {f}" for f in failures) if failures else "")
+                ),
+            },
+            {
+                "heading": "Worst images (adjudicate these in CVAT first)",
+                "content": "\n".join(
+                    f"- {stem}: {value:.2f}" for stem, value in report.worst_images()
+                )
+                or "(none)",
+            },
+        ],
+        path=args.output / f"iaa_{args.session}.md",
+        metadata={
+            "annotators": ", ".join(pair),
+            "iou_threshold": config.annotation.iaa.iou_threshold,
+        },
+    )
+
+    try:
+        update_annotation_status(
+            root, args.session, "staged", iaa_agreement=round(report.overall_agreement, 4)
+        )
+    except FileNotFoundError as e:
+        logger.error(str(e))
+        return 1
+
+    logger.info(
+        f"IAA {args.session} ({pair[0]} vs {pair[1]}): overall "
+        f"{report.overall_agreement:.2f} — {verdict.upper()}"
+    )
+    for failure in failures:
+        logger.warning(failure)
+    return 0 if verdict == "pass" else 2
+
+
 def _finalize(args: argparse.Namespace) -> int:
     """--finalize: promote staged labels to the session's final labels."""
     if not args.from_annotator:
@@ -206,6 +336,8 @@ def main() -> int:
     args = parse_args()
     if args.stage:
         return _stage(args)
+    if args.compare:
+        return _compare(args)
     return _finalize(args)
 
 

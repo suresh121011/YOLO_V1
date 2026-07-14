@@ -20,6 +20,15 @@ Operational guide: docs/04_dataset_engineering/capture_annotation_runbook.md
 
 from __future__ import annotations
 
+from src.dataset.capture.agreement import (
+    AgreementReport,
+    ClassAgreement,
+    agreement_verdict,
+    compare_annotators,
+    compute_iou,
+    load_staged_labels,
+    report_as_dict,
+)
 from src.dataset.capture.annotations import (
     FinalizeResult,
     LabelValidation,
@@ -62,8 +71,10 @@ from src.dataset.capture.ingest import (
 )
 
 __all__ = [
+    "AgreementReport",
     "AnnotationSettings",
     "CaptureConfig",
+    "ClassAgreement",
     "CollectionTargets",
     "ConsentRecord",
     "ConsentSettings",
@@ -74,6 +85,9 @@ __all__ = [
     "LabelValidation",
     "SessionMeta",
     "YoloExport",
+    "agreement_verdict",
+    "compare_annotators",
+    "compute_iou",
     "finalize_annotations",
     "find_withdrawn_consents",
     "ingest_session",
@@ -83,10 +97,12 @@ __all__ = [
     "load_capture_config",
     "load_consent_registry",
     "load_session_manifests",
+    "load_staged_labels",
     "lock_eval_set",
     "parse_session_id",
     "read_yolo_export",
     "rebuild_aggregate_manifest",
+    "report_as_dict",
     "stage_annotations",
     "staged_annotators",
     "strip_metadata",
