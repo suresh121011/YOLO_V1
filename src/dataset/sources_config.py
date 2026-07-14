@@ -86,7 +86,9 @@ class SourcesConfig:
     dedup: DedupSettings = field(default_factory=DedupSettings)
     indoor_filter: IndoorFilterSettings = field(default_factory=IndoorFilterSettings)
     raw_root: Path = Path("data/raw")
+    interim_root: Path = Path("data/interim")
     merged_root: Path = Path("data/merged")
+    downloads_cache: Path = Path("data/downloads_cache")
     sources: dict[str, SourceConfig] = field(default_factory=dict)
 
     @property
@@ -171,7 +173,9 @@ def load_sources_config(path: Path | None = None) -> SourcesConfig:
             min_image_dim=int(filter_raw.get("min_image_dim", 320)),
         ),
         raw_root=Path(paths_raw.get("raw_root", "data/raw")),
+        interim_root=Path(paths_raw.get("interim_root", "data/interim")),
         merged_root=Path(paths_raw.get("merged_root", "data/merged")),
+        downloads_cache=Path(paths_raw.get("downloads_cache", "data/downloads_cache")),
         sources=sources,
     )
 

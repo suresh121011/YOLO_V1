@@ -10,6 +10,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Stage 2: Dataset Collection & Dataset Engineering (Phase-2)
+  - `src/dataset/` — dataset engineering library: provenance manifests
+    (source / capture-session / merged), acquisition config loader with
+    smoke/full mode + license gate, class remapping (copy & in-place modes),
+    indoor/quality filters, flip-robust perceptual dedup, multi-source merge
+    with lineage, negative selection, split-strategy registry
+    (`group_aware`, `stratified_group`; `kfold`/`leave_one_house_out` reserved)
+  - `src/dataset/downloaders/` — bespoke annotations-first downloaders for
+    COCO 2017, Open Images V7, WIDER FACE (license-gated), negatives, plus a
+    Roboflow Universe SDK integration (graceful skip without API key)
+  - `scripts/dataset/01–07` acquisition/processing CLIs matching `dvc.yaml`
+  - `scripts/qa/run_full_qa.py` — QA orchestrator: structural checks + stats
+    + license gate + label-completeness + blur/low-light checks (risk R01),
+    all merged into the DVC metric `data/qa_reports/annotation_qa_report.json`
+  - `configs/dataset_sources.yaml` — acquisition config, doubles as DVC params;
+    `configs/dataset_split_config.yaml` now actually read by the split CLIs
+  - DVC initialized (cache outside OneDrive), truthful `dvc.yaml` DAG
+    (download → remap → merge → split → QA; training stage frozen for Phase-5)
+  - `docs/04_dataset_engineering/` — license register, label-completeness
+    policy, DPDP/PII notes, split governance, Phase-2 descope statement
+  - `tests/integration/test_dataset_pipeline.py` — first offline end-to-end
+    pipeline test; ~70 new unit tests (296 total assertions across 241+ tests)
+
+### Changed
+- Smoke dataset validated end-to-end: 188 images / 4 sources through
+  `dvc repro` with QA zero critical issues (tag `dataset-v0.1.0-smoke`)
+- CI: unit/integration tests now blocking; mypy gates `src/dataset`
+- Repo-wide lint cleanup (60+ pre-existing ruff violations fixed);
+  Windows cp1252 console crashes fixed; `.gitkeep` no longer counted as
+  split leakage; `PipelineMetrics`-unrelated runtime defects logged for
+  Phase-6 (see docs/04 §7 and the Phase-2 plan)
+
 - Stage 1: Repository foundation and project skeleton
   - Production-ready folder structure
   - `pyproject.toml` with Black, Ruff, MyPy, Pytest configuration

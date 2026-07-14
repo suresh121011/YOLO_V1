@@ -88,6 +88,18 @@ All documentation is in [`docs/`](./docs/README.md):
 - **[01 Executive Implementation Plan](./docs/01_executive_implementation_plan/README.md)** — Product vision, phases, roadmap
 - **[02 Technical Architecture Specification](./docs/02_technical_architecture_specification/README.md)** — System design, data contracts, threading model
 - **[03 Engineering Appendix](./docs/03_engineering_appendix/README.md)** — YAML examples, Python examples, QA pipeline, DVC pipeline
+- **[04 Dataset Engineering & Governance](./docs/04_dataset_engineering/README.md)** — Phase-2 pipeline, license register, label-completeness policy, split governance
+
+### Dataset pipeline (Phase-2)
+
+```bash
+dvc repro            # smoke-scale build: download → remap → merge → split → QA
+dvc metrics show     # QA verdict (data/qa_reports/annotation_qa_report.json)
+```
+
+The full dataset build is one command: set `mode: full` in
+`configs/dataset_sources.yaml`, then `dvc repro`. Roboflow sources need
+`ROBOFLOW_API_KEY` and dataset slugs configured (skipped gracefully otherwise).
 
 ---
 

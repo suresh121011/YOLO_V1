@@ -1,15 +1,15 @@
 {
-  "timestamp": "2026-07-13T16:43:25Z",
+  "timestamp": "2026-07-13T17:03:30Z",
   "data_dir": "C:\\Users\\haris\\OneDrive\\Desktop\\YOLO_V1\\data\\processed",
   "num_classes": 23,
   "summary": {
-    "total_images": 53,
-    "total_labels": 53,
-    "total_boxes": 272,
+    "total_images": 188,
+    "total_labels": 188,
+    "total_boxes": 1605,
     "critical_issues": 0,
-    "warning_issues": 0,
+    "warning_issues": 18,
     "info_issues": 0,
-    "total_issues": 0
+    "total_issues": 18
   },
   "checks": {
     "invalid_yolo_format": {
@@ -45,8 +45,8 @@
       "count": 0
     },
     "empty_label_files": {
-      "status": "PASS",
-      "count": 0
+      "status": "WARNING",
+      "count": 18
     },
     "inconsistent_pairs": {
       "status": "PASS",
@@ -69,5 +69,273 @@
       "count": 0
     }
   },
-  "issues": []
+  "issues": [
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data\\processed\\labels\\train\\negatives_000000014888.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000014888.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data\\processed\\labels\\train\\negatives_000000015272.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000015272.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data\\processed\\labels\\train\\negatives_000000087875.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000087875.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data\\processed\\labels\\train\\negatives_000000106266.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000106266.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data\\processed\\labels\\train\\negatives_000000155291.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000155291.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data\\processed\\labels\\train\\negatives_000000184321.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000184321.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data\\processed\\labels\\train\\negatives_000000311909.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000311909.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data\\processed\\labels\\train\\negatives_000000348488.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000348488.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data\\processed\\labels\\train\\negatives_000000354753.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000354753.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data\\processed\\labels\\train\\negatives_000000369751.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000369751.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data\\processed\\labels\\train\\negatives_000000372317.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000372317.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data\\processed\\labels\\train\\negatives_000000420472.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000420472.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data\\processed\\labels\\train\\negatives_000000446117.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000446117.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data\\processed\\labels\\train\\negatives_000000462756.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000462756.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data\\processed\\labels\\train\\negatives_000000509656.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000509656.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data\\processed\\labels\\train\\negatives_000000511321.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000511321.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data\\processed\\labels\\train\\negatives_000000514979.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000514979.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data\\processed\\labels\\train\\negatives_000000545129.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000545129.txt"
+    }
+  ],
+  "license_report": {
+    "allow_noncommercial": true,
+    "sources": [
+      {
+        "source": "coco",
+        "license": "CC BY 4.0 (annotations); images retain original Flickr licenses",
+        "noncommercial": false,
+        "image_count": 60,
+        "gate_violation": false
+      },
+      {
+        "source": "negatives",
+        "license": "inherits COCO licensing (sampled from COCO)",
+        "noncommercial": false,
+        "image_count": 20,
+        "gate_violation": false
+      },
+      {
+        "source": "openimages",
+        "license": "Annotations CC BY 4.0; images CC BY 2.0 (per Open Images terms)",
+        "noncommercial": false,
+        "image_count": 60,
+        "gate_violation": false
+      },
+      {
+        "source": "wider_face",
+        "license": "research-only / non-commercial (WIDER FACE terms)",
+        "noncommercial": true,
+        "image_count": 60,
+        "gate_violation": false
+      }
+    ],
+    "violation": false
+  },
+  "label_completeness": {
+    "available": true,
+    "label_completeness": {
+      "coco": [
+        "person",
+        "water_bottle",
+        "knife",
+        "laptop",
+        "monitor",
+        "chair",
+        "bed",
+        "toilet",
+        "sink",
+        "book"
+      ],
+      "openimages": [
+        "door",
+        "cupboard",
+        "stove"
+      ],
+      "wider_face": [
+        "face"
+      ],
+      "negatives": []
+    },
+    "sources": [
+      {
+        "source": "coco",
+        "total": 60,
+        "accepted": 53,
+        "duplicates": 0,
+        "filtered_out": 7,
+        "missing_labels": 0
+      },
+      {
+        "source": "openimages",
+        "total": 60,
+        "accepted": 57,
+        "duplicates": 0,
+        "filtered_out": 3,
+        "missing_labels": 0
+      },
+      {
+        "source": "wider_face",
+        "total": 60,
+        "accepted": 60,
+        "duplicates": 0,
+        "filtered_out": 0,
+        "missing_labels": 0
+      },
+      {
+        "source": "negatives",
+        "total": 20,
+        "accepted": 18,
+        "duplicates": 2,
+        "filtered_out": 0,
+        "missing_labels": 0
+      }
+    ],
+    "duplicates_removed": 2,
+    "filtered_out": 10
+  },
+  "image_quality": {
+    "available": true,
+    "scanned": 188,
+    "blur_variance_threshold": 100.0,
+    "low_light_brightness_threshold": 40.0,
+    "blurry_count": 8,
+    "blurry_samples": [
+      "openimages_18853abb4c860a27.jpg",
+      "openimages_1b66ee083974f58e.jpg",
+      "openimages_0774d2f6414c4b10.jpg",
+      "openimages_10fb73ee47a33a83.jpg",
+      "openimages_2242a8f866a6c2b4.jpg",
+      "openimages_2752a1c19bb01f78.jpg",
+      "wider_face_0--Parade_0_Parade_Parade_0_461.jpg",
+      "wider_face_0--Parade_0_Parade_Parade_0_960.jpg"
+    ],
+    "low_light_count": 1,
+    "low_light_samples": [
+      "negatives_000000354753.jpg"
+    ]
+  },
+  "orchestrator": {
+    "check_annotations_exit": 2,
+    "dataset_stats_exit": 0,
+    "license_critical": false,
+    "image_quality_warnings": 9
+  }
 }

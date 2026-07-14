@@ -47,6 +47,10 @@ class MergeSource:
         allow_empty_labels:  Accept images whose label file is empty
                              (negatives source); missing-label images are
                              always dropped.
+        labels_dir:          Override for the labels location (the remap
+                             stage writes taxonomy labels to
+                             data/interim/<source>/labels while images stay
+                             under root). Defaults to root/labels.
     """
 
     name: str
@@ -54,6 +58,7 @@ class MergeSource:
     trusted_classes: list[str] = field(default_factory=list)
     apply_indoor_filter: bool = False
     allow_empty_labels: bool = False
+    labels_dir: Path | None = None
 
 
 def merge_sources(
@@ -95,7 +100,8 @@ def merge_sources(
             "filtered_out": 0,
             "missing_labels": 0,
         }
-        pairs = get_image_label_pairs(source.root / "images", source.root / "labels")
+        labels_dir = source.labels_dir if source.labels_dir is not None else source.root / "labels"
+        pairs = get_image_label_pairs(source.root / "images", labels_dir)
 
         for img_path, lbl_path in pairs:
             stats["total"] += 1

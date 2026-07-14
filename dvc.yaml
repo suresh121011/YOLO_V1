@@ -1,22 +1,36 @@
-# dvc.yaml — Elderly Assistant System Pipeline
-# Full reproducible pipeline from raw data acquisition to model evaluation.
-# Stage 1: Stub structure only — commands will be implemented in Stage 2+.
+# dvc.yaml — Elderly Assistant System Dataset Pipeline
+# Reproducible pipeline from raw acquisition to a QA-verified training set.
+#
+# Every referenced script exists and runs (audit fix — the Stage-1 stub
+# referenced scripts that were never written).
+#
+# Smoke vs full build: configs/dataset_sources.yaml `mode: smoke|full` is a
+# tracked param — flip it and `dvc repro` re-runs the affected stages. The
+# full dataset build is therefore exactly one command.
+#
+# Download caches (archives/CSV indexes) live in data/downloads_cache/,
+# OUTSIDE the stage outs, so repro never re-downloads them.
 #
 # Usage:
-#   dvc repro              — reproduce all stages
-#   dvc repro train_yolo11n — reproduce specific stage
-#   dvc dag                — view pipeline DAG
-#   dvc metrics diff       — compare training metrics
+#   dvc repro                 — reproduce all stages
+#   dvc repro qa_check        — reproduce up to QA
+#   dvc dag                   — view the pipeline DAG
+#   dvc metrics show          — show the QA metric
 
 stages:
-
-  # ─── Phase 2: Public Data Acquisition ──────────────────────────────────────
+  # ─── Acquisition (Phase-2) ──────────────────────────────────────────────────
 
   download_coco:
     cmd: python scripts/dataset/01_download_coco_subset.py
     deps:
       - scripts/dataset/01_download_coco_subset.py
-      - configs/data.yaml
+      - src/dataset/downloaders/base.py
+      - src/dataset/downloaders/coco.py
+    params:
+      - configs/dataset_sources.yaml:
+          - mode
+          - smoke
+          - sources.coco
     outs:
       - data/raw/coco_filtered
 
@@ -24,7 +38,13 @@ stages:
     cmd: python scripts/dataset/02_download_openimages_subset.py
     deps:
       - scripts/dataset/02_download_openimages_subset.py
-      - configs/data.yaml
+      - src/dataset/downloaders/base.py
+      - src/dataset/downloaders/openimages.py
+    params:
+      - configs/dataset_sources.yaml:
+          - mode
+          - smoke
+          - sources.openimages
     outs:
       - data/raw/openimages_filtered
 
@@ -32,7 +52,13 @@ stages:
     cmd: python scripts/dataset/03_download_roboflow_datasets.py
     deps:
       - scripts/dataset/03_download_roboflow_datasets.py
-      - configs/data.yaml
+      - src/dataset/downloaders/base.py
+      - src/dataset/downloaders/roboflow_dl.py
+    params:
+      - configs/dataset_sources.yaml:
+          - mode
+          - smoke
+          - sources.roboflow
     outs:
       - data/raw/roboflow_imports
 
@@ -40,83 +66,120 @@ stages:
     cmd: python scripts/dataset/04_download_wider_face.py
     deps:
       - scripts/dataset/04_download_wider_face.py
+      - src/dataset/downloaders/base.py
+      - src/dataset/downloaders/wider_face.py
+    params:
+      - configs/dataset_sources.yaml:
+          - mode
+          - smoke
+          - allow_noncommercial
+          - sources.wider_face
     outs:
-      - data/raw/wider_face
-
-  # ─── Phase 3: Dataset Processing ────────────────────────────────────────────
-
-  remap_classes:
-    cmd: python scripts/dataset/05_remap_classes.py --all
-    deps:
-      - scripts/dataset/05_remap_classes.py
-      - configs/data.yaml
-      - data/raw/coco_filtered
-      - data/raw/openimages_filtered
-      - data/raw/roboflow_imports
       - data/raw/wider_face
 
   collect_negatives:
     cmd: python scripts/dataset/06_collect_negatives.py
     deps:
       - scripts/dataset/06_collect_negatives.py
+      - src/dataset/downloaders/negatives_dl.py
+      - src/dataset/negatives.py
+      # Ordering dependency: reuses the COCO annotation cache.
+      - data/raw/coco_filtered
+    params:
+      - configs/dataset_sources.yaml:
+          - mode
+          - smoke
+          - sources.negatives
     outs:
       - data/raw/negatives
 
-  merge_datasets:
-    cmd: python scripts/dataset/07_merge_datasets.py
+  # ─── Processing ─────────────────────────────────────────────────────────────
+
+  remap_classes:
+    # Copy mode: raw outputs stay immutable; taxonomy labels land in data/interim.
+    cmd: python scripts/dataset/05_remap_classes.py --all
     deps:
-      - scripts/dataset/07_merge_datasets.py
+      - scripts/dataset/05_remap_classes.py
+      - src/dataset/remap.py
       - configs/data.yaml
       - data/raw/coco_filtered
       - data/raw/openimages_filtered
       - data/raw/roboflow_imports
       - data/raw/wider_face
-      - data/raw/custom_captures
       - data/raw/negatives
+    params:
+      - configs/dataset_sources.yaml:
+          - sources
+    outs:
+      - data/interim
+
+  merge_datasets:
+    cmd: python scripts/dataset/07_merge_datasets.py
+    deps:
+      - scripts/dataset/07_merge_datasets.py
+      - src/dataset/merge.py
+      - src/dataset/dedup.py
+      - src/dataset/filters.py
+      - configs/data.yaml
+      - data/raw/coco_filtered
+      - data/raw/openimages_filtered
+      - data/raw/roboflow_imports
+      - data/raw/wider_face
+      - data/raw/negatives
+      - data/interim
+    params:
+      - configs/dataset_sources.yaml:
+          - mode
+          - allow_noncommercial
+          - dedup
+          - indoor_filter
+    outs:
+      - data/merged
+
+  split_train_val_test:
+    cmd: python scripts/dataset/split_dataset.py
+    deps:
+      - scripts/dataset/split_dataset.py
+      - src/dataset/split_config.py
+      - src/dataset/splitting
+      - data/merged
+    params:
+      - configs/dataset_split_config.yaml:
+          - split
     outs:
       - data/processed/images
       - data/processed/labels
+      - data/processed/split_report
 
-  # ─── Phase 4: Dataset QA & Versioning ───────────────────────────────────────
+  # ─── QA (runs AFTER split — the leakage check needs splits) ────────────────
 
   qa_check:
-    cmd: python scripts/qa/run_full_qa.py
+    cmd: python scripts/qa/run_full_qa.py --exit-zero-on-warnings
     deps:
       - scripts/qa/run_full_qa.py
-      - data/processed
-    outs:
-      - data/qa_reports
+      - scripts/qa/check_annotations.py
+      - scripts/dataset/dataset_stats.py
+      - configs/data.yaml
+      - data/processed/images
+      - data/processed/labels
+      - data/merged
     metrics:
       - data/qa_reports/annotation_qa_report.json:
           cache: false
 
-  split_train_val_test:
-    cmd: python scripts/dataset/08_split_dataset.py --train 0.80 --val 0.10 --test 0.10
-    deps:
-      - scripts/dataset/08_split_dataset.py
-      - data/processed
-
-  # ─── Phase 5: Training ───────────────────────────────────────────────────────
+  # ─── Training (Phase-5 — declared but frozen until the dataset is released) ─
 
   train_yolo11n:
-    cmd: python scripts/training/train_yolo11n.py
+    frozen: true
+    cmd: python scripts/training/train_yolo.py --config configs/training/yolo11n_config.yaml
     deps:
-      - scripts/training/train_yolo11n.py
-      - data/processed
+      - scripts/training/train_yolo.py
       - configs/data.yaml
       - configs/training/yolo11n_config.yaml
+      - data/processed/images
+      - data/processed/labels
     outs:
       - models/yolo11n/weights
-    metrics:
-      - models/yolo11n/results/results.csv:
-          cache: false
 
-  evaluate:
-    cmd: python scripts/training/evaluate_model.py --model models/yolo11n/weights/best.pt
-    deps:
-      - scripts/training/evaluate_model.py
-      - models/yolo11n/weights/best.pt
-      - configs/data.yaml
-    metrics:
-      - models/yolo11n/results/evaluation.json:
-          cache: false
+  # evaluate/export stages will be added in Phase-5 together with
+  # scripts/training/evaluate_model.py and export_model.py (not yet written).

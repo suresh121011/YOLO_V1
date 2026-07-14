@@ -3,13 +3,16 @@ scripts.dataset.05_remap_classes — Class Remapping CLI
 ======================================================
 
 Rewrites every raw source's YOLO labels from local ids into the 23-class
-taxonomy using :mod:`src.dataset.remap`. Idempotent per source via the
-``.remap_done.json`` sentinel.
+taxonomy using :mod:`src.dataset.remap`.
+
+Default (DVC) mode writes remapped labels to ``data/interim/<source>/labels``
+so raw download outputs stay immutable — required for a coherent DVC DAG.
+``--in-place`` mutates raw labels instead (sentinel-guarded, idempotent).
 
 Usage:
     python scripts/dataset/05_remap_classes.py --all
     python scripts/dataset/05_remap_classes.py --source coco
-    python scripts/dataset/05_remap_classes.py --source coco --force
+    python scripts/dataset/05_remap_classes.py --source coco --in-place --force
 
 DVC integration:
     Invoked by the ``remap_classes`` stage (with --all).
@@ -31,6 +34,7 @@ from src.dataset.sources_config import (
     load_sources_config,
 )
 from src.utils.config_helpers import get_class_names_from_data_yaml, load_data_config
+from src.utils.dataset_utils import find_label_files
 
 logging.basicConfig(
     level=logging.INFO,
@@ -87,9 +91,22 @@ def parse_args() -> argparse.Namespace:
         help="Path to data.yaml (for alias resolution).",
     )
     parser.add_argument(
+        "--output-root",
+        type=Path,
+        default=None,
+        help="Copy-mode destination root (default: interim_root from the "
+        "sources config). Remapped labels land in <root>/<source>/labels.",
+    )
+    parser.add_argument(
+        "--in-place",
+        action="store_true",
+        help="Mutate raw labels instead of writing to the interim root "
+        "(sentinel-guarded; NOT DVC-compatible).",
+    )
+    parser.add_argument(
         "--force",
         action="store_true",
-        help="Re-run even where the remap sentinel exists (DANGEROUS).",
+        help="In-place mode: re-run even where the remap sentinel exists (DANGEROUS).",
     )
     return parser.parse_args()
 
@@ -115,13 +132,24 @@ def main() -> int:
         if not config.is_source_allowed(name):
             logger.info(f"[{name}] disabled/gated — skipping")
             continue
-        if not (source.output_dir / "labels").exists():
-            logger.info(f"[{name}] no labels directory — skipping")
+        if not find_label_files(source.output_dir / "labels"):
+            logger.info(f"[{name}] no label files (source empty or skipped) — skipping")
             continue
+
+        if args.in_place:
+            output_labels_dir = None
+        else:
+            output_root = args.output_root if args.output_root else config.interim_root
+            output_labels_dir = output_root / name / "labels"
 
         try:
             table = build_table(name, config, args.data_config)
-            result = remap_label_dir(source.output_dir, table, force=args.force)
+            result = remap_label_dir(
+                source.output_dir,
+                table,
+                force=args.force,
+                output_labels_dir=output_labels_dir,
+            )
         except (FileNotFoundError, ValueError) as e:
             logger.error(f"[{name}] remap failed: {e}")
             had_error = True

@@ -38,7 +38,10 @@ indoor_filter:
 
 paths:
   raw_root: data/raw
+  interim_root: data/interim          # remapped labels (DVC stage output)
   merged_root: data/merged
+  downloads_cache: data/downloads_cache  # archives/indexes; OUTSIDE DVC outs
+                                         # so `dvc repro` never re-downloads them
 
 # ─── Sources ──────────────────────────────────────────────────────────────────
 # trusted_classes: classes this source labels EXHAUSTIVELY. Any other taxonomy
@@ -67,7 +70,7 @@ sources:
     output_dir: data/raw/openimages_filtered
     license: "Annotations CC BY 4.0; images CC BY 2.0 (per Open Images terms)"
     class_descriptions_url: "https://storage.googleapis.com/openimages/v7/oidv7-class-descriptions-boxable.csv"
-    smoke_bbox_url: "https://storage.googleapis.com/openimages/v6/oidv6-validation-annotations-bbox.csv"
+    smoke_bbox_url: "https://storage.googleapis.com/openimages/v5/validation-annotations-bbox.csv"
     full_bbox_url: "https://storage.googleapis.com/openimages/v6/oidv6-train-annotations-bbox.csv"
     smoke_split: validation
     full_split: train

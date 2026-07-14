@@ -121,11 +121,14 @@ def remap_label_file(
     mapping: dict[int, int | None],
     result: RemapResult,
     id_to_name: dict[int, str],
+    dest: Path | None = None,
 ) -> None:
-    """Rewrite one YOLO label file in place using the id mapping.
+    """Rewrite one YOLO label file using the id mapping.
 
-    Lines whose class maps to None (unmapped source class) are dropped and
-    counted; malformed lines are dropped with a warning.
+    Writes to ``dest`` when given (copy mode — source untouched), otherwise
+    rewrites ``path`` in place. Lines whose class maps to None (unmapped
+    source class) are dropped and counted; malformed lines are dropped with
+    a warning.
     """
     out_lines: list[str] = []
     for raw in path.read_text(encoding="utf-8").splitlines():
@@ -155,22 +158,34 @@ def remap_label_file(
         out_lines.append(" ".join([str(target), *parts[1:]]))
         result.annotations_remapped += 1
 
-    path.write_text("\n".join(out_lines) + ("\n" if out_lines else ""), encoding="utf-8")
+    target_path = dest if dest is not None else path
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    target_path.write_text("\n".join(out_lines) + ("\n" if out_lines else ""), encoding="utf-8")
 
 
 def remap_label_dir(
     source_dir: Path,
     table: dict[str, int],
     force: bool = False,
+    output_labels_dir: Path | None = None,
 ) -> RemapResult:
     """Remap all label files under ``source_dir/labels`` into taxonomy IDs.
 
+    Two modes:
+        - **Copy mode** (``output_labels_dir`` set — the DVC pipeline mode):
+          remapped labels are written to the output dir, the raw source
+          stays untouched, and the operation is idempotent by construction
+          (no sentinel involved).
+        - **In-place mode** (default): labels are rewritten where they are;
+          a ``.remap_done.json`` sentinel guards against double-remapping.
+
     Args:
-        source_dir: Raw source directory (contains labels/ and
-                    source_classes.json).
-        table:      Source class name → taxonomy id.
-        force:      Re-run even if the remap sentinel exists (dangerous —
-                    only for rebuilt label sets).
+        source_dir:        Raw source directory (contains labels/ and
+                           source_classes.json).
+        table:             Source class name → taxonomy id.
+        force:             In-place mode only: re-run despite the sentinel
+                           (dangerous — only for rebuilt label sets).
+        output_labels_dir: Destination for copy mode.
 
     Returns:
         :class:`RemapResult`. ``skipped=True`` when the sentinel exists.
@@ -180,9 +195,10 @@ def remap_label_dir(
         ValueError:        If the mapping targets invalid taxonomy ids.
     """
     result = RemapResult(source_dir=source_dir)
+    in_place = output_labels_dir is None
     sentinel = source_dir / REMAP_SENTINEL_FILENAME
 
-    if sentinel.exists() and not force:
+    if in_place and sentinel.exists() and not force:
         logger.info(f"Remap skipped (already done): {source_dir}")
         result.skipped = True
         return result
@@ -200,22 +216,24 @@ def remap_label_dir(
 
     label_files = find_label_files(source_dir / "labels")
     for label_path in label_files:
-        remap_label_file(label_path, mapping, result, id_to_name)
+        dest = output_labels_dir / label_path.name if output_labels_dir is not None else None
+        remap_label_file(label_path, mapping, result, id_to_name, dest=dest)
         result.files_processed += 1
 
-    sentinel.write_text(
-        json.dumps(
-            {
-                "mapping": {str(k): v for k, v in mapping.items()},
-                "files_processed": result.files_processed,
-                "annotations_remapped": result.annotations_remapped,
-                "annotations_dropped": result.annotations_dropped,
-            },
-            indent=2,
+    if in_place:
+        sentinel.write_text(
+            json.dumps(
+                {
+                    "mapping": {str(k): v for k, v in mapping.items()},
+                    "files_processed": result.files_processed,
+                    "annotations_remapped": result.annotations_remapped,
+                    "annotations_dropped": result.annotations_dropped,
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
         )
-        + "\n",
-        encoding="utf-8",
-    )
 
     logger.info(
         f"Remapped {source_dir.name}: {result.files_processed} files, "

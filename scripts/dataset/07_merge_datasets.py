@@ -95,6 +95,17 @@ def main() -> int:
         if not find_image_files(source.output_dir / "images"):
             logger.info(f"[{name}] no images — excluded from merge")
             continue
+
+        # Prefer the remap stage's interim labels; fall back to raw labels
+        # (already-taxonomy sources like custom captures remapped in place).
+        interim_labels = config.interim_root / name / "labels"
+        labels_dir = interim_labels if interim_labels.exists() else None
+        if labels_dir is None:
+            logger.warning(
+                f"[{name}] no interim labels at {interim_labels} — "
+                f"falling back to raw labels (run 05_remap_classes.py first)"
+            )
+
         merge_inputs.append(
             MergeSource(
                 name=name,
@@ -102,6 +113,7 @@ def main() -> int:
                 trusted_classes=list(source.trusted_classes),
                 apply_indoor_filter=bool(source.options.get("indoor_filter", False)),
                 allow_empty_labels=(name == "negatives"),
+                labels_dir=labels_dir,
             )
         )
 

@@ -32,8 +32,9 @@ jobs:
         run: ruff check src/ scripts/ tests/
 
       - name: Run mypy (type check)
-        run: mypy src/
-        continue-on-error: true  # Warning only in Stage 1
+        run: mypy src/dataset
+        # Whole-src strictness lands with the Phase-6 runtime cleanup;
+        # the dataset library is checked strictly today.
 
   test:
     name: Unit Tests
@@ -57,8 +58,6 @@ jobs:
 
       - name: Run unit tests
         run: pytest tests/unit/ -v --tb=short
-        continue-on-error: true  # No tests yet in Stage 1
 
       - name: Run integration tests
         run: pytest tests/integration/ -v --tb=short
-        continue-on-error: true  # No tests yet in Stage 1

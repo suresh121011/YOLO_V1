@@ -1,0 +1,551 @@
+schema: '2.0'
+stages:
+  download_coco:
+    cmd: python scripts/dataset/01_download_coco_subset.py
+    deps:
+    - path: scripts/dataset/01_download_coco_subset.py
+      hash: md5
+      md5: f2a3c8a09c8a9fc0b7e9f4a58cbb37e9
+      size: 2640
+    - path: src/dataset/downloaders/base.py
+      hash: md5
+      md5: 8cd705e3c0bb03db9a6e204b0fcfb182
+      size: 8636
+    - path: src/dataset/downloaders/coco.py
+      hash: md5
+      md5: f644f53dc3aee19d9226f855a44ca1d8
+      size: 7369
+    params:
+      configs/dataset_sources.yaml:
+        mode: smoke
+        smoke:
+          limit_per_source: 60
+        sources.coco:
+          enabled: true
+          output_dir: data/raw/coco_filtered
+          license: CC BY 4.0 (annotations); images retain original Flickr 
+            licenses
+          annotations_url: 
+            http://images.cocodataset.org/annotations/annotations_trainval2017.zip
+          image_url_template: http://images.cocodataset.org/{split}/{file_name}
+          smoke_split: val2017
+          full_split: train2017
+          remap_table: coco
+          indoor_filter: true
+          trusted_classes:
+          - person
+          - water_bottle
+          - knife
+          - laptop
+          - monitor
+          - chair
+          - bed
+          - toilet
+          - sink
+          - book
+          class_caps:
+            person: 800
+            chair: 500
+    outs:
+    - path: data/raw/coco_filtered
+      hash: md5
+      md5: a04326150e0e2284e63a082ec047f492.dir
+      size: 9172660
+      nfiles: 122
+  download_openimages:
+    cmd: python scripts/dataset/02_download_openimages_subset.py
+    deps:
+    - path: scripts/dataset/02_download_openimages_subset.py
+      hash: md5
+      md5: c8099e53708bad7bdb3d3c6cdb24a34f
+      size: 1060
+    - path: src/dataset/downloaders/base.py
+      hash: md5
+      md5: 8cd705e3c0bb03db9a6e204b0fcfb182
+      size: 8636
+    - path: src/dataset/downloaders/openimages.py
+      hash: md5
+      md5: 83e10fcf3cf0bd1316c996b5842c4c27
+      size: 5818
+    params:
+      configs/dataset_sources.yaml:
+        mode: smoke
+        smoke:
+          limit_per_source: 60
+        sources.openimages:
+          enabled: true
+          output_dir: data/raw/openimages_filtered
+          license: Annotations CC BY 4.0; images CC BY 2.0 (per Open Images 
+            terms)
+          class_descriptions_url: 
+            https://storage.googleapis.com/openimages/v7/oidv7-class-descriptions-boxable.csv
+          smoke_bbox_url: 
+            https://storage.googleapis.com/openimages/v5/validation-annotations-bbox.csv
+          full_bbox_url: 
+            https://storage.googleapis.com/openimages/v6/oidv6-train-annotations-bbox.csv
+          smoke_split: validation
+          full_split: train
+          image_url_template: 
+            https://open-images-dataset.s3.amazonaws.com/{split}/{image_id}.jpg
+          remap_table: openimages
+          indoor_filter: true
+          classes:
+          - Door
+          - Cupboard
+          - Gas stove
+          trusted_classes:
+          - door
+          - cupboard
+          - stove
+    outs:
+    - path: data/raw/openimages_filtered
+      hash: md5
+      md5: c0b6945a55996309338a28cc04684175.dir
+      size: 17237725
+      nfiles: 122
+  download_roboflow:
+    cmd: python scripts/dataset/03_download_roboflow_datasets.py
+    deps:
+    - path: scripts/dataset/03_download_roboflow_datasets.py
+      hash: md5
+      md5: 5e8cea83d30dae81d5f2daef42f67290
+      size: 1161
+    - path: src/dataset/downloaders/base.py
+      hash: md5
+      md5: 8cd705e3c0bb03db9a6e204b0fcfb182
+      size: 8636
+    - path: src/dataset/downloaders/roboflow_dl.py
+      hash: md5
+      md5: f6c0defae2fd1683b61316caf311711e
+      size: 6378
+    params:
+      configs/dataset_sources.yaml:
+        mode: smoke
+        smoke:
+          limit_per_source: 60
+        sources.roboflow:
+          enabled: true
+          output_dir: data/raw/roboflow_imports
+          license: varies per Universe dataset — recorded per-dataset below
+          api_key_env: ROBOFLOW_API_KEY
+          remap_table: roboflow
+          trusted_classes:
+          - medicine_bottle
+          - charger
+          - wire
+          - gas_cylinder
+          datasets: []
+    outs:
+    - path: data/raw/roboflow_imports
+      hash: md5
+      md5: d751713988987e9331980363e24189ce.dir
+      size: 0
+      nfiles: 0
+  download_wider_face:
+    cmd: python scripts/dataset/04_download_wider_face.py
+    deps:
+    - path: scripts/dataset/04_download_wider_face.py
+      hash: md5
+      md5: d74970b0e50e8fd40e2a877d58a63cfe
+      size: 1133
+    - path: src/dataset/downloaders/base.py
+      hash: md5
+      md5: 8cd705e3c0bb03db9a6e204b0fcfb182
+      size: 8636
+    - path: src/dataset/downloaders/wider_face.py
+      hash: md5
+      md5: 2554bf8368354a8244364a209071bd84
+      size: 6263
+    params:
+      configs/dataset_sources.yaml:
+        allow_noncommercial: true
+        mode: smoke
+        smoke:
+          limit_per_source: 60
+        sources.wider_face:
+          enabled: true
+          output_dir: data/raw/wider_face
+          license: research-only / non-commercial (WIDER FACE terms)
+          noncommercial: true
+          smoke_images_url: 
+            https://huggingface.co/datasets/CUHK-CSE/wider_face/resolve/main/data/WIDER_val.zip
+          full_images_url: 
+            https://huggingface.co/datasets/CUHK-CSE/wider_face/resolve/main/data/WIDER_train.zip
+          annotations_url: 
+            https://huggingface.co/datasets/CUHK-CSE/wider_face/resolve/main/data/wider_face_split.zip
+          remap_table: wider_face
+          trusted_classes:
+          - face
+    outs:
+    - path: data/raw/wider_face
+      hash: md5
+      md5: 325cc7d9df0d28b69c6edddd3e1d6898.dir
+      size: 8262811
+      nfiles: 122
+  collect_negatives:
+    cmd: python scripts/dataset/06_collect_negatives.py
+    deps:
+    - path: data/raw/coco_filtered
+      hash: md5
+      md5: a04326150e0e2284e63a082ec047f492.dir
+      size: 9172660
+      nfiles: 122
+    - path: scripts/dataset/06_collect_negatives.py
+      hash: md5
+      md5: 94de9b32c53d7d6c793cdaf7d6733b0f
+      size: 1114
+    - path: src/dataset/downloaders/negatives_dl.py
+      hash: md5
+      md5: 11c42b840545d9ba47624fc2e2088276
+      size: 2849
+    - path: src/dataset/negatives.py
+      hash: md5
+      md5: 4dc23940ba25e5cd5ad7a9d012bb631d
+      size: 2426
+    params:
+      configs/dataset_sources.yaml:
+        mode: smoke
+        smoke:
+          limit_per_source: 60
+        sources.negatives:
+          enabled: true
+          output_dir: data/raw/negatives
+          license: inherits COCO licensing (sampled from COCO)
+          smoke_count: 20
+          full_count: 500
+          trusted_classes: []
+    outs:
+    - path: data/raw/negatives
+      hash: md5
+      md5: 958f8908bd48701a9406f2b0113c05d6.dir
+      size: 4024641
+      nfiles: 42
+  remap_classes:
+    cmd: python scripts/dataset/05_remap_classes.py --all
+    deps:
+    - path: configs/data.yaml
+      hash: md5
+      md5: aee65566d7b4876d68948f6bc02abb3d
+      size: 2254
+    - path: data/raw/coco_filtered
+      hash: md5
+      md5: a04326150e0e2284e63a082ec047f492.dir
+      size: 9172660
+      nfiles: 122
+    - path: data/raw/negatives
+      hash: md5
+      md5: 958f8908bd48701a9406f2b0113c05d6.dir
+      size: 4024641
+      nfiles: 42
+    - path: data/raw/openimages_filtered
+      hash: md5
+      md5: c0b6945a55996309338a28cc04684175.dir
+      size: 17237725
+      nfiles: 122
+    - path: data/raw/roboflow_imports
+      hash: md5
+      md5: d751713988987e9331980363e24189ce.dir
+      size: 0
+      nfiles: 0
+    - path: data/raw/wider_face
+      hash: md5
+      md5: 325cc7d9df0d28b69c6edddd3e1d6898.dir
+      size: 8262811
+      nfiles: 122
+    - path: scripts/dataset/05_remap_classes.py
+      hash: md5
+      md5: e533532529bfdf8a36626bea3e193075
+      size: 5795
+    - path: src/dataset/remap.py
+      hash: md5
+      md5: 920001c77c0a9c127ab8697aa255c25c
+      size: 8510
+    params:
+      configs/dataset_sources.yaml:
+        sources:
+          coco:
+            enabled: true
+            output_dir: data/raw/coco_filtered
+            license: CC BY 4.0 (annotations); images retain original Flickr 
+              licenses
+            annotations_url: 
+              http://images.cocodataset.org/annotations/annotations_trainval2017.zip
+            image_url_template: 
+              http://images.cocodataset.org/{split}/{file_name}
+            smoke_split: val2017
+            full_split: train2017
+            remap_table: coco
+            indoor_filter: true
+            trusted_classes:
+            - person
+            - water_bottle
+            - knife
+            - laptop
+            - monitor
+            - chair
+            - bed
+            - toilet
+            - sink
+            - book
+            class_caps:
+              person: 800
+              chair: 500
+          openimages:
+            enabled: true
+            output_dir: data/raw/openimages_filtered
+            license: Annotations CC BY 4.0; images CC BY 2.0 (per Open Images 
+              terms)
+            class_descriptions_url: 
+              https://storage.googleapis.com/openimages/v7/oidv7-class-descriptions-boxable.csv
+            smoke_bbox_url: 
+              https://storage.googleapis.com/openimages/v5/validation-annotations-bbox.csv
+            full_bbox_url: 
+              https://storage.googleapis.com/openimages/v6/oidv6-train-annotations-bbox.csv
+            smoke_split: validation
+            full_split: train
+            image_url_template: 
+              https://open-images-dataset.s3.amazonaws.com/{split}/{image_id}.jpg
+            remap_table: openimages
+            indoor_filter: true
+            classes:
+            - Door
+            - Cupboard
+            - Gas stove
+            trusted_classes:
+            - door
+            - cupboard
+            - stove
+          roboflow:
+            enabled: true
+            output_dir: data/raw/roboflow_imports
+            license: varies per Universe dataset — recorded per-dataset below
+            api_key_env: ROBOFLOW_API_KEY
+            remap_table: roboflow
+            trusted_classes:
+            - medicine_bottle
+            - charger
+            - wire
+            - gas_cylinder
+            datasets: []
+          wider_face:
+            enabled: true
+            output_dir: data/raw/wider_face
+            license: research-only / non-commercial (WIDER FACE terms)
+            noncommercial: true
+            smoke_images_url: 
+              https://huggingface.co/datasets/CUHK-CSE/wider_face/resolve/main/data/WIDER_val.zip
+            full_images_url: 
+              https://huggingface.co/datasets/CUHK-CSE/wider_face/resolve/main/data/WIDER_train.zip
+            annotations_url: 
+              https://huggingface.co/datasets/CUHK-CSE/wider_face/resolve/main/data/wider_face_split.zip
+            remap_table: wider_face
+            trusted_classes:
+            - face
+          negatives:
+            enabled: true
+            output_dir: data/raw/negatives
+            license: inherits COCO licensing (sampled from COCO)
+            smoke_count: 20
+            full_count: 500
+            trusted_classes: []
+          custom_captures:
+            enabled: false
+            output_dir: data/raw/custom_captures
+            license: proprietary (consent-gated; see CaptureSessionManifest)
+            trusted_classes: []
+    outs:
+    - path: data/interim
+      hash: md5
+      md5: 12b5b95220222fc6542004631a13a1f9.dir
+      size: 64226
+      nfiles: 200
+  merge_datasets:
+    cmd: python scripts/dataset/07_merge_datasets.py
+    deps:
+    - path: configs/data.yaml
+      hash: md5
+      md5: aee65566d7b4876d68948f6bc02abb3d
+      size: 2254
+    - path: data/interim
+      hash: md5
+      md5: 12b5b95220222fc6542004631a13a1f9.dir
+      size: 64226
+      nfiles: 200
+    - path: data/raw/coco_filtered
+      hash: md5
+      md5: a04326150e0e2284e63a082ec047f492.dir
+      size: 9172660
+      nfiles: 122
+    - path: data/raw/negatives
+      hash: md5
+      md5: 958f8908bd48701a9406f2b0113c05d6.dir
+      size: 4024641
+      nfiles: 42
+    - path: data/raw/openimages_filtered
+      hash: md5
+      md5: c0b6945a55996309338a28cc04684175.dir
+      size: 17237725
+      nfiles: 122
+    - path: data/raw/roboflow_imports
+      hash: md5
+      md5: d751713988987e9331980363e24189ce.dir
+      size: 0
+      nfiles: 0
+    - path: data/raw/wider_face
+      hash: md5
+      md5: 325cc7d9df0d28b69c6edddd3e1d6898.dir
+      size: 8262811
+      nfiles: 122
+    - path: scripts/dataset/07_merge_datasets.py
+      hash: md5
+      md5: 2f2b0e75722919e924ac7a8321a4b661
+      size: 4738
+    - path: src/dataset/dedup.py
+      hash: md5
+      md5: 181623451db677b116bc029f2b0a2e18
+      size: 5371
+    - path: src/dataset/filters.py
+      hash: md5
+      md5: 28fcfa0d2f12fe9926f884a882105c3a
+      size: 3023
+    - path: src/dataset/merge.py
+      hash: md5
+      md5: 575efe2d5cc9276f995e09a04a1fb4f6
+      size: 6432
+    params:
+      configs/dataset_sources.yaml:
+        allow_noncommercial: true
+        dedup:
+          hamming_threshold: 5
+          check_flips: true
+        indoor_filter:
+          enabled: true
+          brightness_outdoor_threshold: 160
+          portrait_aspect_max: 0.6
+          min_image_dim: 320
+        mode: smoke
+    outs:
+    - path: data/merged
+      hash: md5
+      md5: d35adbcde35e8375c4da9a7191eb4611.dir
+      size: 37087111
+      nfiles: 377
+  split_train_val_test:
+    cmd: python scripts/dataset/split_dataset.py
+    deps:
+    - path: data/merged
+      hash: md5
+      md5: d35adbcde35e8375c4da9a7191eb4611.dir
+      size: 37087111
+      nfiles: 377
+    - path: scripts/dataset/split_dataset.py
+      hash: md5
+      md5: 3412bbe5f1bd8038f7e5cec6d4a94dd6
+      size: 16313
+    - path: src/dataset/split_config.py
+      hash: md5
+      md5: 8863a9e79eb20ab209a6aed26c4b4cc5
+      size: 4365
+    - path: src/dataset/splitting
+      hash: md5
+      md5: c4d90f4af6ac8409656149d6470f6a29.dir
+      size: 10949
+      nfiles: 5
+    params:
+      configs/dataset_split_config.yaml:
+        split:
+          strategy: group_aware
+          train_ratio: 0.8
+          val_ratio: 0.1
+          test_ratio: 0.1
+          seed: 42
+          group_by_capture: true
+          source_dir: data/merged
+          output_dir: data/processed
+    outs:
+    - path: data/processed/images
+      hash: md5
+      md5: 6cf47112d2c4483c0072d4064547ceed.dir
+      size: 37012740
+      nfiles: 188
+    - path: data/processed/labels
+      hash: md5
+      md5: 6bfdb5cfd36ccc85670f5f5d1f7960d5.dir
+      size: 62700
+      nfiles: 188
+    - path: data/processed/split_report
+      hash: md5
+      md5: a3f4d19ee719cefdd637976f7756a24d.dir
+      size: 1265
+      nfiles: 2
+  qa_check:
+    cmd: python scripts/qa/run_full_qa.py --exit-zero-on-warnings
+    deps:
+    - path: configs/data.yaml
+      hash: md5
+      md5: aee65566d7b4876d68948f6bc02abb3d
+      size: 2254
+    - path: data/merged
+      hash: md5
+      md5: d35adbcde35e8375c4da9a7191eb4611.dir
+      size: 37087111
+      nfiles: 377
+    - path: data/processed/images
+      hash: md5
+      md5: 6cf47112d2c4483c0072d4064547ceed.dir
+      size: 37012740
+      nfiles: 188
+    - path: data/processed/labels
+      hash: md5
+      md5: 6bfdb5cfd36ccc85670f5f5d1f7960d5.dir
+      size: 62700
+      nfiles: 188
+    - path: scripts/dataset/dataset_stats.py
+      hash: md5
+      md5: f0ff4843eecd4c86e9304733ac2adfc9
+      size: 15393
+    - path: scripts/qa/check_annotations.py
+      hash: md5
+      md5: 362bd4d8224be795bc27f49d4a824ce5
+      size: 30867
+    - path: scripts/qa/run_full_qa.py
+      hash: md5
+      md5: 1d5f804a950526017a3ee5f29e0e15dc
+      size: 10245
+    outs:
+    - path: data/qa_reports/annotation_qa_report.json
+      hash: md5
+      md5: 3e437936434b264cd10fdcbd2221be2a
+      size: 9472
+  train_yolo11n:
+    cmd: python scripts/training/train_yolo.py --config 
+      configs/training/yolo11n_config.yaml
+    deps:
+    - path: configs/data.yaml
+      hash: md5
+      md5: aee65566d7b4876d68948f6bc02abb3d
+      size: 2254
+    - path: configs/training/yolo11n_config.yaml
+      hash: md5
+      md5: 7033afd9d593c08594459e82f6e2e0ab
+      size: 2672
+    - path: data/processed/images
+      hash: md5
+      md5: 6cf47112d2c4483c0072d4064547ceed.dir
+      size: 37012740
+      nfiles: 188
+    - path: data/processed/labels
+      hash: md5
+      md5: 6bfdb5cfd36ccc85670f5f5d1f7960d5.dir
+      size: 62700
+      nfiles: 188
+    - path: scripts/training/train_yolo.py
+      hash: md5
+      md5: 708e54429227f6f6b801f6a23c076360
+      size: 13318
+    outs:
+    - path: models/yolo11n/weights
+      hash: md5
+      md5: 6ffbaaad7b4ac6e1afabed19a80b2560.dir
+      size: 0
+      nfiles: 1

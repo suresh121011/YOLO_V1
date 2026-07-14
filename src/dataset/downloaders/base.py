@@ -63,7 +63,9 @@ class BaseDownloader(ABC):
         self.output_dir = source.output_dir
         self.images_dir = self.output_dir / "images"
         self.labels_dir = self.output_dir / "labels"
-        self.downloads_dir = self.output_dir / "_downloads"
+        # Archives/indexes cache OUTSIDE the DVC-managed output dir so that
+        # `dvc repro` (which clears stage outs) never re-downloads them.
+        self.downloads_dir = config.downloads_cache / source.name
 
     # ── Subclass contract ────────────────────────────────────────────────
 
