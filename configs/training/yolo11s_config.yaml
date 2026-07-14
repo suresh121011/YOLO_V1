@@ -5,7 +5,7 @@
 # Small model: ~11M params vs nano's ~2.6M — higher accuracy, higher latency.
 # Target: mAP50 >= 0.75, still >=10 FPS on target device
 #
-# Read by: scripts/training/train_yolo11s.py
+# Read by: scripts/training/train_yolo.py (--config configs/training/yolo11s_config.yaml)
 # ─────────────────────────────────────────────────────────────────────────────
 
 model:

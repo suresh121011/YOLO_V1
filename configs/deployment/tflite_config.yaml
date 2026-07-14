@@ -4,7 +4,8 @@
 # TFLite is used for Android deployment with NPU/DSP acceleration.
 # INT8 quantization reduces model size ~4x and improves NPU throughput.
 #
-# Read by: scripts/training/export_model.py
+# Read by: scripts/training/export_model.py (Phase-5 deliverable — not yet written;
+# see dvc.yaml's note on the deferred evaluate/export stages)
 # ─────────────────────────────────────────────────────────────────────────────
 
 export:

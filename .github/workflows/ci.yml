@@ -34,8 +34,10 @@ jobs:
 
       - name: Run mypy (type check)
         run: mypy src/dataset src/utils src/config src/logging
-        # src/pipeline joins the gate with the Phase-6 runtime cleanup
-        # (18 known errors logged in CHANGELOG / docs/04 §7).
+        # src/pipeline is deferred to the Phase-6 runtime cleanup (17 errors as of
+        # the 2026-07-14 validation pass: mostly missing numpy stubs in a bare
+        # CI-style env plus untyped defs in scene_analyzer.py/orchestrator.py;
+        # see docs/04_dataset_engineering/README.md §7 for the Phase-2 descope).
 
   test:
     name: Tests (${{ matrix.os }}, py${{ matrix.python-version }})

@@ -94,12 +94,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.1.0] - 2026-07-14 (Planned)
+## [0.1.0] - Superseded
 
-### Stage 1 — Project Bootstrap & Repository Foundation
-
-Initial skeleton release. No application logic implemented.
-Establishes production-ready engineering infrastructure for all subsequent stages.
+This entry originally described a Stage-1-only "skeleton release, no application
+logic implemented." That is no longer accurate — Stage 1 (repository foundation)
+and Stage 2 / Phase-2 (dataset engineering platform) are both complete and
+documented in the `[Unreleased]` section above. No `0.1.0` tag has actually been
+cut; the dataset-specific milestone is tracked instead via the `dataset-v0.1.0-smoke`
+git tag. This stub is kept only for changelog continuity and should not be read
+as a current status statement.
 
 ---
 

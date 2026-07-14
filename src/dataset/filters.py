@@ -46,7 +46,7 @@ def compute_mean_brightness(path: Path) -> float | None:
         with Image.open(path) as img:
             small = img.convert("L").resize((_BRIGHTNESS_SAMPLE_SIZE, _BRIGHTNESS_SAMPLE_SIZE))
             pixels = list(small.tobytes())  # mode "L" → one byte per pixel
-        return sum(pixels) / len(pixels)
+        return float(sum(pixels)) / len(pixels)
     except Exception as e:  # noqa: BLE001 — any decode failure means "unknown"
         logger.debug(f"Brightness computation failed for {path.name}: {e}")
         return None

@@ -1,3 +1,7 @@
+> **Superseded** — this Stage-1 bootstrap checklist predates the Phase-2 dataset
+> engineering platform build-out. For current project status, see `CHANGELOG.md`
+> and `docs/04_dataset_engineering/README.md`.
+
 # Stage 1 — Bootstrap Tasks
 
 ## Phase A: Root Files

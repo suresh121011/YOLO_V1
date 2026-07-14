@@ -126,7 +126,8 @@ def get_image_dimensions(path: Path) -> tuple[int, int] | None:
         from PIL import Image
 
         with Image.open(path) as img:
-            return img.size  # (width, height)
+            width, height = img.size  # (width, height)
+            return width, height
     except ImportError:
         pass
     except Exception as e:

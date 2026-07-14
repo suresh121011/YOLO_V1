@@ -4,7 +4,7 @@
 # Target hardware: Raspberry Pi 5 (CPU-only), Android mid-range
 # Target: mAP50 >= 0.70, Safety-class recall >= 0.80, >=15 FPS on target device
 #
-# Read by: scripts/training/train_yolo11n.py
+# Read by: scripts/training/train_yolo.py (--config configs/training/yolo11n_config.yaml)
 # ─────────────────────────────────────────────────────────────────────────────
 
 model:
