@@ -95,6 +95,38 @@ class TestCaptureSessionManifest:
         for banned in ("name", "address", "phone", "email"):
             assert banned not in field_names
 
+    def test_annotation_lifecycle_fields_round_trip(self, tmp_path: Path) -> None:
+        manifest = CaptureSessionManifest(
+            source="custom_captures",
+            session_id="h01_kitchen_s001",
+            annotation_status="finalized",
+            annotators=["asha", "ravi"],
+            iaa_agreement=0.82,
+        )
+        path = tmp_path / "manifest.json"
+        manifest.save(path)
+
+        loaded = CaptureSessionManifest.load(path)
+        assert loaded.session_id == "h01_kitchen_s001"
+        assert loaded.annotation_status == "finalized"
+        assert loaded.annotators == ["asha", "ravi"]
+        assert loaded.iaa_agreement == 0.82
+
+    def test_pre_phase3_manifest_loads_with_defaults(self, tmp_path: Path) -> None:
+        # Additive schema evolution: manifests written before the annotation
+        # lifecycle fields existed must load with the new defaults.
+        path = tmp_path / "manifest.json"
+        path.write_text(
+            json.dumps({"source": "custom_captures", "house_id": "h01", "room": "kitchen"}),
+            encoding="utf-8",
+        )
+        loaded = CaptureSessionManifest.load(path)
+        assert loaded.session_id == ""
+        assert loaded.annotation_status == "unannotated"
+        assert loaded.annotators == []
+        assert loaded.iaa_agreement == -1.0
+        assert loaded.schema_version == 1
+
 
 @pytest.mark.unit
 class TestMergedManifest:

@@ -36,6 +36,18 @@ from src.dataset.capture.consent import (
     load_consent_registry,
     verify_consent,
 )
+from src.dataset.capture.exif import inspect_metadata, strip_metadata
+from src.dataset.capture.ingest import (
+    IngestResult,
+    SessionMeta,
+    ingest_session,
+    init_captures_tree,
+    is_eval_locked,
+    load_session_manifests,
+    lock_eval_set,
+    rebuild_aggregate_manifest,
+    verify_captures_tree,
+)
 
 __all__ = [
     "AnnotationSettings",
@@ -45,9 +57,20 @@ __all__ = [
     "ConsentSettings",
     "IaaSettings",
     "ImageRequirements",
+    "IngestResult",
+    "SessionMeta",
     "find_withdrawn_consents",
+    "ingest_session",
+    "init_captures_tree",
+    "inspect_metadata",
+    "is_eval_locked",
     "load_capture_config",
     "load_consent_registry",
+    "load_session_manifests",
+    "lock_eval_set",
     "parse_session_id",
+    "rebuild_aggregate_manifest",
+    "strip_metadata",
+    "verify_captures_tree",
     "verify_consent",
 ]
