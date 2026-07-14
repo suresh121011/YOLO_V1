@@ -1,2 +1,10 @@
 [core]
     analytics = false
+    remote = storage
+['remote "storage"']
+    # Rename to your actual bucket after creating it (any S3 or
+    # S3-compatible store). Credentials come from the standard AWS chain
+    # (env vars / ~/.aws) — NEVER from this tracked file.
+    url = s3://elderly-assistant-dvc/yolo-v1
+    # For S3-compatible providers (Cloudflare R2, Backblaze B2, MinIO):
+    # endpointurl = https://<provider-endpoint>

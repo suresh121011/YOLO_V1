@@ -89,7 +89,21 @@ The taxonomy includes direct PII/health signals: `passport` (ID document),
   cache **locally, per machine** via the untracked override — never in the shared config:
   `dvc cache dir --local <path-outside-synced-tree>` (writes `.dvc/config.local`, gitignored).
   Cloud sync on the cache causes corruption/thrash; excluding `data/` from sync is also
-  recommended. No DVC remote yet; add one before multi-machine work (WP3.0 gate).
+  recommended.
+- **DVC remote (`storage`)**: an S3/S3-compatible remote is configured as the default in
+  `.dvc/config` with a placeholder bucket URL. One-time activation, run on the machine
+  that holds the smoke data:
+  1. Create the bucket (any S3-compatible store; set `endpointurl` for R2/B2/MinIO) and
+     put the final URL in `.dvc/config` (`dvc remote modify storage url s3://<bucket>/<prefix>`).
+  2. `pip install "dvc[s3]"` and export credentials (see `.env.example`); credentials must
+     never enter tracked config — use env vars, an AWS profile, or
+     `dvc remote modify --local` (writes gitignored `.dvc/config.local`).
+  3. `dvc push` — uploads the cache for every `dvc.lock` output; from then on
+     `dvc push`/`dvc pull` is part of every dataset release (definition of done).
+  4. Gate check: on any clean machine, `dvc pull && dvc repro qa_check` must succeed —
+     see `reproduction_log.md` in this directory for executed reproduction tests.
+  **Phase-3 data collection must not start before step 3 is done** — until the first
+  `dvc push`, the dataset exists on a single machine (risk C1 in the Phase-2 review).
 
 ## 7. Explicit Phase-2 descope (approved)
 
