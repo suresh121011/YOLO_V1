@@ -25,6 +25,17 @@ Related:
 4. Objects **smaller than 20×20 pixels** may be skipped
 5. A single image may contain **1 to 15+ annotations**
 6. When photographing any object, **annotate ALL other visible classes** in the same frame
+7. **`passport` images**: personal details (name, photo, number) must be blurred
+   before export from the annotation tool — verified at import time
+   (`09_import_annotations.py`) by the trusted-class expectation check, but the
+   blurring itself is a manual annotator step, not automated
+8. **CVAT class-order footgun**: the CVAT task's label list MUST be the full 23
+   classes from `configs/data.yaml`, **in that exact order**. A task created
+   from a subset or with reordered labels silently shifts every class ID on
+   export — the resulting label files still "look" valid (IDs in range), so
+   nothing catches this except the class-order check at import
+   (`src/dataset/capture/annotations.py:verify_class_order`, CRITICAL). See
+   §10.6.
 
 ---
 
@@ -41,7 +52,7 @@ Related:
 | `stove` | Include burner area + knobs; gas stoves mandatory |
 | `gas_cylinder` | Full cylinder including regulator attachment area |
 | `passport` | Blur personal details in images used for training |
-| `wet_floor` | Annotate the WET AREA (shiny/reflective surface), not entire floor |
+| `wet_floor` | Annotate the WET AREA (shiny/reflective surface), not entire floor. One box per contiguous wet patch — do not merge disjoint puddles into one box, and skip "maybe damp" areas without a discernible water edge or specular highlight. **Every wet_floor capture must be paired with a dry-floor negative of the same surface** (same tile/marble, dry) — this is the class's known confuser (risk R24; see runbook §8) |
 | `wire` | Annotate visible wire runs; tangled masses = one box around cluster |
 | `walking_stick` | Full stick from handle to tip |
 | `support_handle` | Wall-mounted grab bars and railings |
@@ -116,8 +127,43 @@ For EACH object, capture with variations across:
 
 ---
 
+## 10.6 CVAT Export/Import Quick Reference
+
+Phase-3 annotation import (`scripts/dataset/09_import_annotations.py`) accepts
+any YOLO-format export — CVAT's **"YOLO 1.1"** format is the reference tool.
+
+**Creating the CVAT task:**
+1. Upload the session's images.
+2. **Label list**: add all 23 classes from `configs/data.yaml`, **in ID order**
+   (0=`person`, 1=`face`, 2=`medicine_strip`, … 22=`support_handle`). Do not
+   let CVAT auto-generate labels from a subset of used classes — this is the
+   #1 way to silently break class IDs (§10.1 rule 8).
+3. Assign two annotators for dual annotation (governance requirement).
+
+**Exporting:** Task menu → Export dataset → Format: **`YOLO 1.1`** → this
+produces a zip with `obj.names` (the class list, in the order it was
+entered — verify it matches `configs/data.yaml` before sending it on),
+`obj.data`, and `obj_train_data/*.txt` label files.
+
+**Importing:**
+```bash
+python scripts/dataset/09_import_annotations.py \
+    --session h01_kitchen_s001 --stage \
+    --export path/to/export.zip --annotator asha
+```
+This is where the class-order check runs — if CVAT's label list didn't
+match the taxonomy, the import is CRITICAL-refused with the specific
+mismatched IDs, not silently accepted.
+
+Full workflow (stage → compare/IAA → finalize):
+`docs/04_dataset_engineering/capture_annotation_runbook.md` §4.
+
+---
+
 Previous: [api_reference.md](./api_reference.md)
 
 Next: [release_checklists.md](./release_checklists.md)
 
-Related: [../01_executive_implementation_plan/implementation_phases.md](../01_executive_implementation_plan/implementation_phases.md)
+Related: [../01_executive_implementation_plan/implementation_phases.md](../01_executive_implementation_plan/implementation_phases.md),
+[../04_dataset_engineering/capture_annotation_runbook.md](../04_dataset_engineering/capture_annotation_runbook.md),
+[consent_form_template.md](./consent_form_template.md)
