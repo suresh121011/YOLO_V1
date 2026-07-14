@@ -94,11 +94,11 @@ class RoboflowDownloader(BaseDownloader):
                     "yolov8", location=str(export_dir), overwrite=False
                 )
 
-            counts, n_classes = self._consolidate_export(export_dir, id_offset, remaining)
+            counts, n_classes, copied = self._consolidate_export(export_dir, id_offset, remaining)
             for name, count in counts.items():
                 class_counts[name] = class_counts.get(name, 0) + count
             if remaining is not None:
-                remaining = max(remaining - sum(1 for _ in counts), 0)
+                remaining = max(remaining - copied, 0)
             id_offset += n_classes
 
         return class_counts
@@ -108,7 +108,7 @@ class RoboflowDownloader(BaseDownloader):
         export_dir: Path,
         id_offset: int,
         limit: int | None,
-    ) -> tuple[dict[str, int], int]:
+    ) -> tuple[dict[str, int], int, int]:
         """Copy one export's images/labels into the standard layout.
 
         Label ids are shifted by ``id_offset`` so ids from multiple
@@ -116,7 +116,9 @@ class RoboflowDownloader(BaseDownloader):
         combined source_classes map.
 
         Returns:
-            (per-class annotation counts, number of classes in the export)
+            (per-class annotation counts, number of classes in the export,
+            number of images copied — used to decrement the cross-dataset
+            image budget)
         """
         data_yaml = export_dir / "data.yaml"
         names_raw = load_yaml(data_yaml).get("names", [])
@@ -134,7 +136,7 @@ class RoboflowDownloader(BaseDownloader):
             images = find_image_files(export_dir / subset / "images")
             for img_path in images:
                 if limit is not None and copied >= limit:
-                    return counts, len(names)
+                    return counts, len(names), copied
                 label_path = export_dir / subset / "labels" / f"{img_path.stem}.txt"
                 if not label_path.exists():
                     continue
@@ -158,4 +160,4 @@ class RoboflowDownloader(BaseDownloader):
                 )
                 copied += 1
 
-        return counts, len(names)
+        return counts, len(names), copied

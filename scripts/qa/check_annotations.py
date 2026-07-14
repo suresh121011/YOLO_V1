@@ -547,6 +547,19 @@ def check_split_leakage(data_dir: Path, results: QAResults) -> None:
 # ─── Report Assembly ──────────────────────────────────────────────────────────
 
 
+def portable_path(path: Path) -> str:
+    """Render a path for committed reports: cwd-relative, posix separators.
+
+    Absolute machine paths (user names, OneDrive roots) must never land in
+    versioned QA artifacts. Paths outside the working directory are kept
+    as given rather than absolutized.
+    """
+    try:
+        return path.resolve().relative_to(Path.cwd()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
 def build_qa_reports(
     results: QAResults,
     data_dir: Path,
@@ -560,7 +573,7 @@ def build_qa_reports(
     # JSON
     json_report = {
         "timestamp": timestamp_str(),
-        "data_dir": str(data_dir.absolute()),
+        "data_dir": portable_path(data_dir),
         "num_classes": num_classes,
         "summary": {
             "total_images": results.total_images,
@@ -577,7 +590,7 @@ def build_qa_reports(
                 "check": i.check,
                 "severity": i.severity,
                 "split": i.split,
-                "file": i.file,
+                "file": portable_path(Path(i.file)) if i.file else i.file,
                 "line": i.line,
                 "message": i.message,
             }
@@ -790,7 +803,7 @@ def main() -> int:
         base_name="annotation_qa_report",
         csv_fieldnames=["severity", "check", "split", "file", "line", "message"],
         md_metadata={
-            "Data directory": str(args.data_dir.absolute()),
+            "Data directory": portable_path(args.data_dir),
             "Classes": num_classes,
             "Images scanned": results.total_images,
             "Boxes validated": results.total_boxes,

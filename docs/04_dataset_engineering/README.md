@@ -84,9 +84,12 @@ The taxonomy includes direct PII/health signals: `passport` (ID document),
   new images; patch = label/QA fixes) — per `docs/03 dvc_pipeline.md`.
 - Every release: QA green (0 critical) → `data/DATASET_CHANGELOG.md` entry → git tag +
   DVC-tracked data. Smoke validation is tagged `dataset-v0.1.0-smoke`.
-- DVC cache lives **outside the OneDrive-synced tree** (`C:\Users\haris\.dvc_cache\yolo_v1`)
-  — OneDrive sync on the cache causes corruption/thrash. Recommended: exclude `data/` from
-  OneDrive sync entirely. No DVC remote yet; add one before multi-machine work.
+- The tracked `.dvc/config` carries **no machine-specific cache path** (default: in-repo
+  `.dvc/cache`). If the repo lives inside a cloud-synced folder (OneDrive etc.), relocate the
+  cache **locally, per machine** via the untracked override — never in the shared config:
+  `dvc cache dir --local <path-outside-synced-tree>` (writes `.dvc/config.local`, gitignored).
+  Cloud sync on the cache causes corruption/thrash; excluding `data/` from sync is also
+  recommended. No DVC remote yet; add one before multi-machine work (WP3.0 gate).
 
 ## 7. Explicit Phase-2 descope (approved)
 

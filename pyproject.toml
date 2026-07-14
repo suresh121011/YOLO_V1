@@ -121,6 +121,7 @@ module = [
     "transformers.*",
     "torch.*",
     "roboflow.*",
+    "psutil.*",
 ]
 ignore_missing_imports = true
 
@@ -161,4 +162,7 @@ exclude_lines = [
     "@abstractmethod",
 ]
 show_missing = true
-fail_under = 0  # No minimum in Stage 1 — raised in Stage 6
+# Floor set from the measured Phase-2 baseline (43% overall; the untested
+# remainder is mostly the Phase-6 runtime in src/pipeline). Ratchet upward —
+# never lower — as coverage grows.
+fail_under = 40

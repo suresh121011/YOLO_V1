@@ -1,4 +1,2 @@
-[cache]
-    dir = C:\Users\haris\.dvc_cache\yolo_v1
 [core]
     analytics = false

@@ -206,7 +206,7 @@ class SystemConfig:
             Per-class threshold, or global confidence_threshold if not specified.
         """
         global_thresh = self.runtime.get("confidence_threshold", 0.25)
-        return self.class_thresholds.get(class_name, global_thresh)
+        return float(self.class_thresholds.get(class_name, global_thresh))
 
     def get_runtime(self, key: str, default: Any = None) -> Any:
         """Get a runtime configuration value by key.

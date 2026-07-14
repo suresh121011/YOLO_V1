@@ -1,14 +1,18 @@
 """
-scripts.dataset.generate_splits — Dataset Split Orchestrator
-============================================================
+scripts.dataset.generate_splits — Split + Statistics Convenience Wrapper
+========================================================================
 
-High-level orchestrator that runs the full dataset preparation workflow:
+Developer convenience CLI that chains split + statistics in one run:
     1. Run split_dataset.py logic (train/val/test split)
     2. Run dataset_stats.py to generate statistics
     3. Validate split integrity (no leakage)
     4. Print a human-readable summary
 
-This is the single entry point for the split_train_val_test DVC stage.
+NOTE: This is NOT the DVC stage entry point. The ``split_train_val_test``
+stage in dvc.yaml runs ``scripts/dataset/split_dataset.py`` (which honors
+the configured split strategy); this wrapper reuses that module's
+functions but always splits group-aware. Prefer ``dvc repro`` for
+pipeline runs.
 
 Usage:
     python scripts/dataset/generate_splits.py
