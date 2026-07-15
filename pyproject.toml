@@ -117,6 +117,7 @@ show_error_codes = true
 module = [
     "ultralytics.*",
     "cv2.*",
+    "numpy.*",
     "sounddevice.*",
     "PIL.*",
     "transformers.*",
