@@ -22,6 +22,7 @@ Threading model:
 from __future__ import annotations
 
 import heapq
+import itertools
 import logging
 import threading
 import time
@@ -48,7 +49,13 @@ class AlertQueue:
     """
 
     def __init__(self, max_size: int = 10) -> None:
-        self._heap: list[tuple[int, float, Alert]] = []  # (neg_severity, timestamp, alert)
+        # (neg_severity, timestamp, seq, alert) — seq is a strictly increasing
+        # tiebreaker so heap tuples never fall through to comparing Alert objects
+        # (which are not orderable). Without it, two alerts with equal severity
+        # and equal timestamp — common on platforms with coarse-resolution clocks
+        # like Windows — would raise TypeError during heap operations.
+        self._heap: list[tuple[int, float, int, Alert]] = []
+        self._counter = itertools.count()
         self._lock = threading.Lock()
         self._not_empty = threading.Condition(self._lock)
         self._max_size = max_size
@@ -75,10 +82,13 @@ class AlertQueue:
                 # Drop lowest-priority to make room
                 self._heap.remove(min_item)
                 heapq.heapify(self._heap)
-                logger.debug(f"Dropped lower-priority alert: {min_item[2].rule_id}")
+                logger.debug(f"Dropped lower-priority alert: {min_item[3].rule_id}")
 
             # Negate severity so highest severity = smallest heap value (min-heap → max priority)
-            heapq.heappush(self._heap, (-int(alert.severity), time.monotonic(), alert))
+            heapq.heappush(
+                self._heap,
+                (-int(alert.severity), time.monotonic(), next(self._counter), alert),
+            )
             self._not_empty.notify()
             return True
 
@@ -101,7 +111,7 @@ class AlertQueue:
                     return None
                 self._not_empty.wait(timeout=remaining)
 
-            _, _, alert = heapq.heappop(self._heap)
+            _, _, _, alert = heapq.heappop(self._heap)
             return alert
 
     def size(self) -> int:
