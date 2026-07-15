@@ -9,6 +9,7 @@ numpy>=1.26,<2.0
 
 # Configuration
 PyYAML>=6.0,<7.0
+requests>=2.31,<3.0
 
 # Audio playback (TTS output)
 sounddevice>=0.4.6,<0.5
