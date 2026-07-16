@@ -12,7 +12,7 @@ Executed clean-machine reproduction tests for the Phase-2 dataset pipeline
 | **Machine** | Ephemeral Linux container (x86_64, Python 3.11.15) — no prior repo state, no DVC cache, no dataset |
 | **Commit** | `wp3.0-platform-remediation` @ `b1c1a84` (fresh `git clone`, separate working copy) |
 | **Variant** | Rebuild-from-sources (`dvc repro`), smoke mode. The `dvc pull` variant is **pending** — it requires the first `dvc push` from the machine holding the smoke data (see §6 runbook). |
-| **Deps** | `dvc[s3] 3.67.1`, pyyaml, requests, pillow, numpy, opencv-python-headless in a fresh venv. *Deviation:* full `requirements.txt` (ultralytics/torch/sounddevice) not installed — unused by the dataset DAG (training stage frozen). |
+| **Deps** | `dvc[s3] 3.67.1`, pyyaml, requests, pillow, numpy, opencv-python-headless in a fresh `.venv`. *Deviation:* full `requirements.txt` (ultralytics/torch/sounddevice) not installed — unused by the dataset DAG (training stage frozen). |
 
 ### Result: PASS (for every stage the environment's network policy allowed)
 

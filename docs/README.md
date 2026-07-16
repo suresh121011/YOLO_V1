@@ -60,20 +60,30 @@ docs/
 │   ├── deployment_architecture.md
 │   └── architecture_decisions.md
 │
-└── 03_engineering_appendix/             ← Code, templates, checklists (12 files)
-    ├── README.md                         ← Index
-    ├── yaml_examples.md
-    ├── python_examples.md
-    ├── dataset_templates.md
-    ├── training_scripts.md
-    ├── qa_pipeline.md
-    ├── dvc_pipeline.md
-    ├── sample_logs.md
-    ├── api_reference.md
-    ├── annotation_guide.md
-    ├── release_checklists.md
-    ├── troubleshooting.md
-    └── future_modules.md
+├── 03_engineering_appendix/             ← Code, templates, checklists (14 files)
+│   ├── README.md                         ← Index
+│   ├── yaml_examples.md
+│   ├── python_examples.md
+│   ├── dataset_templates.md
+│   ├── training_scripts.md
+│   ├── qa_pipeline.md
+│   ├── dvc_pipeline.md
+│   ├── sample_logs.md
+│   ├── api_reference.md
+│   ├── annotation_guide.md
+│   ├── consent_form_template.md
+│   ├── release_checklists.md
+│   ├── troubleshooting.md
+│   └── future_modules.md
+│
+├── 04_dataset_engineering/              ← Phase-2/3 dataset platform (4 files)
+│   ├── README.md                         ← Governance: licenses, completeness, splits
+│   ├── capture_annotation_runbook.md     ← Phase-3 collection/annotation SOP
+│   ├── phase3_engineering_report.md
+│   └── reproduction_log.md               ← Clean-machine rebuild evidence
+│
+└── 05_audit/                            ← Production readiness audits
+    └── pre_phase4_production_readiness_audit.md
 ```
 
 ---
@@ -86,8 +96,10 @@ docs/
 | **Engineering Manager** | [implementation_phases.md](./01_executive_implementation_plan/implementation_phases.md) → [risk_register.md](./01_executive_implementation_plan/risk_register.md) |
 | **ML / CV Engineer** | [system_architecture.md](./02_technical_architecture_specification/system_architecture.md) → [data_contracts.md](./02_technical_architecture_specification/data_contracts.md) |
 | **Backend Engineer** | [interfaces.md](./02_technical_architecture_specification/interfaces.md) → [threading_model.md](./02_technical_architecture_specification/threading_model.md) |
-| **Data Annotator** | [annotation_guide.md](./03_engineering_appendix/annotation_guide.md) |
-| **MLOps / DevOps** | [dvc_pipeline.md](./03_engineering_appendix/dvc_pipeline.md) → [release_checklists.md](./03_engineering_appendix/release_checklists.md) |
+| **Data Annotator** | [annotation_guide.md](./03_engineering_appendix/annotation_guide.md) → [capture_annotation_runbook.md](./04_dataset_engineering/capture_annotation_runbook.md) |
+| **Dataset Engineer** | [04_dataset_engineering/README.md](./04_dataset_engineering/README.md) → [capture_annotation_runbook.md](./04_dataset_engineering/capture_annotation_runbook.md) |
+| **MLOps / DevOps** | [dvc_pipeline.md](./03_engineering_appendix/dvc_pipeline.md) → [04_dataset_engineering/README.md §6](./04_dataset_engineering/README.md) → [release_checklists.md](./03_engineering_appendix/release_checklists.md) |
+| **Release Manager / Auditor** | [05_audit/pre_phase4_production_readiness_audit.md](./05_audit/pre_phase4_production_readiness_audit.md) |
 | **QA Engineer** | [validation_strategy.md](./01_executive_implementation_plan/validation_strategy.md) → [qa_pipeline.md](./03_engineering_appendix/qa_pipeline.md) |
 | **New Team Member** | Read in order: SUMMARY → product_vision → architecture_overview → system_architecture |
 

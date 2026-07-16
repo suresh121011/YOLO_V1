@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Pre-Phase-4 production readiness audit
+  (`docs/05_audit/pre_phase4_production_readiness_audit.md`) — phase
+  verification (1/2/WP3.0/3 all PASS), full findings register, CI/DVC/git
+  review, Phase-4 readiness assessment, prioritized action plan; verdict:
+  ✅ ready for Phase 4 (first `dvc push` remains the gate before real
+  capture collection)
 - Phase-3: Custom Dataset Collection & Annotation tooling
   - `src/dataset/capture/` — collection/annotation library: typed capture
     config (`configs/capture_config.yaml`), PII-free consent verification
@@ -61,6 +67,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `.env.example` documenting `ROBOFLOW_API_KEY` (graceful-skip semantics)
 
 ### Fixed
+- Local mypy gate aborted on venvs with numpy 2.x installed (PEP 695 `type`
+  statements in numpy stubs vs the hard `python_version = "3.10"` pin);
+  pin removed — mypy now checks under the running interpreter while CI's
+  Python-3.10 quality job keeps enforcing the 3.10 floor. Supersedes the
+  ineffective `numpy.*` ignore-missing-imports override attempt.
+- `AlertQueue` heap comparison `TypeError` on coarse-resolution clocks
+  (equal-severity alerts with identical `time.monotonic()` timestamps fell
+  through to non-orderable `Alert` objects, failing windows-latest CI);
+  strictly increasing sequence-number tiebreaker added
+  (`src/pipeline/alert_queue.py`)
+- `requests` added to runtime dependencies (`requirements.txt`,
+  `pyproject.toml`) — downloader tests import it transitively and fresh
+  environments failed collection
 - Roboflow cross-dataset image budget decremented by *distinct class count*
   instead of images copied (`_consolidate_export` now returns the copied
   count; regression-tested)
