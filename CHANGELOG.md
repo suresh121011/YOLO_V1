@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Pre-Phase-4 production readiness audit
+  (`docs/05_audit/pre_phase4_production_readiness_audit.md`) — phase
+  verification (1/2/WP3.0/3 all PASS), full findings register, CI/DVC/git
+  review, Phase-4 readiness assessment, prioritized action plan; verdict:
+  ✅ ready for Phase 4 (first `dvc push` remains the gate before real
+  capture collection)
 - Phase-3: Custom Dataset Collection & Annotation tooling
   - `src/dataset/capture/` — collection/annotation library: typed capture
     config (`configs/capture_config.yaml`), PII-free consent verification
