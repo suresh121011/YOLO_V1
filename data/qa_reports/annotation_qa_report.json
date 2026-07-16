@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-07-13T17:03:30Z",
-  "data_dir": "C:\\Users\\haris\\OneDrive\\Desktop\\YOLO_V1\\data\\processed",
+  "timestamp": "2026-07-16T15:06:54Z",
+  "data_dir": "data/processed",
   "num_classes": 23,
   "summary": {
     "total_images": 188,
@@ -74,7 +74,7 @@
       "check": "empty_label_files",
       "severity": "WARNING",
       "split": "train",
-      "file": "data\\processed\\labels\\train\\negatives_000000014888.txt",
+      "file": "data/processed/labels/train/negatives_000000014888.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000014888.txt"
     },
@@ -82,7 +82,7 @@
       "check": "empty_label_files",
       "severity": "WARNING",
       "split": "train",
-      "file": "data\\processed\\labels\\train\\negatives_000000015272.txt",
+      "file": "data/processed/labels/train/negatives_000000015272.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000015272.txt"
     },
@@ -90,7 +90,7 @@
       "check": "empty_label_files",
       "severity": "WARNING",
       "split": "train",
-      "file": "data\\processed\\labels\\train\\negatives_000000087875.txt",
+      "file": "data/processed/labels/train/negatives_000000087875.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000087875.txt"
     },
@@ -98,7 +98,7 @@
       "check": "empty_label_files",
       "severity": "WARNING",
       "split": "train",
-      "file": "data\\processed\\labels\\train\\negatives_000000106266.txt",
+      "file": "data/processed/labels/train/negatives_000000106266.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000106266.txt"
     },
@@ -106,7 +106,7 @@
       "check": "empty_label_files",
       "severity": "WARNING",
       "split": "train",
-      "file": "data\\processed\\labels\\train\\negatives_000000155291.txt",
+      "file": "data/processed/labels/train/negatives_000000155291.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000155291.txt"
     },
@@ -114,7 +114,7 @@
       "check": "empty_label_files",
       "severity": "WARNING",
       "split": "train",
-      "file": "data\\processed\\labels\\train\\negatives_000000184321.txt",
+      "file": "data/processed/labels/train/negatives_000000184321.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000184321.txt"
     },
@@ -122,7 +122,7 @@
       "check": "empty_label_files",
       "severity": "WARNING",
       "split": "train",
-      "file": "data\\processed\\labels\\train\\negatives_000000311909.txt",
+      "file": "data/processed/labels/train/negatives_000000311909.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000311909.txt"
     },
@@ -130,7 +130,7 @@
       "check": "empty_label_files",
       "severity": "WARNING",
       "split": "train",
-      "file": "data\\processed\\labels\\train\\negatives_000000348488.txt",
+      "file": "data/processed/labels/train/negatives_000000348488.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000348488.txt"
     },
@@ -138,7 +138,7 @@
       "check": "empty_label_files",
       "severity": "WARNING",
       "split": "train",
-      "file": "data\\processed\\labels\\train\\negatives_000000354753.txt",
+      "file": "data/processed/labels/train/negatives_000000354753.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000354753.txt"
     },
@@ -146,7 +146,7 @@
       "check": "empty_label_files",
       "severity": "WARNING",
       "split": "train",
-      "file": "data\\processed\\labels\\train\\negatives_000000369751.txt",
+      "file": "data/processed/labels/train/negatives_000000369751.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000369751.txt"
     },
@@ -154,7 +154,7 @@
       "check": "empty_label_files",
       "severity": "WARNING",
       "split": "train",
-      "file": "data\\processed\\labels\\train\\negatives_000000372317.txt",
+      "file": "data/processed/labels/train/negatives_000000372317.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000372317.txt"
     },
@@ -162,7 +162,7 @@
       "check": "empty_label_files",
       "severity": "WARNING",
       "split": "train",
-      "file": "data\\processed\\labels\\train\\negatives_000000420472.txt",
+      "file": "data/processed/labels/train/negatives_000000420472.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000420472.txt"
     },
@@ -170,7 +170,7 @@
       "check": "empty_label_files",
       "severity": "WARNING",
       "split": "train",
-      "file": "data\\processed\\labels\\train\\negatives_000000446117.txt",
+      "file": "data/processed/labels/train/negatives_000000446117.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000446117.txt"
     },
@@ -178,7 +178,7 @@
       "check": "empty_label_files",
       "severity": "WARNING",
       "split": "train",
-      "file": "data\\processed\\labels\\train\\negatives_000000462756.txt",
+      "file": "data/processed/labels/train/negatives_000000462756.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000462756.txt"
     },
@@ -186,7 +186,7 @@
       "check": "empty_label_files",
       "severity": "WARNING",
       "split": "train",
-      "file": "data\\processed\\labels\\train\\negatives_000000509656.txt",
+      "file": "data/processed/labels/train/negatives_000000509656.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000509656.txt"
     },
@@ -194,7 +194,7 @@
       "check": "empty_label_files",
       "severity": "WARNING",
       "split": "train",
-      "file": "data\\processed\\labels\\train\\negatives_000000511321.txt",
+      "file": "data/processed/labels/train/negatives_000000511321.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000511321.txt"
     },
@@ -202,7 +202,7 @@
       "check": "empty_label_files",
       "severity": "WARNING",
       "split": "train",
-      "file": "data\\processed\\labels\\train\\negatives_000000514979.txt",
+      "file": "data/processed/labels/train/negatives_000000514979.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000514979.txt"
     },
@@ -210,7 +210,7 @@
       "check": "empty_label_files",
       "severity": "WARNING",
       "split": "train",
-      "file": "data\\processed\\labels\\train\\negatives_000000545129.txt",
+      "file": "data/processed/labels/train/negatives_000000545129.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000545129.txt"
     }
@@ -332,10 +332,25 @@
       "negatives_000000354753.jpg"
     ]
   },
+  "eval_set": {
+    "overlap": {
+      "available": true,
+      "eval_image_count": 0,
+      "train_facing_image_count": 376,
+      "exact_overlap_count": 0,
+      "exact_overlaps": [],
+      "near_overlap_count": 0,
+      "near_overlaps": []
+    },
+    "house_exclusivity": {
+      "available": false
+    }
+  },
   "orchestrator": {
     "check_annotations_exit": 2,
     "dataset_stats_exit": 0,
     "license_critical": false,
-    "image_quality_warnings": 9
+    "image_quality_warnings": 9,
+    "eval_overlap_critical": false
   }
 }
