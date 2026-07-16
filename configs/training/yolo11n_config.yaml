@@ -50,6 +50,24 @@ output:
   plots: true                      # Generate confusion matrix, PR curves
   verbose: true
 
+# ─── Missing-Annotation Mitigation (Phase-4) ──────────────────────────────────
+# When enabled, the classification BCE loss is masked per image to the classes
+# its source labels exhaustively (data/processed/completeness.json, built by
+# `dvc repro generate_completeness`), removing false "push to background"
+# supervision on partially annotated public datasets. When false, training is
+# byte-for-byte identical to the stock pipeline (no custom trainer, no
+# completeness read). CLI override: --mitigation on|off.
+# NOTE: with mitigation enabled, preflight gate G8 requires
+# mosaic/mixup/copy_paste to be 0 (mixing_augmentation_policy: forbid) —
+# composited samples expose only the primary image, making per-image masks
+# unsound. See docs/06_training_engineering/ for the full rationale.
+missing_annotation_mitigation:
+  enabled: false
+  completeness_path: data/processed/completeness.json
+  on_unknown_image: error              # error | warn_full_supervision
+  mixing_augmentation_policy: forbid   # forbid | warn | ignore (preflight G8)
+  log_mask_stats: true                 # per-epoch % of masked (image, class) cells
+
 # ─── WandB Experiment Tracking ─────────────────────────────────────────────────
 # Optional: set WANDB_API_KEY environment variable to enable
 wandb:

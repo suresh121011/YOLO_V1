@@ -7,13 +7,26 @@ is multiplied per image by a {0,1} class mask (from the completeness
 artifact) before summation, removing the false "push to background" signal
 for classes a source does not annotate. Box and DFL losses are untouched.
 
-This module deliberately imports torch/ultralytics inside functions and
-class bodies — importing it is free, so the preflight gates can use
-:func:`assert_ultralytics_compat` in torch-less environments and the
-disabled training path never pays the import cost.
+Mechanism (ADR-P4-01/02): ``v8DetectionLoss`` computes the classification
+loss as ``self.bce(pred_scores, target_scores).sum() / target_scores_sum``
+with ``self.bce = nn.BCEWithLogitsLoss(reduction="none")``. Instead of
+copying that ~80-line method, :class:`MaskedDetectionLoss` swaps ``self.bce``
+for a :class:`_MaskingBCE` wrapper and sets a per-batch ``(bs, 1, nc)`` mask
+built from ``batch["im_file"]`` before delegating to the stock ``__call__``.
+
+Identity guarantee: multiplying by an all-ones mask is exact in IEEE-754, and
+``target_scores_sum`` derives from the (untouched) assigner targets, so with
+every class trusted the loss is bit-identical to stock — the unit tests
+assert this. Box/DFL losses depend only on assigner outputs and are never
+touched.
+
+Import policy: this module stays torch-free so the preflight gates (G5) and
+their tests can import :func:`assert_ultralytics_compat` in any environment.
+The loss classes live in src/training/_masked_loss_impl.py (torch/ultralytics
+at module level, imported only on the mitigation-enabled path).
 
 Compatibility contract: designed against the ``v8DetectionLoss`` surface of
-ultralytics >=8.3,<9.0 (developed and validated on 8.4.96). The canary below
+ultralytics >=8.3,<9.0 (developed and validated on 8.4.96). The canary
 fails loudly if an upstream release moves the seams this module relies on.
 """
 

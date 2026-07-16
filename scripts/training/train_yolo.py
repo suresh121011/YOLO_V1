@@ -13,6 +13,10 @@ Supports:
     - TensorBoard support (auto-enabled by Ultralytics)
     - Optional W&B integration (wandb.enabled in training config)
     - Structured logging of training metadata
+    - Optional missing-annotation mitigation (Phase-4): masked BCE cls loss
+      driven by data/processed/completeness.json; preflight gates G1–G8 run
+      before training; strictly opt-in (missing_annotation_mitigation.enabled
+      or --mitigation on|off) — disabled keeps the stock path byte-for-byte
 
 Training outputs (under models/yolo11n/):
     weights/best.pt           — Best checkpoint by val mAP50
@@ -25,6 +29,7 @@ Usage:
     python scripts/training/train_yolo.py --config configs/training/yolo11n_config.yaml
     python scripts/training/train_yolo.py --epochs 50 --batch 8 --device cpu
     python scripts/training/train_yolo.py --resume
+    python scripts/training/train_yolo.py --mitigation on
 
 DVC integration:
     This script is invoked by the train_yolo11n DVC stage.
@@ -41,6 +46,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from src.training.mitigation_config import MITIGATION_SECTION, MitigationConfig
 from src.utils.config_helpers import load_data_config, load_training_config, resolve_device
 from src.utils.report_utils import timestamp_str
 
@@ -134,38 +140,28 @@ def save_metrics_json(metrics: dict, output_dir: Path) -> Path:
     return metrics_path
 
 
-# ─── Training Pipeline ────────────────────────────────────────────────────────
+# ─── Training kwargs assembly ─────────────────────────────────────────────────
 
 
-def run_training(args: argparse.Namespace) -> int:
-    """Execute the full YOLO training pipeline.
+def build_train_kwargs(args: argparse.Namespace, train_cfg: dict) -> dict:
+    """Assemble the kwargs passed to Ultralytics ``model.train()``.
+
+    Extracted verbatim from the pre-Phase-4 inline assembly; a golden
+    regression test (tests/unit/test_train_kwargs_regression.py) guards that
+    the disabled-mitigation output stays byte-identical.
 
     Args:
-        args: Parsed CLI arguments.
+        args:      Parsed CLI arguments (CLI overrides config values).
+        train_cfg: Parsed training config dict.
 
     Returns:
-        Exit code: 0 on success, 1 on error.
+        Flat kwargs dict for model.train(). Never contains a 'trainer' key —
+        the mitigation-enabled path adds that separately in run_training().
     """
-    # Load configurations
-    try:
-        train_cfg = load_training_config(args.config)
-    except FileNotFoundError as e:
-        logger.error(f"Training config not found: {e}")
-        return 1
-
-    try:
-        load_data_config(args.data)  # validation only — Ultralytics reads the YAML itself
-    except (FileNotFoundError, ValueError) as e:
-        logger.error(f"Data config error: {e}")
-        return 1
-
-    # Resolve settings (CLI args override config values)
     model_section = train_cfg.get("model", {})
     training_section = train_cfg.get("training", {})
     output_section = train_cfg.get("output", {})
-    wandb_cfg = train_cfg.get("wandb", {})
 
-    model_base = args.model or model_section.get("base", "yolo11n.pt")
     epochs = args.epochs or training_section.get("epochs", 150)
     batch = args.batch or training_section.get("batch", 16)
     imgsz = args.imgsz or training_section.get("imgsz", 640)
@@ -177,43 +173,6 @@ def run_training(args: argparse.Namespace) -> int:
     name = args.name or output_section.get("name", "yolo11n")
     save_period = output_section.get("save_period", 10)
 
-    run_name = f"{name}_{timestamp_str().replace(':', '-')}"
-
-    logger.info("=" * 60)
-    logger.info("YOLO Training Pipeline — Elderly Assistant System")
-    logger.info("=" * 60)
-    logger.info(f"Model:    {model_base}")
-    logger.info(f"Data:     {args.data}")
-    logger.info(f"Epochs:   {epochs}")
-    logger.info(f"Batch:    {batch}")
-    logger.info(f"Image sz: {imgsz}")
-    logger.info(f"Device:   {device}")
-    logger.info(f"Patience: {patience}")
-    logger.info(f"Output:   {project}/{name}")
-    logger.info(f"Resume:   {args.resume}")
-
-    # W&B setup (optional)
-    _setup_wandb(wandb_cfg, run_name)
-
-    # Load YOLO model
-    try:
-        from ultralytics import YOLO  # type: ignore[import]
-    except ImportError:
-        logger.error("ultralytics not installed. Run: pip install ultralytics")
-        return 1
-
-    if args.resume:
-        # Resume from last checkpoint
-        last_ckpt = Path(project) / name / "weights" / "last.pt"
-        if not last_ckpt.exists():
-            logger.error(f"No checkpoint found to resume: {last_ckpt}")
-            return 1
-        logger.info(f"Resuming from: {last_ckpt}")
-        model = YOLO(str(last_ckpt))
-    else:
-        model = YOLO(model_base)
-
-    # Assemble training kwargs from config + CLI
     train_kwargs: dict = {
         "data": str(args.data),
         "epochs": epochs,
@@ -259,6 +218,133 @@ def run_training(args: argparse.Namespace) -> int:
         }
         train_kwargs.update(aug_kwargs)
 
+    return train_kwargs
+
+
+# ─── Training Pipeline ────────────────────────────────────────────────────────
+
+
+def run_training(args: argparse.Namespace) -> int:
+    """Execute the full YOLO training pipeline.
+
+    Args:
+        args: Parsed CLI arguments.
+
+    Returns:
+        Exit code: 0 on success, 1 on error.
+    """
+    # Load configurations
+    try:
+        train_cfg = load_training_config(args.config)
+    except FileNotFoundError as e:
+        logger.error(f"Training config not found: {e}")
+        return 1
+
+    try:
+        load_data_config(args.data)  # validation only — Ultralytics reads the YAML itself
+    except (FileNotFoundError, ValueError) as e:
+        logger.error(f"Data config error: {e}")
+        return 1
+
+    # Missing-annotation mitigation (Phase-4). Disabled config ⇒ the stock
+    # training path below runs completely unchanged.
+    try:
+        mitigation = MitigationConfig.from_training_config(train_cfg)
+        if args.mitigation is not None:
+            mitigation = mitigation.with_overrides(enabled=(args.mitigation == "on"))
+    except ValueError as e:
+        logger.error(f"Invalid {MITIGATION_SECTION} config: {e}")
+        return 1
+
+    if mitigation.enabled:
+        # Fail early, before any Ultralytics/W&B work.
+        from src.training.preflight import run_preflight
+
+        report = run_preflight(mitigation, data_yaml_path=Path(args.data), train_cfg=train_cfg)
+        for gate in report.results:
+            line = gate.format_line()
+            if gate.status == "fail":
+                logger.error(line)
+            elif gate.status == "warn":
+                logger.warning(line)
+            else:
+                logger.info(line)
+        if report.verdict == "FAIL":
+            logger.error("Mitigation preflight FAILED — training aborted before start.")
+            return 1
+
+    # Resolve settings (CLI args override config values)
+    model_section = train_cfg.get("model", {})
+    wandb_cfg = train_cfg.get("wandb", {})
+
+    model_base = args.model or model_section.get("base", "yolo11n.pt")
+
+    # Assemble training kwargs from config + CLI (extracted verbatim;
+    # guarded by the golden regression test).
+    train_kwargs = build_train_kwargs(args, train_cfg)
+    project = train_kwargs["project"]
+    name = train_kwargs["name"]
+
+    run_name = f"{name}_{timestamp_str().replace(':', '-')}"
+
+    logger.info("=" * 60)
+    logger.info("YOLO Training Pipeline — Elderly Assistant System")
+    logger.info("=" * 60)
+    logger.info(f"Model:    {model_base}")
+    logger.info(f"Data:     {args.data}")
+    logger.info(f"Epochs:   {train_kwargs['epochs']}")
+    logger.info(f"Batch:    {train_kwargs['batch']}")
+    logger.info(f"Image sz: {train_kwargs['imgsz']}")
+    logger.info(f"Device:   {train_kwargs['device']}")
+    logger.info(f"Patience: {train_kwargs['patience']}")
+    logger.info(f"Output:   {project}/{name}")
+    logger.info(f"Resume:   {args.resume}")
+
+    # W&B setup (optional)
+    _setup_wandb(wandb_cfg, run_name)
+
+    # Load YOLO model
+    try:
+        from ultralytics import YOLO  # type: ignore[import]
+    except ImportError:
+        logger.error("ultralytics not installed. Run: pip install ultralytics")
+        return 1
+
+    if args.resume:
+        # Resume from last checkpoint
+        last_ckpt = Path(project) / name / "weights" / "last.pt"
+        if not last_ckpt.exists():
+            logger.error(f"No checkpoint found to resume: {last_ckpt}")
+            return 1
+        logger.info(f"Resuming from: {last_ckpt}")
+        model = YOLO(str(last_ckpt))
+    else:
+        model = YOLO(model_base)
+
+    mitigation_metrics: dict | None = None
+    if mitigation.enabled:
+        # Inject the masked-loss trainer. On resume this must be passed again
+        # (the trainer class is never stored in checkpoints).
+        from src.training.completeness_lookup import CompletenessLookup
+        from src.training.trainer import build_masked_trainer
+
+        try:
+            lookup = CompletenessLookup.load(mitigation.completeness_path)
+        except (FileNotFoundError, ValueError) as e:
+            logger.error(f"Completeness artifact unusable: {e}")
+            return 1
+        train_kwargs["trainer"] = build_masked_trainer(mitigation, lookup)
+        mitigation_metrics = {
+            "enabled": True,
+            "completeness_path": mitigation.completeness_path.as_posix(),
+            "taxonomy_fingerprint": lookup.fingerprint,
+            "images_covered": len(lookup),
+        }
+        logger.info(
+            f"Mitigation: ENABLED — masked BCE trainer injected "
+            f"({len(lookup)} images, artifact {mitigation.completeness_path})"
+        )
+
     # Run training
     logger.info("Starting training…")
     start_time = time.time()
@@ -278,14 +364,17 @@ def run_training(args: argparse.Namespace) -> int:
         {
             "timestamp": timestamp_str(),
             "model_base": model_base,
-            "epochs_trained": epochs,
-            "batch_size": batch,
-            "imgsz": imgsz,
-            "device": device,
+            "epochs_trained": train_kwargs["epochs"],
+            "batch_size": train_kwargs["batch"],
+            "imgsz": train_kwargs["imgsz"],
+            "device": train_kwargs["device"],
             "training_time_hours": round(elapsed / 3600, 3),
             "run_name": run_name,
         }
     )
+    if mitigation_metrics is not None:
+        # Only added when enabled — the disabled metrics.json stays unchanged.
+        metrics["mitigation"] = mitigation_metrics
 
     results_dir = Path(project) / name / "results"
     save_metrics_json(metrics, results_dir)
@@ -373,6 +462,15 @@ def parse_args() -> argparse.Namespace:
         "--resume",
         action="store_true",
         help="Resume training from last.pt checkpoint.",
+    )
+    parser.add_argument(
+        "--mitigation",
+        choices=("on", "off"),
+        default=None,
+        help=(
+            "Override missing_annotation_mitigation.enabled from the training "
+            "config (Phase-4 masked BCE loss)."
+        ),
     )
     return parser.parse_args()
 
