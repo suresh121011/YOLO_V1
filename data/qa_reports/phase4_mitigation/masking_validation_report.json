@@ -1,0 +1,88 @@
+{
+  "generated_at": "2026-07-16T19:42:32Z",
+  "git_commit": "7d67ebc",
+  "artifact": "data/processed/completeness.json",
+  "environment": {
+    "python": "3.14.3",
+    "ultralytics": "8.4.96",
+    "torch": "2.13.0+cpu"
+  },
+  "correctness_suite": {
+    "passed": true,
+    "summary": "\u001b[32m============================= \u001b[32m\u001b[1m31 passed\u001b[0m\u001b[32m in 4.13s\u001b[0m\u001b[32m ==============================\u001b[0m"
+  },
+  "mask_spot_checks": {
+    "passed": true,
+    "images_checked": 188,
+    "by_policy": {
+      "coco": {
+        "images": 53,
+        "trusted": 10,
+        "masked": 13,
+        "expected_trusted": 10,
+        "all_ok": true
+      },
+      "negatives": {
+        "images": 18,
+        "trusted": 23,
+        "masked": 0,
+        "expected_trusted": 23,
+        "all_ok": true
+      },
+      "openimages": {
+        "images": 57,
+        "trusted": 3,
+        "masked": 20,
+        "expected_trusted": 3,
+        "all_ok": true
+      },
+      "wider_face": {
+        "images": 60,
+        "trusted": 1,
+        "masked": 22,
+        "expected_trusted": 1,
+        "all_ok": true
+      }
+    },
+    "nc": 23
+  },
+  "mitigated_run": {
+    "name": "m35_mitigated",
+    "mitigation_enabled": true,
+    "exit_code": 0,
+    "seconds": 21.2,
+    "weights_written": true,
+    "finite_losses": true,
+    "mitigation_active_logged": true,
+    "mask_stats_logged": true,
+    "preflight_ran": true,
+    "metrics": {
+      "mAP50": 0.0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "training_time_hours": 0.005
+    },
+    "mitigation_block_in_metrics": true,
+    "passed": true
+  },
+  "disabled_run": {
+    "name": "m35_disabled",
+    "mitigation_enabled": false,
+    "exit_code": 0,
+    "seconds": 21.2,
+    "weights_written": true,
+    "finite_losses": true,
+    "mitigation_active_logged": false,
+    "mask_stats_logged": false,
+    "preflight_ran": false,
+    "metrics": {
+      "mAP50": 0.0011,
+      "precision": 0.0021,
+      "recall": 0.1298,
+      "training_time_hours": 0.005
+    },
+    "mitigation_block_in_metrics": false,
+    "passed": true
+  },
+  "verdict": "PASS"
+}
