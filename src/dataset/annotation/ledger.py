@@ -339,3 +339,12 @@ class LedgerView:
     def all_images(self) -> frozenset[str]:
         """Every filename with at least one verified cell."""
         return frozenset(self.raw.get("entries", {}).keys())
+
+    def taxonomy_fingerprint(self) -> str:
+        """Fingerprint recorded at last import (``""`` if never imported).
+
+        An empty string is never taxonomy drift — the M1 git-bootstrapped
+        ledger has no entries yet to have been imported against anything
+        (M3's completeness drift check treats it as "not applicable").
+        """
+        return str(self.raw.get("taxonomy_fingerprint", ""))
