@@ -30,7 +30,7 @@ from src.training.mitigation_config import MitigationConfig
 logger = logging.getLogger(__name__)
 
 
-class _MaskingBCE(nn.Module):
+class _MaskingBCE(nn.BCEWithLogitsLoss):
     """Elementwise BCE wrapper that multiplies by the current batch mask.
 
     ``v8DetectionLoss`` computes ``self.bce(pred_scores, target_scores)``
@@ -39,6 +39,12 @@ class _MaskingBCE(nn.Module):
     the owner sets a ``(bs, 1, nc)`` {0,1} mask before delegating to the
     stock ``__call__`` and clears it afterwards. With no mask set (e.g. a
     non-mitigated caller) the wrapper is transparent.
+
+    Subclasses ``nn.BCEWithLogitsLoss`` (not bare ``nn.Module``) so assigning
+    it to ``v8DetectionLoss.bce`` — which the base class types as
+    ``BCEWithLogitsLoss`` — is a valid subtype, with no annotation overrides.
+    Computation still delegates to the wrapped ``inner`` module; the
+    inherited state is inert (``reduction="none"``, no weights).
     """
 
     def __init__(self, inner: nn.Module) -> None:
@@ -47,7 +53,7 @@ class _MaskingBCE(nn.Module):
         Args:
             inner: The elementwise BCE module being wrapped.
         """
-        super().__init__()
+        super().__init__(reduction="none")
         self.inner = inner
         self._mask: torch.Tensor | None = None
 
@@ -92,9 +98,6 @@ class MaskedDetectionLoss(v8DetectionLoss):
     depend only on assigner outputs — behave exactly as stock. An all-ones
     mask is bit-identical to stock v8DetectionLoss (unit-tested).
     """
-
-    # Annotate attribute so mypy knows the type populated by the base class
-    bce: nn.Module
 
     def __init__(
         self,
