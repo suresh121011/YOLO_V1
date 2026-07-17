@@ -608,12 +608,12 @@ stages:
       size: 8452
     - path: src/dataset/completeness.py
       hash: md5
-      md5: 16159e62d9c34481c3f9eadb0e9ce313
-      size: 22798
+      md5: 7db3525a8c237cb853e468e92363d986
+      size: 25159
     - path: src/dataset/completeness_policies.py
       hash: md5
-      md5: 1db2c388281921883829a8df6a41a641
-      size: 14027
+      md5: e6b227f5dd24e0b21dffac1638c59413
+      size: 18665
     params:
       configs/dataset_sources.yaml:
         completeness:
@@ -627,11 +627,11 @@ stages:
     outs:
     - path: data/processed/completeness.json
       hash: md5
-      md5: c752f639e88cf3c4b2488622cd20c311
+      md5: be7e5f6cdb035179fe9619a79601e42c
       size: 22832
     - path: data/qa_reports/completeness_report.json
       hash: md5
-      md5: 03c45b97836a0cebce11c096e2e4a4f1
+      md5: 54f1a3ba448e6d3ea88298f4d070cd51
       size: 2135
   auto_annotate:
     cmd: python scripts/dataset/12_auto_annotate.py
@@ -762,3 +762,34 @@ stages:
       md5: d751713988987e9331980363e24189ce.dir
       size: 0
       nfiles: 0
+  apply_verified_labels:
+    cmd: python scripts/dataset/15_apply_verified_labels.py
+    deps:
+    - path: data/annotation/verification_ledger.json
+      hash: md5
+      md5: 7db92f1d0ace8eacfe1e528454ae331c
+      size: 173
+    - path: data/annotation/verified_labels
+      hash: md5
+      md5: d751713988987e9331980363e24189ce.dir
+      size: 0
+      nfiles: 0
+    - path: data/merged/labels
+      hash: md5
+      md5: 03dda6eff1d150b17bca0c0bd12fc057.dir
+      size: 62700
+      nfiles: 188
+    - path: scripts/dataset/15_apply_verified_labels.py
+      hash: md5
+      md5: 4092c80ba22c297c1726f1ff7af7291f
+      size: 2353
+    - path: src/dataset/annotation/apply.py
+      hash: md5
+      md5: fb5c1ca6108f9397528a0aa0b481623d
+      size: 3194
+    outs:
+    - path: data/merged_verified
+      hash: md5
+      md5: 814aa782f778046aa58c3b8e0edce298.dir
+      size: 62700
+      nfiles: 188

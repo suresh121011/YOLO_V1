@@ -269,6 +269,19 @@ stages:
           cache: false
       - data/annotation/verified_labels
 
+  # Pure deterministic derivation of already-frozen outputs — a normal
+  # (non-frozen) stage, unlike the two human-loop stages above (ADR-P5-05).
+  apply_verified_labels:
+    cmd: python scripts/dataset/15_apply_verified_labels.py
+    deps:
+      - scripts/dataset/15_apply_verified_labels.py
+      - src/dataset/annotation/apply.py
+      - data/merged/labels
+      - data/annotation/verification_ledger.json
+      - data/annotation/verified_labels
+    outs:
+      - data/merged_verified
+
   # ─── Training (Phase-5 — declared but frozen until the dataset is released) ─
 
   train_yolo11n:

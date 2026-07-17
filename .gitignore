@@ -51,6 +51,7 @@ data/raw/custom_captures/
 data/raw/negatives/
 data/interim/
 data/merged/
+data/merged_verified/
 data/downloads_cache/
 data/processed/images/
 data/processed/labels/
