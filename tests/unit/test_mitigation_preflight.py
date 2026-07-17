@@ -8,7 +8,8 @@ from typing import Any
 
 import pytest
 
-from src.dataset.completeness import build_completeness, save_completeness
+from src.dataset.annotation.ledger import new_ledger, recompute_stats, record_verdict, save_ledger
+from src.dataset.completeness import build_completeness, save_completeness, taxonomy_fingerprint
 from src.dataset.manifest import MergedManifest
 from src.training.completeness_lookup import CompletenessLookup, UnknownImageError
 from src.training.mitigation_config import MitigationConfig
@@ -57,15 +58,22 @@ class Env:
         self.data_yaml = root / "data.yaml"
         self.artifact_path = root / "processed" / "completeness.json"
         self.processed_root = root / "processed"
+        self.merged_manifest_path = root / "merged" / "merged_manifest.json"
+        self.ledger_path = root / "annotation" / "verification_ledger.json"
+        self.verified_labels_dir = root / "annotation" / "verified_labels"
         self.mitigation = MitigationConfig(enabled=True, completeness_path=self.artifact_path)
 
     def gates(self, train_cfg: dict[str, Any] | None = None) -> PreflightReport:
-        """Run preflight against this environment."""
+        """Run preflight against this environment (tmp-scoped, isolated from
+        the real repo's ledger/verified_labels/merged manifest)."""
         return run_preflight(
             self.mitigation,
             data_yaml_path=self.data_yaml,
             train_cfg=_CLEAN_TRAIN_CFG if train_cfg is None else train_cfg,
             processed_root=self.processed_root,
+            ledger_path=self.ledger_path,
+            verified_labels_dir=self.verified_labels_dir,
+            merged_manifest_path=self.merged_manifest_path,
         )
 
     def gate(self, gate_id: str, train_cfg: dict[str, Any] | None = None) -> Any:
@@ -91,7 +99,7 @@ def make_env(tmp_path: Path) -> Env:
         img.parent.mkdir(parents=True, exist_ok=True)
         img.write_bytes(b"\xff\xd8fake")
 
-    merged_path = tmp_path / "merged" / "merged_manifest.json"
+    merged_path = env.merged_manifest_path
     MergedManifest(
         image_provenance={n: s for n, (_sp, s) in images.items()},
         label_completeness={"coco": ["person", "knife"], "negatives": []},
@@ -290,6 +298,166 @@ class TestGateG8MixingAugs:
 
     def test_effective_augs_no_section_is_ultralytics_defaults(self) -> None:
         assert effective_mixing_augs({}) == {"mosaic": 1.0, "mixup": 0.0, "copy_paste": 0.0}
+
+
+@pytest.mark.unit
+class TestGateG9LedgerConsistency:
+    """G9: ledger <-> verified_labels <-> provenance + taxonomy fp."""
+
+    def test_missing_ledger_file_is_pass(self, tmp_path: Path) -> None:
+        assert make_env(tmp_path).gate("G9").status == GATE_STATUS_PASS
+
+    def test_empty_ledger_is_pass(self, tmp_path: Path) -> None:
+        env = make_env(tmp_path)
+        save_ledger(new_ledger(), env.ledger_path)
+        assert env.gate("G9").status == GATE_STATUS_PASS
+
+    def test_consistent_entry_passes(self, tmp_path: Path) -> None:
+        env = make_env(tmp_path)
+        ledger = new_ledger()
+        record_verdict(
+            ledger,
+            "coco_0001.jpg",
+            "coco",
+            "face",
+            "present_labeled",
+            [(0.5, 0.5, 0.1, 0.1)],
+            "vb001",
+            "anno_1",
+            "cvat",
+            "",
+        )
+        save_ledger(ledger, env.ledger_path)
+        env.verified_labels_dir.mkdir(parents=True, exist_ok=True)
+        (env.verified_labels_dir / "coco_0001.txt").write_text(
+            "1 0.5 0.5 0.1 0.1\n", encoding="utf-8"
+        )
+        assert env.gate("G9").status == GATE_STATUS_PASS
+
+    def test_missing_verified_labels_file_fails(self, tmp_path: Path) -> None:
+        env = make_env(tmp_path)
+        ledger = new_ledger()
+        record_verdict(
+            ledger,
+            "coco_0001.jpg",
+            "coco",
+            "face",
+            "present_labeled",
+            [(0.5, 0.5, 0.1, 0.1)],
+            "vb001",
+            "anno_1",
+            "cvat",
+            "",
+        )
+        save_ledger(ledger, env.ledger_path)
+        result = env.gate("G9")
+        assert result.status == GATE_STATUS_FAIL
+        assert "no verified_labels file" in result.details
+
+    def test_box_count_mismatch_fails(self, tmp_path: Path) -> None:
+        env = make_env(tmp_path)
+        ledger = new_ledger()
+        record_verdict(
+            ledger,
+            "coco_0001.jpg",
+            "coco",
+            "face",
+            "present_labeled",
+            [(0.5, 0.5, 0.1, 0.1)],
+            "vb001",
+            "anno_1",
+            "cvat",
+            "",
+        )
+        save_ledger(ledger, env.ledger_path)
+        env.verified_labels_dir.mkdir(parents=True, exist_ok=True)
+        (env.verified_labels_dir / "coco_0001.txt").write_text(
+            "1 0.5 0.5 0.1 0.1\n1 0.2 0.2 0.1 0.1\n", encoding="utf-8"
+        )
+        result = env.gate("G9")
+        assert result.status == GATE_STATUS_FAIL
+        assert "box count" in result.details
+
+    def test_source_mismatch_fails(self, tmp_path: Path) -> None:
+        env = make_env(tmp_path)
+        ledger = new_ledger()
+        record_verdict(
+            ledger,
+            "coco_0001.jpg",
+            "negatives",  # actually provenanced to 'coco'
+            "face",
+            "verified_absent",
+            [],
+            "vb001",
+            "anno_1",
+            "cvat",
+            "",
+        )
+        save_ledger(ledger, env.ledger_path)
+        result = env.gate("G9")
+        assert result.status == GATE_STATUS_FAIL
+        assert "!= provenance" in result.details
+
+    def test_unknown_image_fails(self, tmp_path: Path) -> None:
+        env = make_env(tmp_path)
+        ledger = new_ledger()
+        record_verdict(
+            ledger,
+            "ghost.jpg",
+            "coco",
+            "face",
+            "verified_absent",
+            [],
+            "vb001",
+            "anno_1",
+            "cvat",
+            "",
+        )
+        save_ledger(ledger, env.ledger_path)
+        result = env.gate("G9")
+        assert result.status == GATE_STATUS_FAIL
+        assert "absent from merged manifest" in result.details
+
+    def test_taxonomy_drift_fails(self, tmp_path: Path) -> None:
+        env = make_env(tmp_path)
+        ledger = new_ledger()
+        record_verdict(
+            ledger,
+            "coco_0001.jpg",
+            "coco",
+            "face",
+            "verified_absent",
+            [],
+            "vb001",
+            "anno_1",
+            "cvat",
+            "",
+        )
+        recompute_stats(ledger, "sha256:stale")
+        save_ledger(ledger, env.ledger_path)
+        result = env.gate("G9")
+        assert result.status == GATE_STATUS_FAIL
+        assert "fingerprint drift" in result.details
+
+    def test_matching_taxonomy_fingerprint_passes(self, tmp_path: Path) -> None:
+        env = make_env(tmp_path)
+        ledger = new_ledger()
+        record_verdict(
+            ledger,
+            "coco_0001.jpg",
+            "coco",
+            "face",
+            "verified_absent",
+            [],
+            "vb001",
+            "anno_1",
+            "cvat",
+            "",
+        )
+        live_fp = taxonomy_fingerprint(3, {0: "person", 1: "face", 2: "knife"})
+        recompute_stats(ledger, live_fp)
+        save_ledger(ledger, env.ledger_path)
+        assert env.gate("G9").status == GATE_STATUS_PASS
 
 
 @pytest.mark.unit
