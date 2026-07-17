@@ -243,7 +243,7 @@ def microbenchmark_loss_forward(
     sample_files = list(lookup._policy_by_image)[:16] or ["missing.jpg"]
 
     model = DetectionModel(cfg="yolo11n.yaml", nc=lookup.nc, verbose=False)
-    model.args = get_cfg()  # type: ignore[assignment]
+    model.args = get_cfg()
     model.eval()
 
     batch_size = 16

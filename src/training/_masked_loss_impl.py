@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import torch
 from torch import nn
@@ -93,6 +93,9 @@ class MaskedDetectionLoss(v8DetectionLoss):
     mask is bit-identical to stock v8DetectionLoss (unit-tested).
     """
 
+    # Annotate attribute so mypy knows the type populated by the base class
+    bce: nn.Module
+
     def __init__(
         self,
         model: Any,
@@ -127,7 +130,7 @@ class MaskedDetectionLoss(v8DetectionLoss):
                 f"taxonomy this model trains on (dvc repro generate_completeness)."
             )
         # Typed handle for set/clear; self.bce is what the stock loss calls.
-        self._masking_bce = _MaskingBCE(cast(nn.Module, self.bce))
+        self._masking_bce = _MaskingBCE(self.bce)
         self.bce = self._masking_bce
         self._lookup = lookup
         self._config = config
