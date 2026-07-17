@@ -172,7 +172,9 @@ def _run_single_eval(spec: EvalRunSpec, out_dir: Path) -> dict[str, Any]:
         plots=False,
         verbose=False,
         workers=0,
-        project=str(out_dir / "ultralytics_runs"),
+        # Absolute path — Ultralytics resolves relative projects under its
+        # settings runs_dir, not the cwd.
+        project=str((out_dir / "ultralytics_runs").resolve()),
         name=spec.label,
         exist_ok=True,
     )

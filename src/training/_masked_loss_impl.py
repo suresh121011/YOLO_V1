@@ -77,7 +77,10 @@ class _MaskingBCE(nn.Module):
                 f"logits, got {tuple(out.shape)} — the Ultralytics loss surface changed; "
                 f"see assert_ultralytics_compat()."
             )
-        return out * mask.to(dtype=out.dtype)
+        # In-place is autograd-safe here: BCEWithLogitsLoss backward recomputes
+        # from logits/targets, never from its output — and it avoids allocating
+        # a second (bs, anchors, nc) map (bit-identity test covers this).
+        return out.mul_(mask.to(dtype=out.dtype))
 
 
 class MaskedDetectionLoss(v8DetectionLoss):
@@ -129,6 +132,9 @@ class MaskedDetectionLoss(v8DetectionLoss):
         self._lookup = lookup
         self._config = config
         self._warned_unknown: set[str] = set()
+        # Few unique rows exist (one per policy) — cache their tensors so the
+        # per-batch build is a stack of cached (nc,) tensors, not re-parsing.
+        self._row_tensor_cache: dict[tuple[int, ...], torch.Tensor] = {}
         self._stats_batches = 0
         self._stats_images = 0
         self._stats_total_cells = 0
@@ -177,7 +183,14 @@ class MaskedDetectionLoss(v8DetectionLoss):
                     self._warned_unknown.add(name)
                     logger.warning(f"{e} — training '{name}' with full supervision")
                 rows.append((1,) * self.nc)
-        return torch.tensor(rows, dtype=torch.float32, device=self.device).unsqueeze(1)
+        tensors = []
+        for row in rows:
+            cached = self._row_tensor_cache.get(row)
+            if cached is None:
+                cached = torch.tensor(row, dtype=torch.float32, device=self.device)
+                self._row_tensor_cache[row] = cached
+            tensors.append(cached)
+        return torch.stack(tensors).unsqueeze(1)
 
     def __call__(self, preds: Any, batch: dict[str, Any]) -> tuple[torch.Tensor, torch.Tensor]:
         """Compute the stock loss with the per-batch class mask installed."""
@@ -187,7 +200,7 @@ class MaskedDetectionLoss(v8DetectionLoss):
             result: tuple[torch.Tensor, torch.Tensor] = super().__call__(preds, batch)
         finally:
             self._masking_bce.clear_mask()
-        if mask is not None:
+        if mask is not None and self._config.log_mask_stats:
             self._stats_batches += 1
             self._stats_images += int(mask.shape[0])
             self._stats_total_cells += int(mask.shape[0]) * self.nc

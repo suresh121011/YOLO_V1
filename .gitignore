@@ -24,6 +24,8 @@ ENV/
 models/yolo11n/weights/
 models/yolo11n/exports/
 models/yolo11n/results/
+# Phase-4 benchmark run workspace (weights/configs; reports live in data/qa_reports)
+models/benchmarks/
 models/smolvlm2/
 models/tts/*.onnx
 models/tts/*.onnx.json

@@ -1,0 +1,9 @@
+run,class_id,class,precision,recall,f1,mAP50,mAP50_95
+baseline,1,face,0.0235,0.067,0.0347,0.0243,0.0097
+baseline,6,stove,0.0,0.0,0.0,0.0,0.0
+baseline,14,cupboard,0.0028,0.5,0.0055,0.495,0.3465
+baseline,15,door,0.0,0.0,0.0,0.0,0.0
+mitigated,1,face,0.0383,0.0526,0.0444,0.0244,0.0124
+mitigated,6,stove,0.0,0.0,0.0,0.0,0.0
+mitigated,14,cupboard,0.003,0.5,0.006,0.099,0.0594
+mitigated,15,door,0.0,0.0,0.0,0.0,0.0

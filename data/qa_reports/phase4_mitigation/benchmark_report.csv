@@ -1,0 +1,7 @@
+arm,repeat,seconds_total,epoch_seconds,peak_rss_mb,gpu_memory_mb,precision,recall,f1,mAP50,mAP50_95,weights
+baseline,0,66.8,"[14.66, 15.3, 14.89]",1084.6,,0.0066,0.1417,0.0126,0.1298,0.089,C:/Users/haris/OneDrive/Desktop/YOLO_V1/models/benchmarks/models/baseline_r0/weights/best.pt
+baseline,1,63.4,"[13.88, 15.1, 12.89]",1077.1,,0.0066,0.1417,0.0126,0.1298,0.089,C:/Users/haris/OneDrive/Desktop/YOLO_V1/models/benchmarks/models/baseline_r1/weights/best.pt
+baseline,2,61.4,"[26.66, 11.29, 12.54]",1057.4,,0.0066,0.1417,0.0126,0.1298,0.089,C:/Users/haris/OneDrive/Desktop/YOLO_V1/models/benchmarks/models/baseline_r2/weights/best.pt
+mitigated,0,50.1,"[13.3, 12.99, 11.39]",1070.5,,0.0103,0.1382,0.0192,0.0309,0.0179,C:/Users/haris/OneDrive/Desktop/YOLO_V1/models/benchmarks/models/mitigated_r0/weights/best.pt
+mitigated,1,44.6,"[11.28, 11.29, 10.49]",1086.7,,0.0103,0.1382,0.0192,0.0309,0.0179,C:/Users/haris/OneDrive/Desktop/YOLO_V1/models/benchmarks/models/mitigated_r1/weights/best.pt
+mitigated,2,48.6,"[13.64, 13.22, 10.84]",1079.6,,0.0103,0.1382,0.0192,0.0309,0.0179,C:/Users/haris/OneDrive/Desktop/YOLO_V1/models/benchmarks/models/mitigated_r2/weights/best.pt
