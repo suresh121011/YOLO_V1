@@ -3,8 +3,8 @@
   "candidates": [
     {
       "backend": "yolo_world",
-      "run_id": "yolo_world_f4fd41f_aeb25aa1",
-      "sha256": "65c391ad98b810807cb7871edba96353911a686dac27cac034819a993f2b13c4"
+      "run_id": "yolo_world_1fae7f6_aeb25aa1",
+      "sha256": "4e895dc65bcf6b5eb2140b8d10e9ff016f08203194cb2446a368c510159b7149"
     }
   ],
   "taxonomy_fingerprint": "sha256:a831924bb82e23ffbc6cc1d56647a78cc72ff5e329920569b05bd5ae99c2f125",
