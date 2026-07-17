@@ -73,6 +73,7 @@ data/annotation/verified_labels/
 data/qa_reports/*
 !data/qa_reports/annotation_qa_report.json
 !data/qa_reports/completeness_report.json
+!data/qa_reports/coverage_report.json
 # Phase-4 validation/benchmark evidence is committed (referenced by docs/06)
 !data/qa_reports/phase4_mitigation/
 # Phase-5 full-build preflight evidence is committed (referenced by docs/07)

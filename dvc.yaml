@@ -287,6 +287,26 @@ stages:
     outs:
       - data/merged_verified
 
+  # ─── Phase-5 missing-annotation resolution (L4 coverage estimation) ───────
+  # Pure arithmetic over already-pinned inputs (ADR-P5-06) — no inference.
+
+  coverage_report:
+    cmd: python scripts/dataset/16_coverage_report.py
+    deps:
+      - scripts/dataset/16_coverage_report.py
+      - src/dataset/annotation/coverage.py
+      - configs/data.yaml
+      - data/annotation/candidates
+      - data/annotation/verification_ledger.json
+      - data/processed/labels
+      - data/processed/completeness.json
+    params:
+      - configs/annotation.yaml:
+          - coverage
+    outs:
+      - data/qa_reports/coverage_report.json:
+          cache: false
+
   # ─── Training (Phase-5 — declared but frozen until the dataset is released) ─
 
   train_yolo11n:

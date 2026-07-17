@@ -1,0 +1,1155 @@
+{
+  "schema_version": 1,
+  "candidates": [
+    {
+      "backend": "yolo_world",
+      "run_id": "yolo_world_f4fd41f_aeb25aa1",
+      "sha256": "65c391ad98b810807cb7871edba96353911a686dac27cac034819a993f2b13c4"
+    }
+  ],
+  "taxonomy_fingerprint": "sha256:a831924bb82e23ffbc6cc1d56647a78cc72ff5e329920569b05bd5ae99c2f125",
+  "method": {
+    "iou_match_threshold": 0.5,
+    "estimation_conf": {
+      "default": 0.35
+    }
+  },
+  "calibration": {},
+  "per_class": {
+    "person": {
+      "annotated_instances": 202,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "face": {
+      "annotated_instances": 1254,
+      "unverified_candidates": 217,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 75.95,
+      "coverage_score": 0.9429
+    },
+    "medicine_strip": {
+      "annotated_instances": 0,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "medicine_bottle": {
+      "annotated_instances": 0,
+      "unverified_candidates": 46,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 16.1,
+      "coverage_score": 0.0
+    },
+    "water_bottle": {
+      "annotated_instances": 13,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "knife": {
+      "annotated_instances": 10,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "stove": {
+      "annotated_instances": 6,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "gas_cylinder": {
+      "annotated_instances": 0,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "passport": {
+      "annotated_instances": 0,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "book": {
+      "annotated_instances": 15,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "charger": {
+      "annotated_instances": 0,
+      "unverified_candidates": 32,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 11.2,
+      "coverage_score": 0.0
+    },
+    "wire": {
+      "annotated_instances": 0,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "laptop": {
+      "annotated_instances": 1,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "monitor": {
+      "annotated_instances": 5,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "cupboard": {
+      "annotated_instances": 34,
+      "unverified_candidates": 56,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 19.6,
+      "coverage_score": 0.6343
+    },
+    "door": {
+      "annotated_instances": 39,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "chair": {
+      "annotated_instances": 14,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "bed": {
+      "annotated_instances": 5,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "toilet": {
+      "annotated_instances": 3,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "sink": {
+      "annotated_instances": 4,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "wet_floor": {
+      "annotated_instances": 0,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "walking_stick": {
+      "annotated_instances": 0,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "support_handle": {
+      "annotated_instances": 0,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    }
+  },
+  "per_image_summary": {
+    "mean_completeness": 0.8796,
+    "p10_completeness": 0.6061,
+    "images_below_0_5": 8
+  },
+  "per_image": {
+    "coco_000000000139.jpg": {
+      "annotated": 11,
+      "estimated": 6.3,
+      "completeness": 0.6358
+    },
+    "coco_000000000632.jpg": {
+      "annotated": 15,
+      "estimated": 1.75,
+      "completeness": 0.8955
+    },
+    "coco_000000000776.jpg": {
+      "annotated": 1,
+      "estimated": 0.35,
+      "completeness": 0.7407
+    },
+    "coco_000000000872.jpg": {
+      "annotated": 2,
+      "estimated": 1.05,
+      "completeness": 0.6557
+    },
+    "coco_000000000885.jpg": {
+      "annotated": 8,
+      "estimated": 3.15,
+      "completeness": 0.7175
+    },
+    "coco_000000001000.jpg": {
+      "annotated": 12,
+      "estimated": 4.2,
+      "completeness": 0.7407
+    },
+    "coco_000000001268.jpg": {
+      "annotated": 4,
+      "estimated": 1.4,
+      "completeness": 0.7407
+    },
+    "coco_000000001296.jpg": {
+      "annotated": 2,
+      "estimated": 1.4,
+      "completeness": 0.5882
+    },
+    "coco_000000001353.jpg": {
+      "annotated": 6,
+      "estimated": 0.35,
+      "completeness": 0.9449
+    },
+    "coco_000000001584.jpg": {
+      "annotated": 11,
+      "estimated": 1.4,
+      "completeness": 0.8871
+    },
+    "coco_000000001993.jpg": {
+      "annotated": 3,
+      "estimated": 0.7,
+      "completeness": 0.8108
+    },
+    "coco_000000002006.jpg": {
+      "annotated": 3,
+      "estimated": 1.05,
+      "completeness": 0.7407
+    },
+    "coco_000000002153.jpg": {
+      "annotated": 4,
+      "estimated": 1.4,
+      "completeness": 0.7407
+    },
+    "coco_000000002157.jpg": {
+      "annotated": 3,
+      "estimated": 0.35,
+      "completeness": 0.8955
+    },
+    "coco_000000002261.jpg": {
+      "annotated": 1,
+      "estimated": 0.35,
+      "completeness": 0.7407
+    },
+    "coco_000000002431.jpg": {
+      "annotated": 3,
+      "estimated": 0.35,
+      "completeness": 0.8955
+    },
+    "coco_000000002473.jpg": {
+      "annotated": 4,
+      "estimated": 1.4,
+      "completeness": 0.7407
+    },
+    "coco_000000002532.jpg": {
+      "annotated": 1,
+      "estimated": 0.35,
+      "completeness": 0.7407
+    },
+    "coco_000000002592.jpg": {
+      "annotated": 1,
+      "estimated": 0.7,
+      "completeness": 0.5882
+    },
+    "coco_000000002685.jpg": {
+      "annotated": 14,
+      "estimated": 5.6,
+      "completeness": 0.7143
+    },
+    "coco_000000003156.jpg": {
+      "annotated": 3,
+      "estimated": 1.05,
+      "completeness": 0.7407
+    },
+    "coco_000000003255.jpg": {
+      "annotated": 6,
+      "estimated": 1.05,
+      "completeness": 0.8511
+    },
+    "coco_000000003553.jpg": {
+      "annotated": 1,
+      "estimated": 0.35,
+      "completeness": 0.7407
+    },
+    "coco_000000003934.jpg": {
+      "annotated": 7,
+      "estimated": 4.55,
+      "completeness": 0.6061
+    },
+    "coco_000000004134.jpg": {
+      "annotated": 16,
+      "estimated": 4.9,
+      "completeness": 0.7656
+    },
+    "coco_000000004395.jpg": {
+      "annotated": 1,
+      "estimated": 0.35,
+      "completeness": 0.7407
+    },
+    "coco_000000004495.jpg": {
+      "annotated": 2,
+      "estimated": 1.75,
+      "completeness": 0.5333
+    },
+    "coco_000000004765.jpg": {
+      "annotated": 1,
+      "estimated": 0.35,
+      "completeness": 0.7407
+    },
+    "coco_000000004795.jpg": {
+      "annotated": 2,
+      "estimated": 0.7,
+      "completeness": 0.7407
+    },
+    "coco_000000005001.jpg": {
+      "annotated": 13,
+      "estimated": 8.75,
+      "completeness": 0.5977
+    },
+    "coco_000000005037.jpg": {
+      "annotated": 7,
+      "estimated": 1.05,
+      "completeness": 0.8696
+    },
+    "coco_000000005060.jpg": {
+      "annotated": 1,
+      "estimated": 2.45,
+      "completeness": 0.2899
+    },
+    "coco_000000005193.jpg": {
+      "annotated": 7,
+      "estimated": 3.15,
+      "completeness": 0.6897
+    },
+    "coco_000000005503.jpg": {
+      "annotated": 1,
+      "estimated": 1.75,
+      "completeness": 0.3636
+    },
+    "coco_000000006040.jpg": {
+      "annotated": 9,
+      "estimated": 1.4,
+      "completeness": 0.8654
+    },
+    "coco_000000006213.jpg": {
+      "annotated": 2,
+      "estimated": 1.05,
+      "completeness": 0.6557
+    },
+    "coco_000000006460.jpg": {
+      "annotated": 1,
+      "estimated": 0.35,
+      "completeness": 0.7407
+    },
+    "coco_000000006471.jpg": {
+      "annotated": 12,
+      "estimated": 4.2,
+      "completeness": 0.7407
+    },
+    "coco_000000006763.jpg": {
+      "annotated": 4,
+      "estimated": 0.7,
+      "completeness": 0.8511
+    },
+    "coco_000000006771.jpg": {
+      "annotated": 8,
+      "estimated": 4.2,
+      "completeness": 0.6557
+    },
+    "coco_000000006818.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "coco_000000006894.jpg": {
+      "annotated": 1,
+      "estimated": 0.7,
+      "completeness": 0.5882
+    },
+    "coco_000000006954.jpg": {
+      "annotated": 5,
+      "estimated": 2.45,
+      "completeness": 0.6711
+    },
+    "coco_000000007088.jpg": {
+      "annotated": 1,
+      "estimated": 0.35,
+      "completeness": 0.7407
+    },
+    "coco_000000007278.jpg": {
+      "annotated": 1,
+      "estimated": 0.35,
+      "completeness": 0.7407
+    },
+    "coco_000000007281.jpg": {
+      "annotated": 10,
+      "estimated": 2.45,
+      "completeness": 0.8032
+    },
+    "coco_000000007511.jpg": {
+      "annotated": 13,
+      "estimated": 1.05,
+      "completeness": 0.9253
+    },
+    "coco_000000007574.jpg": {
+      "annotated": 3,
+      "estimated": 5.6,
+      "completeness": 0.3488
+    },
+    "coco_000000007795.jpg": {
+      "annotated": 2,
+      "estimated": 0.35,
+      "completeness": 0.8511
+    },
+    "coco_000000007816.jpg": {
+      "annotated": 10,
+      "estimated": 1.75,
+      "completeness": 0.8511
+    },
+    "coco_000000007818.jpg": {
+      "annotated": 5,
+      "estimated": 1.05,
+      "completeness": 0.8264
+    },
+    "coco_000000007977.jpg": {
+      "annotated": 5,
+      "estimated": 0.35,
+      "completeness": 0.9346
+    },
+    "coco_000000007991.jpg": {
+      "annotated": 2,
+      "estimated": 0.35,
+      "completeness": 0.8511
+    },
+    "negatives_000000014888.jpg": {
+      "annotated": 0,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "negatives_000000015272.jpg": {
+      "annotated": 0,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "negatives_000000087875.jpg": {
+      "annotated": 0,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "negatives_000000106266.jpg": {
+      "annotated": 0,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "negatives_000000155291.jpg": {
+      "annotated": 0,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "negatives_000000184321.jpg": {
+      "annotated": 0,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "negatives_000000311909.jpg": {
+      "annotated": 0,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "negatives_000000348488.jpg": {
+      "annotated": 0,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "negatives_000000354753.jpg": {
+      "annotated": 0,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "negatives_000000369751.jpg": {
+      "annotated": 0,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "negatives_000000372317.jpg": {
+      "annotated": 0,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "negatives_000000420472.jpg": {
+      "annotated": 0,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "negatives_000000446117.jpg": {
+      "annotated": 0,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "negatives_000000462756.jpg": {
+      "annotated": 0,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "negatives_000000509656.jpg": {
+      "annotated": 0,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "negatives_000000511321.jpg": {
+      "annotated": 0,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "negatives_000000514979.jpg": {
+      "annotated": 0,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "negatives_000000545129.jpg": {
+      "annotated": 0,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_00794645d77184eb.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_01bef5827cab386c.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_02608695ddead637.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_05042cfa44abe4f6.jpg": {
+      "annotated": 3,
+      "estimated": 1.05,
+      "completeness": 0.7407
+    },
+    "openimages_05e697eba59741a6.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_0774d2f6414c4b10.jpg": {
+      "annotated": 1,
+      "estimated": 0.35,
+      "completeness": 0.7407
+    },
+    "openimages_0794df9274debd2f.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_091af8d4a3c6c6f1.jpg": {
+      "annotated": 3,
+      "estimated": 1.05,
+      "completeness": 0.7407
+    },
+    "openimages_095dff8dc2e5405b.jpg": {
+      "annotated": 1,
+      "estimated": 7.7,
+      "completeness": 0.1149
+    },
+    "openimages_0b6227bb06345402.jpg": {
+      "annotated": 4,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_0ba133e5d7ae9ccd.jpg": {
+      "annotated": 3,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_0c3567f0d4d650eb.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_0ce960b8d36cc629.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_0d8e57d0804c2d1a.jpg": {
+      "annotated": 1,
+      "estimated": 0.7,
+      "completeness": 0.5882
+    },
+    "openimages_0e2868759e7a615c.jpg": {
+      "annotated": 3,
+      "estimated": 0.35,
+      "completeness": 0.8955
+    },
+    "openimages_0fa91664f038fbc8.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_0faf733d08b38efa.jpg": {
+      "annotated": 1,
+      "estimated": 1.05,
+      "completeness": 0.4878
+    },
+    "openimages_10c183f776fe5e73.jpg": {
+      "annotated": 4,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_10fb73ee47a33a83.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_115ef722923602a8.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_128a59bca025bed6.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_137e1402cbadecac.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_13f20b706bfe7f41.jpg": {
+      "annotated": 1,
+      "estimated": 2.1,
+      "completeness": 0.3226
+    },
+    "openimages_140e0627fe51d0f8.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_15f0965b63397a40.jpg": {
+      "annotated": 2,
+      "estimated": 0.35,
+      "completeness": 0.8511
+    },
+    "openimages_18853abb4c860a27.jpg": {
+      "annotated": 1,
+      "estimated": 1.05,
+      "completeness": 0.4878
+    },
+    "openimages_1945f91b6f5311ed.jpg": {
+      "annotated": 1,
+      "estimated": 0.7,
+      "completeness": 0.5882
+    },
+    "openimages_1b3247da6dd5d578.jpg": {
+      "annotated": 2,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_1b66ee083974f58e.jpg": {
+      "annotated": 2,
+      "estimated": 1.05,
+      "completeness": 0.6557
+    },
+    "openimages_1b9a720f8a90c62a.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_1d1cb0e663151c74.jpg": {
+      "annotated": 1,
+      "estimated": 0.35,
+      "completeness": 0.7407
+    },
+    "openimages_1f058e3f36ffbbde.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_1f07d7d2f3db7c7e.jpg": {
+      "annotated": 2,
+      "estimated": 0.7,
+      "completeness": 0.7407
+    },
+    "openimages_1fc6d80f8cb3494a.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_217b95a71cb220f8.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_21b246ca3da40334.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_2242a8f866a6c2b4.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_22ca223e1e0a48cc.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_22eef21f892d0d1e.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_2523ac25dfbfa2f8.jpg": {
+      "annotated": 2,
+      "estimated": 1.75,
+      "completeness": 0.5333
+    },
+    "openimages_258d4b14b0a13e52.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_259b1ae62870b32b.jpg": {
+      "annotated": 2,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_2623415850b406cf.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_2752a1c19bb01f78.jpg": {
+      "annotated": 1,
+      "estimated": 0.7,
+      "completeness": 0.5882
+    },
+    "openimages_2753536137929411.jpg": {
+      "annotated": 2,
+      "estimated": 1.05,
+      "completeness": 0.6557
+    },
+    "openimages_292c1ae06208c267.jpg": {
+      "annotated": 1,
+      "estimated": 0.7,
+      "completeness": 0.5882
+    },
+    "openimages_2973a8567ac40ef6.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_2a2af82043d0c6e1.jpg": {
+      "annotated": 1,
+      "estimated": 2.45,
+      "completeness": 0.2899
+    },
+    "openimages_2aa0e3d8a77149b7.jpg": {
+      "annotated": 2,
+      "estimated": 0.35,
+      "completeness": 0.8511
+    },
+    "openimages_2ace7ed94cce89ee.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_2b5a92af4b57d139.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_2b65dab8d38362f5.jpg": {
+      "annotated": 1,
+      "estimated": 0.35,
+      "completeness": 0.7407
+    },
+    "openimages_2bd26c63ebf598b7.jpg": {
+      "annotated": 1,
+      "estimated": 0.35,
+      "completeness": 0.7407
+    },
+    "openimages_2be7d09ecf30eb82.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_2ccda0175d74e6ca.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "openimages_2dfbee88b3b304ae.jpg": {
+      "annotated": 1,
+      "estimated": 0.35,
+      "completeness": 0.7407
+    },
+    "openimages_2e8b7e99fc52906d.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_102.jpg": {
+      "annotated": 32,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_12.jpg": {
+      "annotated": 18,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_120.jpg": {
+      "annotated": 21,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_125.jpg": {
+      "annotated": 9,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_137.jpg": {
+      "annotated": 16,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_164.jpg": {
+      "annotated": 60,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_194.jpg": {
+      "annotated": 5,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_205.jpg": {
+      "annotated": 6,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_218.jpg": {
+      "annotated": 11,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_239.jpg": {
+      "annotated": 13,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_246.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_247.jpg": {
+      "annotated": 9,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_266.jpg": {
+      "annotated": 19,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_286.jpg": {
+      "annotated": 21,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_288.jpg": {
+      "annotated": 13,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_29.jpg": {
+      "annotated": 25,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_317.jpg": {
+      "annotated": 74,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_353.jpg": {
+      "annotated": 24,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_364.jpg": {
+      "annotated": 5,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_376.jpg": {
+      "annotated": 13,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_377.jpg": {
+      "annotated": 28,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_382.jpg": {
+      "annotated": 6,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_429.jpg": {
+      "annotated": 3,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_43.jpg": {
+      "annotated": 140,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_443.jpg": {
+      "annotated": 13,
+      "estimated": 0.35,
+      "completeness": 0.9738
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_459.jpg": {
+      "annotated": 7,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_461.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_465.jpg": {
+      "annotated": 11,
+      "estimated": 0.35,
+      "completeness": 0.9692
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_468.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_470.jpg": {
+      "annotated": 24,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_472.jpg": {
+      "annotated": 30,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_478.jpg": {
+      "annotated": 11,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_490.jpg": {
+      "annotated": 95,
+      "estimated": 0.35,
+      "completeness": 0.9963
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_502.jpg": {
+      "annotated": 18,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_519.jpg": {
+      "annotated": 9,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_53.jpg": {
+      "annotated": 4,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_545.jpg": {
+      "annotated": 2,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_559.jpg": {
+      "annotated": 11,
+      "estimated": 0.35,
+      "completeness": 0.9692
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_611.jpg": {
+      "annotated": 18,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_616.jpg": {
+      "annotated": 5,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_628.jpg": {
+      "annotated": 15,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_639.jpg": {
+      "annotated": 30,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_664.jpg": {
+      "annotated": 64,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_68.jpg": {
+      "annotated": 27,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_688.jpg": {
+      "annotated": 15,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_72.jpg": {
+      "annotated": 17,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_757.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_814.jpg": {
+      "annotated": 25,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_829.jpg": {
+      "annotated": 1,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_850.jpg": {
+      "annotated": 18,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_854.jpg": {
+      "annotated": 11,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_873.jpg": {
+      "annotated": 140,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_887.jpg": {
+      "annotated": 8,
+      "estimated": 0.35,
+      "completeness": 0.9581
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_901.jpg": {
+      "annotated": 3,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_906.jpg": {
+      "annotated": 5,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_913.jpg": {
+      "annotated": 3,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_917.jpg": {
+      "annotated": 2,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_Parade_0_960.jpg": {
+      "annotated": 4,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_marchingband_1_1004.jpg": {
+      "annotated": 8,
+      "estimated": 0.0,
+      "completeness": 1.0
+    },
+    "wider_face_0--Parade_0_Parade_marchingband_1_104.jpg": {
+      "annotated": 25,
+      "estimated": 0.0,
+      "completeness": 1.0
+    }
+  },
+  "dataset": {
+    "residual_missing_total": 122.85,
+    "unknown_objects_total": 351
+  }
+}
