@@ -448,14 +448,19 @@ stages:
       md5: 2d31886b030acf91aa84e7f4d75a123b.dir
       size: 37087111
       nfiles: 377
+    - path: data/merged_verified
+      hash: md5
+      md5: 814aa782f778046aa58c3b8e0edce298.dir
+      size: 62700
+      nfiles: 188
     - path: scripts/dataset/split_dataset.py
       hash: md5
-      md5: 9bbf9b1811c136a644304ab8aaf81a5a
-      size: 16423
+      md5: fe8902789ae9e9866e604dff91244388
+      size: 17168
     - path: src/dataset/split_config.py
       hash: md5
-      md5: 1d1c20d3fbde722fb90faa2ccfa810ba
-      size: 4767
+      md5: f1401cb40b30d33a07e4e7159e8a9045
+      size: 5378
     - path: src/dataset/splitting
       hash: md5
       md5: c1fd9570573bae52d2c938155b2f7adc.dir
@@ -472,6 +477,7 @@ stages:
           group_by_capture: true
           source_dir: data/merged
           output_dir: data/processed
+          source_labels_dir: data/merged_verified/labels
     outs:
     - path: data/processed/images
       hash: md5
@@ -485,7 +491,7 @@ stages:
       nfiles: 188
     - path: data/processed/split_report
       hash: md5
-      md5: c871fb09d74a50f3b9afc190d30c4422.dir
+      md5: d3bec6f0320f1931e6f9995059178ff2.dir
       size: 1265
       nfiles: 2
   qa_check:
@@ -587,6 +593,10 @@ stages:
       hash: md5
       md5: aee65566d7b4876d68948f6bc02abb3d
       size: 2254
+    - path: data/annotation/verification_ledger.json
+      hash: md5
+      md5: 7db92f1d0ace8eacfe1e528454ae331c
+      size: 173
     - path: data/merged
       hash: md5
       md5: 2d31886b030acf91aa84e7f4d75a123b.dir
@@ -599,7 +609,7 @@ stages:
       nfiles: 188
     - path: data/processed/split_report
       hash: md5
-      md5: c871fb09d74a50f3b9afc190d30c4422.dir
+      md5: d3bec6f0320f1931e6f9995059178ff2.dir
       size: 1265
       nfiles: 2
     - path: scripts/dataset/11_generate_completeness.py
@@ -617,22 +627,23 @@ stages:
     params:
       configs/dataset_sources.yaml:
         completeness:
+          ledger_path: data/annotation/verification_ledger.json
           policies:
-            coco: trusted_list
-            openimages: trusted_list
-            roboflow: trusted_list
-            wider_face: trusted_list
+            coco: trusted_list_with_ledger
+            openimages: trusted_list_with_ledger
+            roboflow: trusted_list_with_ledger
+            wider_face: trusted_list_with_ledger
             negatives: verified_absence_all
             custom_captures: per_session
     outs:
     - path: data/processed/completeness.json
       hash: md5
-      md5: be7e5f6cdb035179fe9619a79601e42c
-      size: 22832
+      md5: 6fdcc46631a4dc2096ff67377bdd7b70
+      size: 23061
     - path: data/qa_reports/completeness_report.json
       hash: md5
-      md5: 54f1a3ba448e6d3ea88298f4d070cd51
-      size: 2135
+      md5: 8cc9c4d5beb6c43db2fd54cb42eb4789
+      size: 2171
   auto_annotate:
     cmd: python scripts/dataset/12_auto_annotate.py
     deps:

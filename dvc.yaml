@@ -173,6 +173,9 @@ stages:
       - src/dataset/split_config.py
       - src/dataset/splitting
       - data/merged
+      # M3 (ADR-P5-05): labels come from the verified-labels overlay
+      # (split.source_labels_dir), images still from data/merged above.
+      - data/merged_verified
     params:
       - configs/dataset_split_config.yaml:
           - split
@@ -196,6 +199,8 @@ stages:
       - data/merged
       - data/processed/images
       - data/processed/split_report
+      # M3 (ADR-P5-04): trusted_list_with_ledger sources read this directly.
+      - data/annotation/verification_ledger.json
     params:
       - configs/dataset_sources.yaml:
           - completeness
