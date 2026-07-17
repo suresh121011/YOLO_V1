@@ -20,7 +20,6 @@ Exit codes: 0 = ok, 1 = error (validation problems, pin mismatch, ambiguity).
 from __future__ import annotations
 
 import argparse
-import json
 import logging
 import sys
 import time
@@ -39,6 +38,7 @@ from src.dataset.annotation.candidates import (
     save_candidates,
     validate_candidates,
 )
+from src.dataset.annotation.ledger import LedgerView
 from src.dataset.annotation.registry import available_annotators, get_annotator
 from src.dataset.annotation.targeting import build_targets, promptable_class_ids
 from src.dataset.completeness import taxonomy_fingerprint
@@ -55,43 +55,6 @@ logger = logging.getLogger(__name__)
 
 #: Fixed sample size for --verify-determinism re-runs.
 DETERMINISM_SAMPLE = 20
-
-
-def read_verified_cells(
-    ledger_path: Path, ids_by_name: dict[str, int]
-) -> dict[str, frozenset[int]]:
-    """Minimal ledger read: filename → verified class ids.
-
-    Both ``present_labeled`` and ``verified_absent`` cells are verified —
-    either way a human settled the cell, so it is never re-targeted. The M2
-    ledger module becomes the canonical reader; this stays byte-compatible.
-
-    Args:
-        ledger_path: data/annotation/verification_ledger.json.
-        ids_by_name: Taxonomy class name → id.
-
-    Raises:
-        AnnotationError: On unsupported schema or unknown class names.
-    """
-    if not ledger_path.exists():
-        return {}
-    raw = json.loads(ledger_path.read_text(encoding="utf-8"))
-    if raw.get("schema_version") != 1:
-        raise AnnotationError(
-            f"Unsupported ledger schema_version {raw.get('schema_version')!r} in {ledger_path}"
-        )
-    cells: dict[str, frozenset[int]] = {}
-    for filename, entry in (raw.get("entries") or {}).items():
-        names = list((entry.get("classes") or {}).keys())
-        unknown = sorted(n for n in names if n not in ids_by_name)
-        if unknown:
-            raise AnnotationError(
-                f"Ledger entry '{filename}' references classes not in the taxonomy: "
-                f"{unknown} — taxonomy drift; do not auto-annotate until reconciled."
-            )
-        if names:
-            cells[filename] = frozenset(ids_by_name[n] for n in names)
-    return cells
 
 
 def _setup_determinism() -> dict[str, Any]:
@@ -319,7 +282,7 @@ def main() -> int:
     ledger_path = Path(
         str(verification_cfg.get("ledger_path", "data/annotation/verification_ledger.json"))
     )
-    verified_cells = read_verified_cells(ledger_path, ids_by_name)
+    verified_cells = LedgerView.load(ledger_path).verified_cells(ids_by_name)
 
     selected = args.backend or [
         name for name, cfg in backends_cfg.items() if (cfg or {}).get("enabled", False)

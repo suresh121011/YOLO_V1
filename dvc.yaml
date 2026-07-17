@@ -256,6 +256,19 @@ stages:
     outs:
       - data/annotation/batches
 
+  # FROZEN, no deps (same rationale). Humans run 14_import_verified_batch.py
+  # per batch (--batch, --export, --verifier), then
+  # `dvc commit -f import_verified_annotations`. The ledger is a small,
+  # git-tracked, append-only audit trail (cache: false) — like the QA
+  # reports; verified_labels is DVC-cached (grows with scale).
+  import_verified_annotations:
+    frozen: true
+    cmd: python scripts/dataset/14_import_verified_batch.py
+    outs:
+      - data/annotation/verification_ledger.json:
+          cache: false
+      - data/annotation/verified_labels
+
   # ─── Training (Phase-5 — declared but frozen until the dataset is released) ─
 
   train_yolo11n:

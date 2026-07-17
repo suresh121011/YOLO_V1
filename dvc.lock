@@ -642,8 +642,8 @@ stages:
       size: 2254
     - path: data/annotation/verification_ledger.json
       hash: md5
-      md5: 7db92f1d0ace8eacfe1e528454ae331c
-      size: 173
+      md5: ddb691dad4ccf963d057b8c1213f9e93
+      size: 140319
     - path: data/merged
       hash: md5
       md5: 2d31886b030acf91aa84e7f4d75a123b.dir
@@ -651,13 +651,13 @@ stages:
       nfiles: 377
     - path: scripts/dataset/12_auto_annotate.py
       hash: md5
-      md5: 2b7407974a5538d0d0894357fc7172e9
-      size: 15081
+      md5: e5b9222fb9c76810121cb1f41f5de431
+      size: 13650
     - path: src/dataset/annotation
       hash: md5
-      md5: c5401e26739badf587d148d3f27e8a6c.dir
-      size: 46918
-      nfiles: 8
+      md5: e2c5d200ca6de2a19297458a16467426.dir
+      size: 85444
+      nfiles: 12
     params:
       configs/annotation.yaml:
         auto_annotation:
@@ -739,14 +739,26 @@ stages:
     outs:
     - path: data/annotation/candidates
       hash: md5
-      md5: 9c2908b82a3f354c2e8fc2e460641da2.dir
-      size: 137088
+      md5: 2446af518b026cdcd1d84aadb53e8136.dir
+      size: 26652
       nfiles: 1
   build_verification_batches:
     cmd: python scripts/dataset/13_build_verification_batches.py
     outs:
     - path: data/annotation/batches
       hash: md5
-      md5: 1e53e0e7f1b2717dc82def19a21157b3.dir
-      size: 31202
+      md5: b22c084db870d7c6969e901eb4d10de1.dir
+      size: 31203
       nfiles: 3
+  import_verified_annotations:
+    cmd: python scripts/dataset/14_import_verified_batch.py
+    outs:
+    - path: data/annotation/verification_ledger.json
+      hash: md5
+      md5: ddb691dad4ccf963d057b8c1213f9e93
+      size: 140319
+    - path: data/annotation/verified_labels
+      hash: md5
+      md5: d69326437a41438a7d71a605aab20577.dir
+      size: 19999
+      nfiles: 80
