@@ -59,6 +59,7 @@ def build_for_backend(
     class_names_by_id: dict[int, str],
     priority_classes: frozenset[str],
     batch_size: int,
+    iaa_sample_fraction: float,
 ) -> int:
     """Build every new batch for one backend's candidate artifact.
 
@@ -85,6 +86,7 @@ def build_for_backend(
         class_names_by_id=class_names_by_id,
         priority_classes=priority_classes,
         batch_size=batch_size,
+        iaa_sample_fraction=iaa_sample_fraction,
     )
     if not manifests:
         logger.info(f"[{backend}] nothing to batch (no unclaimed images with candidates)")
@@ -137,6 +139,7 @@ def main() -> int:
     verification_cfg: dict[str, Any] = load_yaml(args.config).get("verification") or {}
     batches_root = Path(str(verification_cfg.get("batches_root", "data/annotation/batches")))
     batch_size = int(verification_cfg.get("batch_size", 200))
+    iaa_sample_fraction = float(verification_cfg.get("iaa_sample_fraction", 0.0))
     priority_classes = frozenset(
         (annotation_cfg.get("targeting") or {}).get("priority_classes") or []
     )
@@ -168,6 +171,7 @@ def main() -> int:
                 class_names_by_id=class_names_by_id,
                 priority_classes=priority_classes,
                 batch_size=batch_size,
+                iaa_sample_fraction=iaa_sample_fraction,
             )
     except AnnotationError as exc:
         logger.error(str(exc))

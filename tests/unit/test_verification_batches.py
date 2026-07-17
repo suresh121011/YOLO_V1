@@ -15,6 +15,7 @@ from src.dataset.annotation.batches import (
     image_expected_gain,
     next_batch_id,
     plan_batches,
+    select_iaa_sample,
 )
 
 pytestmark = pytest.mark.unit
@@ -188,3 +189,60 @@ class TestBuildBatchManifests:
             batch_size=200,
         )
         assert manifests[0].batch_id == "vb002_yolo_world"
+
+    def test_iaa_sample_populated_when_fraction_positive(self, tmp_path: Path) -> None:
+        candidates = _candidates({f"img{i}.jpg": [_det(10, 0.9)] for i in range(10)})
+        manifests = build_batch_manifests(
+            candidates=candidates,
+            backend="yolo_world",
+            candidates_sha256="x",
+            batches_root=tmp_path / "batches",
+            class_names_by_id=_NAMES_BY_ID,
+            priority_classes=_PRIORITY,
+            batch_size=200,
+            iaa_sample_fraction=0.10,
+        )
+        assert len(manifests[0].iaa_sample) == 1
+
+    def test_iaa_sample_empty_when_fraction_zero(self, tmp_path: Path) -> None:
+        candidates = _candidates({"a.jpg": [_det(10, 0.9)]})
+        manifests = build_batch_manifests(
+            candidates=candidates,
+            backend="yolo_world",
+            candidates_sha256="x",
+            batches_root=tmp_path / "batches",
+            class_names_by_id=_NAMES_BY_ID,
+            priority_classes=_PRIORITY,
+            batch_size=200,
+        )
+        assert manifests[0].iaa_sample == []
+
+
+class TestSelectIaaSample:
+    def test_empty_images_gives_empty_sample(self) -> None:
+        assert select_iaa_sample((), 0.10) == ()
+
+    def test_zero_fraction_gives_empty_sample(self) -> None:
+        assert select_iaa_sample(("a.jpg", "b.jpg"), 0.0) == ()
+
+    def test_at_least_one_image_when_fraction_positive(self) -> None:
+        images = tuple(f"img{i}.jpg" for i in range(5))
+        assert len(select_iaa_sample(images, 0.01)) == 1
+
+    def test_never_exceeds_batch_size(self) -> None:
+        images = ("a.jpg",)
+        assert len(select_iaa_sample(images, 1.0)) == 1
+
+    def test_ten_percent_of_eighty(self) -> None:
+        images = tuple(f"img{i:03d}.jpg" for i in range(80))
+        sample = select_iaa_sample(images, 0.10)
+        assert len(sample) == 8
+
+    def test_deterministic_across_calls(self) -> None:
+        images = tuple(f"img{i:03d}.jpg" for i in range(80))
+        assert select_iaa_sample(images, 0.10) == select_iaa_sample(images, 0.10)
+
+    def test_sample_is_subset_of_images(self) -> None:
+        images = tuple(f"img{i:03d}.jpg" for i in range(23))
+        sample = select_iaa_sample(images, 0.10)
+        assert set(sample) <= set(images)

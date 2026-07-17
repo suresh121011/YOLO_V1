@@ -32,6 +32,7 @@ from typing import Any
 from src.dataset.annotation.base import AnnotationError
 from src.dataset.annotation.batches import VerificationBatchManifest
 from src.dataset.annotation.ledger import record_verdict
+from src.dataset.capture.agreement import AgreementReport, compare_annotators
 from src.dataset.capture.annotations import YoloExport, verify_class_order
 from src.utils.annotation_utils import Annotation, parse_label_file_raw, parse_yolo_line
 
@@ -222,3 +223,51 @@ def import_verified_batch(
             f"{skipped[:10]}"
         )
     return result
+
+
+def compute_batch_iaa_agreement(
+    batch: VerificationBatchManifest,
+    primary_export: YoloExport,
+    secondary_export: YoloExport,
+    ids_by_name: Mapping[str, int],
+    iou_threshold: float = 0.5,
+) -> AgreementReport:
+    """Dual-annotator agreement over this batch's IAA sample (D4 gate).
+
+    Reuses ``compare_annotators`` — the same instrument Phase-3 capture
+    sessions use for IAA — restricted to :attr:`batch.iaa_sample` images and
+    :attr:`batch.target_classes` boxes only (verifying pre-labels is the
+    task; agreement outside the target classes isn't this gate's concern).
+
+    Args:
+        batch:            The batch being verified (``iaa_sample`` must be
+                          non-empty — callers gate on that before calling).
+        primary_export:   The export used for the actual import.
+        secondary_export: A second reviewer's independent export of the
+                          SAME batch (dual-annotation).
+        ids_by_name:      Full taxonomy, name -> id.
+        iou_threshold:    Minimum IoU for two boxes to count as the same
+                          object (capture's IAA default).
+    """
+    target_ids = frozenset(ids_by_name[name] for name in batch.target_classes)
+    names_by_target_id = {i: name for name, i in ids_by_name.items() if i in target_ids}
+
+    def _filtered(export: YoloExport) -> dict[str, list[Annotation]]:
+        out: dict[str, list[Annotation]] = {}
+        for filename in batch.iaa_sample:
+            stem = Path(filename).stem
+            out[stem] = [
+                ann
+                for ann in (parse_yolo_line(line) for line in export.labels.get(stem, []))
+                if ann is not None and ann.class_id in target_ids
+            ]
+        return out
+
+    return compare_annotators(
+        _filtered(primary_export),
+        _filtered(secondary_export),
+        iou_threshold=iou_threshold,
+        class_names=names_by_target_id,
+        annotator_a="primary",
+        annotator_b="secondary",
+    )

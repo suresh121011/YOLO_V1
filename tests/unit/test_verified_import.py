@@ -11,6 +11,7 @@ from src.dataset.annotation.batches import VerificationBatchManifest
 from src.dataset.annotation.ledger import LedgerView, new_ledger
 from src.dataset.annotation.verified_import import (
     check_non_target_labels_unchanged,
+    compute_batch_iaa_agreement,
     extract_deltas,
     import_verified_batch,
 )
@@ -282,3 +283,43 @@ class TestImportVerifiedBatch:
         )
         assert result.images_imported == 1
         assert any("b.jpg" in p for p in result.problems)
+
+
+class TestComputeBatchIaaAgreement:
+    def _full_export(self, labels: dict[str, list[str]]):
+        names = [
+            "person", "face", "medicine_strip", "medicine_bottle", "water_bottle", "knife",
+            "stove", "gas_cylinder", "passport", "book", "charger", "wire", "laptop", "monitor",
+            "cupboard", "door", "chair", "bed", "toilet", "sink", "wet_floor", "walking_stick",
+            "support_handle",
+        ]  # fmt: skip
+        return YoloExport(names=names, labels=labels)
+
+    def test_perfect_agreement_on_identical_exports(self) -> None:
+        batch = _batch(["charger"], ["a.jpg", "b.jpg"], iaa_sample=["a.jpg"])
+        export = self._full_export({"a": ["10 0.1 0.1 0.05 0.05"]})
+        report = compute_batch_iaa_agreement(batch, export, export, _IDS_BY_NAME)
+        assert report.overall_agreement == pytest.approx(1.0)
+
+    def test_disagreement_detected(self) -> None:
+        batch = _batch(["charger"], ["a.jpg"], iaa_sample=["a.jpg"])
+        primary = self._full_export({"a": ["10 0.1 0.1 0.05 0.05"]})
+        secondary = self._full_export({"a": []})
+        report = compute_batch_iaa_agreement(batch, primary, secondary, _IDS_BY_NAME)
+        assert report.overall_agreement == pytest.approx(0.0)
+
+    def test_only_iaa_sample_images_considered(self) -> None:
+        batch = _batch(["charger"], ["a.jpg", "b.jpg"], iaa_sample=["a.jpg"])
+        primary = self._full_export({"a": ["10 0.1 0.1 0.05 0.05"], "b": ["10 0.1 0.1 0.05 0.05"]})
+        # b.jpg disagrees completely, but it's outside the IAA sample.
+        secondary = self._full_export({"a": ["10 0.1 0.1 0.05 0.05"], "b": []})
+        report = compute_batch_iaa_agreement(batch, primary, secondary, _IDS_BY_NAME)
+        assert report.overall_agreement == pytest.approx(1.0)
+
+    def test_only_target_classes_considered(self) -> None:
+        batch = _batch(["charger"], ["a.jpg"], iaa_sample=["a.jpg"])
+        primary = self._full_export({"a": ["10 0.1 0.1 0.05 0.05", "11 0.5 0.5 0.1 0.1"]})
+        # Disagree on 'wire' (11, non-target) — must not affect the gate.
+        secondary = self._full_export({"a": ["10 0.1 0.1 0.05 0.05"]})
+        report = compute_batch_iaa_agreement(batch, primary, secondary, _IDS_BY_NAME)
+        assert report.overall_agreement == pytest.approx(1.0)

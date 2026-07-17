@@ -31,7 +31,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.dataset.annotation.base import AnnotationError
 from src.dataset.annotation.batches import BATCH_MANIFEST_FILENAME, VerificationBatchManifest
 from src.dataset.annotation.ledger import load_ledger, recompute_stats, save_ledger, validate_ledger
-from src.dataset.annotation.verified_import import import_verified_batch
+from src.dataset.annotation.verified_import import (
+    compute_batch_iaa_agreement,
+    import_verified_batch,
+)
 from src.dataset.capture.annotations import read_yolo_export
 from src.dataset.completeness import taxonomy_fingerprint
 from src.dataset.manifest import MERGED_MANIFEST_FILENAME, MergedManifest
@@ -58,6 +61,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch", required=True, help="Batch id, e.g. vb001_yolo_world.")
     parser.add_argument(
         "--export", type=Path, required=True, help="CVAT YOLO 1.1 export (zip or dir)."
+    )
+    parser.add_argument(
+        "--dual-export",
+        type=Path,
+        default=None,
+        help="Second reviewer's independent export, required when the batch has a "
+        "non-empty iaa_sample (D4 dual-annotation gate).",
+    )
+    parser.add_argument(
+        "--min-agreement",
+        type=float,
+        default=None,
+        help="Override verification.min_agreement from configs/annotation.yaml.",
     )
     parser.add_argument("--verifier", required=True, help="Pseudonymous reviewer handle.")
     parser.add_argument(
@@ -86,6 +102,11 @@ def main() -> int:
     verified_labels_dir = Path(
         str(verification_cfg.get("verified_labels_dir", "data/annotation/verified_labels"))
     )
+    min_agreement = (
+        args.min_agreement
+        if args.min_agreement is not None
+        else float(verification_cfg.get("min_agreement", 0.70))
+    )
 
     data_cfg = load_data_config(args.data_config)
     class_names_by_id = get_class_names_from_data_yaml(data_cfg)
@@ -110,6 +131,35 @@ def main() -> int:
     except (FileNotFoundError, ValueError) as exc:
         logger.error(str(exc))
         return 1
+
+    if batch.iaa_sample:
+        if args.dual_export is None:
+            logger.error(
+                f"Batch '{batch.batch_id}' has a {len(batch.iaa_sample)}-image IAA sample — "
+                f"pass --dual-export with a second reviewer's independent export."
+            )
+            return 1
+        try:
+            secondary_export = read_yolo_export(args.dual_export)
+        except (FileNotFoundError, ValueError) as exc:
+            logger.error(str(exc))
+            return 1
+
+        report = compute_batch_iaa_agreement(batch, export, secondary_export, ids_by_name)
+        batch.iaa_agreement = report.overall_agreement
+        if report.overall_agreement < min_agreement:
+            logger.error(
+                f"Batch '{batch.batch_id}' failed the IAA gate: agreement "
+                f"{report.overall_agreement:.2f} < required {min_agreement:.2f} — staying "
+                f"'staged' for re-review."
+            )
+            batch.status = "staged"
+            batch.save(manifest_path)
+            return 1
+        logger.info(
+            f"Batch '{batch.batch_id}' IAA gate passed: agreement "
+            f"{report.overall_agreement:.2f} >= {min_agreement:.2f}"
+        )
 
     manifest = MergedManifest.load(args.merged_dir / MERGED_MANIFEST_FILENAME)
     ledger = load_ledger(ledger_path)

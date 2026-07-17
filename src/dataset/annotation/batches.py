@@ -201,6 +201,27 @@ def next_batch_id(batches_root: Path, backend: str) -> str:
     return f"vb{max_n + 1:03d}_{backend}"
 
 
+def select_iaa_sample(images: tuple[str, ...], fraction: float) -> tuple[str, ...]:
+    """Deterministically pick this batch's dual-annotated IAA sample.
+
+    Evenly spaced picks over the SORTED image list (not random) so the
+    sample is reproducible if a batch is ever rebuilt from the same inputs.
+    At least one image once the batch is non-empty and ``fraction > 0`` —
+    a batch small enough that 10% rounds to zero still gets a process check.
+
+    Args:
+        images:   This batch's filenames.
+        fraction: ``verification.iaa_sample_fraction`` (e.g. 0.10).
+    """
+    if not images or fraction <= 0:
+        return ()
+    sorted_images = sorted(images)
+    n = min(max(1, round(len(sorted_images) * fraction)), len(sorted_images))
+    step = len(sorted_images) / n
+    indices = sorted({int(i * step) for i in range(n)})
+    return tuple(sorted_images[i] for i in indices)
+
+
 def build_batch_manifests(
     candidates: Mapping[str, Any],
     backend: str,
@@ -209,6 +230,7 @@ def build_batch_manifests(
     class_names_by_id: Mapping[int, str],
     priority_classes: frozenset[str],
     batch_size: int,
+    iaa_sample_fraction: float = 0.0,
 ) -> list[VerificationBatchManifest]:
     """Plan batches from a candidate artifact and assign them sequential ids.
 
@@ -217,13 +239,16 @@ def build_batch_manifests(
     its pre-annotations, or vice versa).
 
     Args:
-        candidates:         Loaded candidate artifact.
-        backend:            Backend name (candidate_run provenance + batch id).
-        candidates_sha256:  Digest of the on-disk candidates.json consumed.
+        candidates:          Loaded candidate artifact.
+        backend:             Backend name (candidate_run provenance + batch id).
+        candidates_sha256:   Digest of the on-disk candidates.json consumed.
         batches_root:        ``data/annotation/batches``.
-        class_names_by_id:  Taxonomy id -> name.
-        priority_classes:   Names weighted higher in the gain proxy.
-        batch_size:         Max images per batch.
+        class_names_by_id:   Taxonomy id -> name.
+        priority_classes:    Names weighted higher in the gain proxy.
+        batch_size:          Max images per batch.
+        iaa_sample_fraction: Fraction of each batch dual-annotated for the
+                             IAA gate (``verification.iaa_sample_fraction``,
+                             D4); 0 disables IAA sampling for these batches.
     """
     claimed = already_batched_images(batches_root)
     drafts = plan_batches(candidates, claimed, class_names_by_id, priority_classes, batch_size)
@@ -243,6 +268,7 @@ def build_batch_manifests(
                 target_classes=list(draft.target_classes),
                 images=list(draft.images),
                 status="created",
+                iaa_sample=list(select_iaa_sample(draft.images, iaa_sample_fraction)),
                 expected_gain=draft.expected_gain,
             )
         )
