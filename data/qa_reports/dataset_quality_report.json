@@ -1,0 +1,260 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-17T19:54:14Z",
+  "generator": {
+    "script": "scripts/dataset/17_dataset_quality_report.py"
+  },
+  "taxonomy_fingerprint": "sha256:a831924bb82e23ffbc6cc1d56647a78cc72ff5e329920569b05bd5ae99c2f125",
+  "dataset_scale": {
+    "images_total": 188,
+    "images_by_split": {
+      "test": 12,
+      "train": 164,
+      "val": 12
+    },
+    "images_by_source": {
+      "coco": 53,
+      "negatives": 18,
+      "openimages": 57,
+      "wider_face": 60
+    },
+    "instances_per_class": {
+      "person": 202,
+      "face": 1254,
+      "medicine_strip": 0,
+      "medicine_bottle": 0,
+      "water_bottle": 13,
+      "knife": 10,
+      "stove": 6,
+      "gas_cylinder": 0,
+      "passport": 0,
+      "book": 15,
+      "charger": 0,
+      "wire": 0,
+      "laptop": 1,
+      "monitor": 5,
+      "cupboard": 34,
+      "door": 39,
+      "chair": 14,
+      "bed": 5,
+      "toilet": 3,
+      "sink": 4,
+      "wet_floor": 0,
+      "walking_stick": 0,
+      "support_handle": 0
+    },
+    "custom_images_total": 0,
+    "houses_total": 0
+  },
+  "completeness_summary": {
+    "policies_count": 4,
+    "mean_trusted_classes_per_image": 6.25,
+    "masked_cell_fraction": 0.7283
+  },
+  "coverage_summary": {
+    "residual_missing_total": 122.85,
+    "unknown_objects_total": 351,
+    "mean_completeness": 0.8796,
+    "p10_completeness": 0.6061,
+    "images_below_0_5": 8
+  },
+  "per_class_risk": {
+    "person": {
+      "annotated_instances": 202,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "face": {
+      "annotated_instances": 1254,
+      "unverified_candidates": 217,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 75.95,
+      "coverage_score": 0.9429
+    },
+    "medicine_strip": {
+      "annotated_instances": 0,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "medicine_bottle": {
+      "annotated_instances": 0,
+      "unverified_candidates": 46,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 16.1,
+      "coverage_score": 0.0
+    },
+    "water_bottle": {
+      "annotated_instances": 13,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "knife": {
+      "annotated_instances": 10,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "stove": {
+      "annotated_instances": 6,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "gas_cylinder": {
+      "annotated_instances": 0,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "passport": {
+      "annotated_instances": 0,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "book": {
+      "annotated_instances": 15,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "charger": {
+      "annotated_instances": 0,
+      "unverified_candidates": 32,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 11.2,
+      "coverage_score": 0.0
+    },
+    "wire": {
+      "annotated_instances": 0,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "laptop": {
+      "annotated_instances": 1,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "monitor": {
+      "annotated_instances": 5,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "cupboard": {
+      "annotated_instances": 34,
+      "unverified_candidates": 56,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 19.6,
+      "coverage_score": 0.6343
+    },
+    "door": {
+      "annotated_instances": 39,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "chair": {
+      "annotated_instances": 14,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "bed": {
+      "annotated_instances": 5,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "toilet": {
+      "annotated_instances": 3,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "sink": {
+      "annotated_instances": 4,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "wet_floor": {
+      "annotated_instances": 0,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "walking_stick": {
+      "annotated_instances": 0,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    },
+    "support_handle": {
+      "annotated_instances": 0,
+      "unverified_candidates": 0,
+      "verified_present": 0,
+      "verified_absent": 0,
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
+    }
+  },
+  "verification_progress": {
+    "ledger_stats": {
+      "images": 0,
+      "cells_verified": 0,
+      "per_class": {}
+    },
+    "batches_by_status": {
+      "created": 1
+    },
+    "batches_total": 1,
+    "mean_iaa_agreement": null,
+    "batches_with_measured_iaa": 0
+  }
+}

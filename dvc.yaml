@@ -307,6 +307,25 @@ stages:
       - data/qa_reports/coverage_report.json:
           cache: false
 
+  # ─── Phase-5 missing-annotation resolution (L5 dataset quality report) ────
+  # Aggregates completeness + coverage + ledger + merged-manifest — read by
+  # the v0.7+/v1.0 release gate RG3 for per-class threshold checks (M5+).
+
+  dataset_quality_report:
+    cmd: python scripts/dataset/17_dataset_quality_report.py
+    deps:
+      - scripts/dataset/17_dataset_quality_report.py
+      - src/dataset/annotation/quality.py
+      - configs/data.yaml
+      - data/processed/completeness.json
+      - data/qa_reports/coverage_report.json
+      - data/merged/merged_manifest.json
+      - data/annotation/verification_ledger.json
+      - data/annotation/batches
+    metrics:
+      - data/qa_reports/dataset_quality_report.json:
+          cache: false
+
   # ─── Training (Phase-5 — declared but frozen until the dataset is released) ─
 
   train_yolo11n:
