@@ -15,9 +15,9 @@ transformers>=4.45,<5.0
 
 # YOLO-World's set_classes() text encoder. Ultralytics auto-installs this at
 # runtime when missing — pin it here instead so offline/deterministic runs
-# never trigger a surprise install. PIN THE EXACT COMMIT at M1 (when the
-# annotation environment is first provisioned and the resolved sha recorded):
-# clip @ git+https://github.com/ultralytics/CLIP.git@<sha-pinned-at-M1>
+# never trigger a surprise install. Pinned at M1 provisioning (2026-07-17,
+# local GPU box) to the CLIP fork's HEAD at that time.
+clip @ git+https://github.com/ultralytics/CLIP.git@a57ec09a1668b6a5905ff323d734701f8d11d0e2
 
 # Image IO for the annotation stages (transitively present via ultralytics;
 # listed for explicitness, mirroring the psutil precedent in requirements.txt).

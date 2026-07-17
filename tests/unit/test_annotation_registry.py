@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
@@ -55,7 +56,9 @@ class TestRegistry:
 
             @register_annotator("fake")
             class Duplicate(AutoAnnotator):  # pragma: no cover - never used
-                def load(self, config: BackendConfig, device: str) -> None: ...
+                def load(
+                    self, config: BackendConfig, device: str, ids_by_name: Mapping[str, int]
+                ) -> None: ...
 
                 def annotate(
                     self, image_path: Path, target_class_ids: tuple[int, ...]
@@ -130,7 +133,7 @@ class TestPromptFingerprint:
 class TestFakeAnnotator:
     def test_deterministic_detections_for_targeted_classes(self, tmp_path: Path) -> None:
         annotator = get_annotator("fake")
-        annotator.load(_config(), device="cpu")
+        annotator.load(_config(), device="cpu", ids_by_name={"charger": 10, "wire": 11})
         detections = annotator.annotate(tmp_path / "img.jpg", (10, 11))
         assert [d.class_id for d in detections] == [10, 11]
         assert [d.conf for d in detections] == [0.9, 0.8]
@@ -145,7 +148,7 @@ class TestFakeAnnotator:
     def test_fingerprint_reflects_prompts(self) -> None:
         annotator = get_annotator("fake")
         config = _config()
-        annotator.load(config, device="cpu")
+        annotator.load(config, device="cpu", ids_by_name={"charger": 10, "wire": 11})
         fp = annotator.fingerprint()
         assert fp.backend == "fake"
         assert fp.prompt_fingerprint == prompt_fingerprint(config.prompts, config.thresholds)

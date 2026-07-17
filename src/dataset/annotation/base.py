@@ -256,15 +256,17 @@ class AutoAnnotator(ABC):
     name: ClassVar[str] = ""
 
     @abstractmethod
-    def load(self, config: BackendConfig, device: str) -> None:
-        """Load model weights / open resources.
+    def load(self, config: BackendConfig, device: str, ids_by_name: Mapping[str, int]) -> None:
+        """Load model weights / open resources and bind the taxonomy.
 
         Args:
-            config: Validated backend configuration.
-            device: Torch device string (e.g. "cuda:0").
+            config:      Validated backend configuration.
+            device:      Torch device string (e.g. "cuda:0").
+            ids_by_name: Taxonomy class name → id (prompt/output mapping).
 
         Raises:
-            AnnotationError: On weights-sha256 mismatch or unusable config.
+            AnnotationError: On weights-sha256 mismatch, prompted classes
+                             missing from the taxonomy, or unusable config.
         """
 
     @abstractmethod

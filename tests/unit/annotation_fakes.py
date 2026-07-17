@@ -8,6 +8,7 @@ process; the registry rejects duplicate names by design.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 
 from src.dataset.annotation.base import (
@@ -33,9 +34,10 @@ class FakeAnnotator(AutoAnnotator):
         self._config: BackendConfig | None = None
         self._device = ""
 
-    def load(self, config: BackendConfig, device: str) -> None:
+    def load(self, config: BackendConfig, device: str, ids_by_name: Mapping[str, int]) -> None:
         self._config = config
         self._device = device
+        self._ids_by_name = dict(ids_by_name)
 
     def annotate(self, image_path: Path, target_class_ids: tuple[int, ...]) -> list[Detection]:
         if self._config is None:
