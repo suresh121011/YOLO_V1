@@ -246,6 +246,16 @@ stages:
     outs:
       - data/annotation/candidates
 
+  # FROZEN (mirrors ingest_custom_captures/ingest_eval_set): regenerating
+  # mid-flight would orphan live CVAT tasks whose pre-annotations no longer
+  # match a fresh batch plan. Humans run 13_build_verification_batches.py
+  # directly, then `dvc commit -f build_verification_batches`.
+  build_verification_batches:
+    frozen: true
+    cmd: python scripts/dataset/13_build_verification_batches.py
+    outs:
+      - data/annotation/batches
+
   # ─── Training (Phase-5 — declared but frozen until the dataset is released) ─
 
   train_yolo11n:
