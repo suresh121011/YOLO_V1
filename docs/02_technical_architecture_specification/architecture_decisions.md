@@ -15,6 +15,8 @@ Used By: None (terminal document for TAS)
 Related:
 - ../01_executive_implementation_plan/risk_register.md
 - ../01_executive_implementation_plan/roadmap.md
+- ../06_training_engineering/adr/ — Phase-4 architecture decision records
+  (ADR-P4-01 … ADR-P4-05: masked-loss training design)
 
 ---
 

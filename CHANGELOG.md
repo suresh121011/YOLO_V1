@@ -10,6 +10,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Phase-4: Missing Annotation Mitigation — masked-loss training framework
+  (public datasets label only part of the 23-class taxonomy; stock BCE turns
+  every unlabeled class into false background supervision — mean smoke image
+  trusts just 6.25/23 classes). Strictly opt-in; disabled ⇒ byte-for-byte
+  stock pipeline (golden train-kwargs regression pins this).
+  - M1 completeness metadata: top-level `completeness.policies` section in
+    `configs/dataset_sources.yaml` (explicit per-source semantics — never
+    name-inferred; `negatives` = verified absence of ALL classes → all-ones
+    mask; `custom_captures` = per finalized session manifest), pluggable
+    policy-provider registry (`src/dataset/completeness_policies.py`),
+    hard-fail generator + validator (`src/dataset/completeness.py`, orphan
+    refs / duplicate keys / drift / unknown images all fatal), CLI
+    `scripts/dataset/11_generate_completeness.py`, new DVC stage
+    `generate_completeness` (split → completeness → frozen train dep),
+    report triplet `data/qa_reports/completeness_report.*`
+  - M2 preflight gates G1–G8 (`src/training/preflight.py` +
+    `scripts/training/preflight_check.py`, exit 0/1/2): artifact
+    exists/valid, taxonomy fingerprint vs live data.yaml, train/val
+    coverage, self-consistency, environment + loss-surface source canary
+    (`assert_ultralytics_compat`), config validity, input-hash freshness,
+    strict mixing-augmentation gate (mosaic/mixup/copy_paste forbidden
+    under mitigation — ADR-P4-04)
+  - M3 masked BCE loss + trainer injection: `MaskedDetectionLoss`
+    (v8DetectionLoss subclass; `_MaskingBCE` wrapper multiplies the
+    elementwise BCE map by a per-image {0,1}^23 mask — no upstream math
+    copied; box/DFL untouched), criterion attached at `on_train_start` to
+    train + EMA models (model class stays stock → portable checkpoints,
+    ADR-P4-02), `build_masked_trainer` factory for
+    `model.train(trainer=...)`, `--mitigation on|off` CLI,
+    `missing_annotation_mitigation` config section (yolo11n + yolo11s)
+  - M3.5 masking-correctness gate (committed evidence:
+    `data/qa_reports/phase4_mitigation/masking_validation_report.*`):
+    bit-identity vs stock loss under all-ones masks, exact-zero gradients
+    for masked classes, real-artifact spot-checks (coco 10/23,
+    openimages 3/23, wider_face 1/23, negatives 23/23), 1-epoch mitigated +
+    disabled runs — all PASS; re-runnable via
+    `scripts/training/validate_masking.py` + env-gated
+    `tests/system/test_training_smoke.py`
+  - M4 evaluation framework (`src/training/evaluation.py`,
+    `scripts/training/evaluate_mitigation.py`): per-class P/R/F1/mAP,
+    confusion-matrix export, mitigated−baseline delta reports with the
+    partial-annotation caveat documented
+  - M5 benchmark framework (`src/training/benchmark.py`,
+    `scripts/training/benchmark_mitigation.py`): baseline vs mitigated,
+    repeats, process-tree peak RSS (psutil), loss-forward + mask-build
+    microbenchmarks, explicit performance budgets each marked PASS/FAIL
+    (verdict FAIL on any breach); executed smoke benchmark committed
+    (`data/qa_reports/phase4_mitigation/benchmark_report.*`) — all budgets
+    PASS (end-to-end wall-time overhead ≈0 %, loss-forward ≈0.6 ms/call
+    ≈0.2 % of a training step, mask build ≈0.06 ms/batch); microbenchmark
+    uses interleaved stock/masked rounds with median reduction after
+    single-series timing proved unreliable on desktop hardware
+  - M6 documentation: `docs/06_training_engineering/` (engineering report,
+    masked-loss architecture with identity proof + compat contract,
+    operational runbook keyed by gate IDs, ADR-P4-01…05), risk register
+    R25–R29, README Phase-4 section
+  - 153 new CI-scope tests (unit incl. torch-dependent drift canaries +
+    integration against the real shipped configs; suite 412 → 565, coverage
+    73.35 % → 74.99 %) plus an env-gated system smoke test; CI mypy scope
+    now includes `src/training`; `psutil` promoted to an explicit
+    dependency
+
 - Pre-Phase-4 production readiness audit
   (`docs/05_audit/pre_phase4_production_readiness_audit.md`) — phase
   verification (1/2/WP3.0/3 all PASS), full findings register, CI/DVC/git
@@ -67,6 +129,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `.env.example` documenting `ROBOFLOW_API_KEY` (graceful-skip semantics)
 
 ### Fixed
+- Stale DVC pipeline state (audit H-2): `dvc repro` re-run with Phase-3 code
+  refreshed `dvc.lock` (merge/split/QA stages) and locked the new
+  `generate_completeness` stage; regenerated QA metric verified sane
+  (188 images, 0 critical, 18 pre-existing warnings)
 - Local mypy gate aborted on venvs with numpy 2.x installed (PEP 695 `type`
   statements in numpy stubs vs the hard `python_version = "3.10"` pin);
   pin removed — mypy now checks under the running interpreter while CI's

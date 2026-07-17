@@ -82,8 +82,15 @@ docs/
 │   ├── phase3_engineering_report.md
 │   └── reproduction_log.md               ← Clean-machine rebuild evidence
 │
-└── 05_audit/                            ← Production readiness audits
-    └── pre_phase4_production_readiness_audit.md
+├── 05_audit/                            ← Production readiness audits
+│   └── pre_phase4_production_readiness_audit.md
+│
+└── 06_training_engineering/             ← Phase-4 training pipeline (4 files + 5 ADRs)
+    ├── README.md                         ← Missing-annotation mitigation index
+    ├── phase4_engineering_report.md
+    ├── masked_loss_architecture.md       ← Masking mechanism, gates, budgets
+    ├── mitigation_runbook.md             ← Operate: generate/preflight/train/benchmark
+    └── adr/ADR-P4-01 … ADR-P4-05         ← Architecture decision records
 ```
 
 ---
@@ -95,6 +102,7 @@ docs/
 | **Managing Director / CTO** | [SUMMARY.md](./01_executive_implementation_plan/SUMMARY.md) → [business_goals.md](./01_executive_implementation_plan/business_goals.md) |
 | **Engineering Manager** | [implementation_phases.md](./01_executive_implementation_plan/implementation_phases.md) → [risk_register.md](./01_executive_implementation_plan/risk_register.md) |
 | **ML / CV Engineer** | [system_architecture.md](./02_technical_architecture_specification/system_architecture.md) → [data_contracts.md](./02_technical_architecture_specification/data_contracts.md) |
+| **Training Engineer** | [06_training_engineering/README.md](./06_training_engineering/README.md) → [mitigation_runbook.md](./06_training_engineering/mitigation_runbook.md) |
 | **Backend Engineer** | [interfaces.md](./02_technical_architecture_specification/interfaces.md) → [threading_model.md](./02_technical_architecture_specification/threading_model.md) |
 | **Data Annotator** | [annotation_guide.md](./03_engineering_appendix/annotation_guide.md) → [capture_annotation_runbook.md](./04_dataset_engineering/capture_annotation_runbook.md) |
 | **Dataset Engineer** | [04_dataset_engineering/README.md](./04_dataset_engineering/README.md) → [capture_annotation_runbook.md](./04_dataset_engineering/capture_annotation_runbook.md) |
