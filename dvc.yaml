@@ -220,6 +220,32 @@ stages:
       - data/qa_reports/annotation_qa_report.json:
           cache: false
 
+  # ─── Phase-5 missing-annotation resolution (L2 auto-annotation) ────────────
+  # Candidates NEVER touch labels/ directly (ADR-P5-01) — they land under
+  # data/annotation/candidates/ and only reach training labels through the
+  # human CVAT verification loop (M2: build_verification_batches →
+  # import_verified_annotations → ledger → apply_verified_labels). This stage
+  # declares the (currently empty, git-bootstrapped) ledger as a dep so its
+  # DAG edge exists from day one — see dvc.yaml header note in the M2 commit
+  # for why the human-loop stages that produce it declare no deps in return
+  # (breaks the conceptual auto_annotate→...→ledger→auto_annotate cycle in
+  # the declared graph; freshness is enforced by sha256 cross-checks instead,
+  # G9/RG2 — council-verified, plan §"DAG acyclicity").
+
+  auto_annotate:
+    cmd: python scripts/dataset/12_auto_annotate.py
+    deps:
+      - scripts/dataset/12_auto_annotate.py
+      - src/dataset/annotation
+      - configs/data.yaml
+      - data/merged
+      - data/annotation/verification_ledger.json
+    params:
+      - configs/annotation.yaml:
+          - auto_annotation
+    outs:
+      - data/annotation/candidates
+
   # ─── Training (Phase-5 — declared but frozen until the dataset is released) ─
 
   train_yolo11n:

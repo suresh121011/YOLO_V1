@@ -27,7 +27,7 @@ auto_annotation:
     yolo_world:
       enabled: true
       weights: models/annotators/yolov8x-worldv2.pt
-      weights_sha256: ""            # pinned at M1 when the weight file lands
+      weights_sha256: "41e771bfbbb8894dd857f3fef7cac3b3578dffd49fd3547101efa6a606a02a0e"
       imgsz: 640
       conf_floor: 0.05              # record everything above this; per-class
                                     # thresholds below decide candidate status
@@ -82,7 +82,7 @@ auto_annotation:
     # dropped twin carried trusted-class labels. Exact-sha256 twins are
     # salvaged at merge time; near-dups become candidates for human review.
     cross_dataset:
-      enabled: true
+      enabled: false             # flips true when the backend lands (L3 merge-salvage work)
       match: exact_sha256
 
   # Optional SAM box-refinement post-pass. Only tightens existing candidate
@@ -90,7 +90,7 @@ auto_annotation:
   refinement:
     enabled: true
     weights: models/annotators/mobile_sam.pt
-    weights_sha256: ""              # pinned at M1
+    weights_sha256: "6dbb90523a35330fedd7f1d3dfc66f995213d81b29a5ca8108dbcdd4e37d6c2f"
   # Which (image, class) cells to target: skip cells already trusted by the
   # source policy or already verified in the ledger.
   targeting:

@@ -633,3 +633,112 @@ stages:
       hash: md5
       md5: 03c45b97836a0cebce11c096e2e4a4f1
       size: 2135
+  auto_annotate:
+    cmd: python scripts/dataset/12_auto_annotate.py
+    deps:
+    - path: configs/data.yaml
+      hash: md5
+      md5: aee65566d7b4876d68948f6bc02abb3d
+      size: 2254
+    - path: data/annotation/verification_ledger.json
+      hash: md5
+      md5: 7db92f1d0ace8eacfe1e528454ae331c
+      size: 173
+    - path: data/merged
+      hash: md5
+      md5: 2d31886b030acf91aa84e7f4d75a123b.dir
+      size: 37087111
+      nfiles: 377
+    - path: scripts/dataset/12_auto_annotate.py
+      hash: md5
+      md5: 2b7407974a5538d0d0894357fc7172e9
+      size: 15081
+    - path: src/dataset/annotation
+      hash: md5
+      md5: c5401e26739badf587d148d3f27e8a6c.dir
+      size: 46918
+      nfiles: 8
+    params:
+      configs/annotation.yaml:
+        auto_annotation:
+          device: cuda:0
+          backends:
+            yolo_world:
+              enabled: true
+              weights: models/annotators/yolov8x-worldv2.pt
+              weights_sha256: 
+                41e771bfbbb8894dd857f3fef7cac3b3578dffd49fd3547101efa6a606a02a0e
+              imgsz: 640
+              conf_floor: 0.05
+              max_det: 100
+              prompts:
+                person: []
+                face:
+                - human face
+                - person's face
+                medicine_strip: []
+                medicine_bottle:
+                - medicine bottle
+                - pill bottle
+                - prescription bottle
+                water_bottle: []
+                knife: []
+                stove: []
+                gas_cylinder: []
+                passport: []
+                book: []
+                charger:
+                - phone charger
+                - power adapter
+                - charging brick plugged into wall socket
+                wire:
+                - electrical wire
+                - power cable
+                - charging cable on the floor
+                laptop: []
+                monitor: []
+                cupboard:
+                - cupboard
+                - wardrobe
+                - steel almirah
+                - kitchen cabinet
+                door: []
+                chair: []
+                bed: []
+                toilet: []
+                sink: []
+                wet_floor: []
+                walking_stick: []
+                support_handle: []
+              thresholds:
+                default: 0.25
+                charger: 0.2
+                wire: 0.2
+            grounding_dino:
+              enabled: false
+              hf_model: IDEA-Research/grounding-dino-base
+              hf_revision: ''
+              box_threshold: 0.3
+              text_threshold: 0.25
+            cross_dataset:
+              enabled: false
+              match: exact_sha256
+          refinement:
+            enabled: true
+            weights: models/annotators/mobile_sam.pt
+            weights_sha256: 
+              6dbb90523a35330fedd7f1d3dfc66f995213d81b29a5ca8108dbcdd4e37d6c2f
+          targeting:
+            skip_trusted_cells: true
+            priority_classes:
+            - charger
+            - wire
+            - medicine_bottle
+            - cupboard
+            - face
+    outs:
+    - path: data/annotation/candidates
+      hash: md5
+      md5: 9c2908b82a3f354c2e8fc2e460641da2.dir
+      size: 137088
+      nfiles: 1
