@@ -396,6 +396,64 @@ def sweep_annotation_artifacts(
     }
 
 
+def sweep_l4_l5_reports(
+    coverage_report_path: Path,
+    quality_report_path: Path,
+    data_yaml_path: Path,
+) -> dict[str, Any]:
+    """M4 QA sweep over the L4 coverage / L5 dataset quality reports.
+
+    Schema-validates whichever report(s) exist and flags a stale taxonomy
+    fingerprint (the report's embedded fingerprint no longer matching the
+    live ``configs/data.yaml`` — a sign ``dvc repro`` needs to be re-run
+    after a taxonomy edit). WARNING level, like :func:`sweep_annotation_artifacts`
+    — schema/staleness hygiene for a human to investigate, not training-
+    blocking. Returns ``{"available": False}`` before either report exists
+    (pre-M4 checkouts stay green).
+    """
+    if not coverage_report_path.exists() and not quality_report_path.exists():
+        return {"available": False}
+
+    from src.dataset.annotation.coverage import validate_coverage_report
+    from src.dataset.annotation.quality import validate_quality_report
+    from src.dataset.completeness import taxonomy_fingerprint
+    from src.utils.config_helpers import get_class_names_from_data_yaml, load_data_config
+
+    data_cfg = load_data_config(data_yaml_path)
+    names = get_class_names_from_data_yaml(data_cfg)
+    live_fp = taxonomy_fingerprint(int(data_cfg["nc"]), names)
+
+    problems: list[str] = []
+    coverage_present = coverage_report_path.exists()
+    quality_present = quality_report_path.exists()
+
+    if coverage_present:
+        coverage = json.loads(coverage_report_path.read_text(encoding="utf-8"))
+        problems.extend(f"coverage_report: {p}" for p in validate_coverage_report(coverage))
+        if coverage.get("taxonomy_fingerprint") != live_fp:
+            problems.append(
+                "coverage_report: taxonomy fingerprint stale vs live configs/data.yaml — "
+                "re-run `dvc repro coverage_report`"
+            )
+
+    if quality_present:
+        quality = json.loads(quality_report_path.read_text(encoding="utf-8"))
+        problems.extend(f"dataset_quality_report: {p}" for p in validate_quality_report(quality))
+        if quality.get("taxonomy_fingerprint") != live_fp:
+            problems.append(
+                "dataset_quality_report: taxonomy fingerprint stale vs live "
+                "configs/data.yaml — re-run `dvc repro dataset_quality_report`"
+            )
+
+    return {
+        "available": True,
+        "coverage_report_present": coverage_present,
+        "quality_report_present": quality_present,
+        "problems_count": len(problems),
+        "problems": problems[:MAX_LISTED_FILES],
+    }
+
+
 def parse_args() -> argparse.Namespace:
     """Parse CLI arguments."""
     parser = argparse.ArgumentParser(
@@ -426,6 +484,14 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--verified-labels-dir", type=Path, default=Path("data/annotation/verified_labels")
+    )
+    parser.add_argument(
+        "--coverage-report", type=Path, default=Path("data/qa_reports/coverage_report.json")
+    )
+    parser.add_argument(
+        "--quality-report",
+        type=Path,
+        default=Path("data/qa_reports/dataset_quality_report.json"),
     )
     parser.add_argument("--output", type=Path, default=Path("data/qa_reports"))
     parser.add_argument("--strict", action="store_true", help="Treat warnings as critical.")
@@ -518,6 +584,10 @@ def main() -> int:
         else 0
     )
 
+    # M4: L4/L5 report schema + staleness sweep
+    l4_l5_reports = sweep_l4_l5_reports(args.coverage_report, args.quality_report, args.config)
+    l4_l5_warnings = l4_l5_reports.get("problems_count", 0) if l4_l5_reports.get("available") else 0
+
     # Merge everything into the DVC metric file
     report_path = args.output / "annotation_qa_report.json"
     report: dict[str, Any] = {}
@@ -528,6 +598,7 @@ def main() -> int:
     report["image_quality"] = quality_report
     report["eval_set"] = {"overlap": eval_report, "house_exclusivity": house_report}
     report["annotation_sweeps"] = annotation_sweeps
+    report["l4_l5_reports"] = l4_l5_reports
     report["orchestrator"] = {
         "check_annotations_exit": annotations_exit,
         "dataset_stats_exit": stats_exit,
@@ -535,6 +606,7 @@ def main() -> int:
         "image_quality_warnings": quality_warnings,
         "eval_overlap_critical": eval_critical,
         "annotation_sweep_warnings": sweep_warnings,
+        "l4_l5_report_warnings": l4_l5_warnings,
     }
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(
@@ -549,6 +621,7 @@ def main() -> int:
         or quality_warnings > 0
         or bool(house_report.get("shared_houses"))
         or sweep_warnings > 0
+        or l4_l5_warnings > 0
     )
     if license_critical:
         logger.error("LICENSE GATE VIOLATION — see license_report in the QA report")

@@ -504,3 +504,113 @@ class TestSweepAnnotationArtifacts:
         report = sweep_annotation_artifacts(**paths)
         assert report["verified_labels_orphans_count"] == 1
         assert "orphan.txt" in report["verified_labels_orphans"]
+
+
+# ─── M4 L4/L5 report sweep (scripts.qa.run_full_qa) ───────────────────────────
+
+import json  # noqa: E402
+
+from scripts.qa.run_full_qa import sweep_l4_l5_reports  # noqa: E402
+
+_NAMES = {0: "person", 1: "charger"}
+_NC = 2
+
+
+def _write_data_yaml(path: Path) -> Path:
+    path.write_text(
+        json.dumps({"nc": _NC, "names": {str(k): v for k, v in _NAMES.items()}}),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _live_fp() -> str:
+    from src.dataset.completeness import taxonomy_fingerprint
+
+    return taxonomy_fingerprint(_NC, _NAMES)
+
+
+@pytest.mark.unit
+class TestSweepL4L5Reports:
+    """M4: coverage_report.json / dataset_quality_report.json schema + staleness."""
+
+    def test_neither_report_exists_is_not_available(self, tmp_path: Path) -> None:
+        data_yaml = _write_data_yaml(tmp_path / "data.yaml")
+        report = sweep_l4_l5_reports(
+            tmp_path / "coverage_report.json", tmp_path / "dataset_quality_report.json", data_yaml
+        )
+        assert report == {"available": False}
+
+    def test_valid_fresh_reports_no_problems(self, tmp_path: Path) -> None:
+        data_yaml = _write_data_yaml(tmp_path / "data.yaml")
+        fp = _live_fp()
+        coverage_path = tmp_path / "coverage_report.json"
+        coverage_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "taxonomy_fingerprint": fp,
+                    "per_class": {
+                        "person": {"coverage_score": 1.0, "residual_missing_estimate": 0.0}
+                    },
+                    "per_image": {},
+                    "per_image_summary": {},
+                    "dataset": {"residual_missing_total": 0.0, "unknown_objects_total": 0},
+                }
+            ),
+            encoding="utf-8",
+        )
+        quality_path = tmp_path / "dataset_quality_report.json"
+        quality_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "taxonomy_fingerprint": fp,
+                    "dataset_scale": {"images_total": 1},
+                    "completeness_summary": {"masked_cell_fraction": 0.5},
+                    "coverage_summary": {},
+                    "per_class_risk": {},
+                    "verification_progress": {},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        report = sweep_l4_l5_reports(coverage_path, quality_path, data_yaml)
+        assert report["available"] is True
+        assert report["coverage_report_present"] is True
+        assert report["quality_report_present"] is True
+        assert report["problems_count"] == 0
+
+    def test_stale_taxonomy_fingerprint_flagged(self, tmp_path: Path) -> None:
+        data_yaml = _write_data_yaml(tmp_path / "data.yaml")
+        coverage_path = tmp_path / "coverage_report.json"
+        coverage_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "taxonomy_fingerprint": "sha256:stale",
+                    "per_class": {},
+                    "per_image": {},
+                    "per_image_summary": {},
+                    "dataset": {"residual_missing_total": 0.0, "unknown_objects_total": 0},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        report = sweep_l4_l5_reports(coverage_path, tmp_path / "missing.json", data_yaml)
+        assert report["available"] is True
+        assert report["quality_report_present"] is False
+        assert report["problems_count"] == 1
+        assert "stale" in report["problems"][0]
+
+    def test_invalid_schema_flagged(self, tmp_path: Path) -> None:
+        data_yaml = _write_data_yaml(tmp_path / "data.yaml")
+        quality_path = tmp_path / "dataset_quality_report.json"
+        quality_path.write_text(json.dumps({"schema_version": 1}), encoding="utf-8")
+
+        report = sweep_l4_l5_reports(tmp_path / "missing.json", quality_path, data_yaml)
+        assert report["available"] is True
+        assert report["problems_count"] >= 1
+        assert any("missing required dimension" in p for p in report["problems"])
