@@ -1,0 +1,80 @@
+{
+  "generated_at": "2026-07-16T15:06:52Z",
+  "artifact_path": "data/processed/completeness.json",
+  "taxonomy_fingerprint": "sha256:a831924bb82e23ffbc6cc1d56647a78cc72ff5e329920569b05bd5ae99c2f125",
+  "stats": {
+    "images_total": 188,
+    "by_split": {
+      "test": 12,
+      "train": 164,
+      "val": 12
+    },
+    "by_policy": {
+      "coco": 53,
+      "negatives": 18,
+      "openimages": 57,
+      "wider_face": 60
+    },
+    "class_trusted_image_counts": {
+      "bed": 71,
+      "book": 71,
+      "chair": 71,
+      "charger": 18,
+      "cupboard": 75,
+      "door": 75,
+      "face": 78,
+      "gas_cylinder": 18,
+      "knife": 71,
+      "laptop": 71,
+      "medicine_bottle": 18,
+      "medicine_strip": 18,
+      "monitor": 71,
+      "passport": 18,
+      "person": 71,
+      "sink": 71,
+      "stove": 75,
+      "support_handle": 18,
+      "toilet": 71,
+      "walking_stick": 18,
+      "water_bottle": 71,
+      "wet_floor": 18,
+      "wire": 18
+    },
+    "mean_trusted_classes_per_image": 6.25
+  },
+  "policies": [
+    {
+      "policy": "coco",
+      "mode": "trusted_list",
+      "images": 53,
+      "trusted_count": 10,
+      "untrusted_count": 13,
+      "trusted_classes": "person water_bottle knife book laptop monitor chair bed toilet sink"
+    },
+    {
+      "policy": "negatives",
+      "mode": "verified_absence_all",
+      "images": 18,
+      "trusted_count": 23,
+      "untrusted_count": 0,
+      "trusted_classes": "person face medicine_strip medicine_bottle water_bottle knife stove gas_cylinder passport book charger wire laptop monitor cupboard door chair bed toilet sink wet_floor walking_stick support_handle"
+    },
+    {
+      "policy": "openimages",
+      "mode": "trusted_list",
+      "images": 57,
+      "trusted_count": 3,
+      "untrusted_count": 20,
+      "trusted_classes": "stove cupboard door"
+    },
+    {
+      "policy": "wider_face",
+      "mode": "trusted_list",
+      "images": 60,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "face"
+    }
+  ],
+  "unused_policies": []
+}

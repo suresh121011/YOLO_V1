@@ -1,0 +1,283 @@
+{
+  "generated_at": "2026-07-17T01:38:49Z",
+  "verdict": "PASS",
+  "config": {
+    "epochs": 3,
+    "imgsz": 320,
+    "batch": 8,
+    "device": "cpu",
+    "repeats": 3,
+    "cuda_available": false
+  },
+  "note": "Smoke-scale benchmark (188 images): metric numbers are indicative only and NOT generalizable; deterministic seeds make metric variance across repeats ≈0 by design. Budgets are re-validated at full scale in Phase 5.",
+  "arms": {
+    "baseline": {
+      "runs": 3,
+      "seconds_total": {
+        "mean": 63.867,
+        "std": 2.73
+      },
+      "peak_rss_mb": {
+        "mean": 1073.033,
+        "std": 14.049
+      },
+      "precision": {
+        "mean": 0.007,
+        "std": 0.0
+      },
+      "recall": {
+        "mean": 0.142,
+        "std": 0.0
+      },
+      "f1": {
+        "mean": 0.013,
+        "std": 0.0
+      },
+      "mAP50": {
+        "mean": 0.13,
+        "std": 0.0
+      },
+      "mAP50_95": {
+        "mean": 0.089,
+        "std": 0.0
+      }
+    },
+    "mitigated": {
+      "runs": 3,
+      "seconds_total": {
+        "mean": 47.767,
+        "std": 2.843
+      },
+      "peak_rss_mb": {
+        "mean": 1078.933,
+        "std": 8.121
+      },
+      "precision": {
+        "mean": 0.01,
+        "std": 0.0
+      },
+      "recall": {
+        "mean": 0.138,
+        "std": 0.0
+      },
+      "f1": {
+        "mean": 0.019,
+        "std": 0.0
+      },
+      "mAP50": {
+        "mean": 0.031,
+        "std": 0.0
+      },
+      "mAP50_95": {
+        "mean": 0.018,
+        "std": 0.0
+      }
+    }
+  },
+  "runs": [
+    {
+      "arm": "baseline",
+      "repeat": 0,
+      "seconds_total": 66.8,
+      "epoch_seconds": [
+        14.66,
+        15.3,
+        14.89
+      ],
+      "peak_rss_mb": 1084.6,
+      "gpu_memory_mb": null,
+      "precision": 0.0066,
+      "recall": 0.1417,
+      "f1": 0.0126,
+      "mAP50": 0.1298,
+      "mAP50_95": 0.089,
+      "weights": "C:/Users/haris/OneDrive/Desktop/YOLO_V1/models/benchmarks/models/baseline_r0/weights/best.pt"
+    },
+    {
+      "arm": "baseline",
+      "repeat": 1,
+      "seconds_total": 63.4,
+      "epoch_seconds": [
+        13.88,
+        15.1,
+        12.89
+      ],
+      "peak_rss_mb": 1077.1,
+      "gpu_memory_mb": null,
+      "precision": 0.0066,
+      "recall": 0.1417,
+      "f1": 0.0126,
+      "mAP50": 0.1298,
+      "mAP50_95": 0.089,
+      "weights": "C:/Users/haris/OneDrive/Desktop/YOLO_V1/models/benchmarks/models/baseline_r1/weights/best.pt"
+    },
+    {
+      "arm": "baseline",
+      "repeat": 2,
+      "seconds_total": 61.4,
+      "epoch_seconds": [
+        26.66,
+        11.29,
+        12.54
+      ],
+      "peak_rss_mb": 1057.4,
+      "gpu_memory_mb": null,
+      "precision": 0.0066,
+      "recall": 0.1417,
+      "f1": 0.0126,
+      "mAP50": 0.1298,
+      "mAP50_95": 0.089,
+      "weights": "C:/Users/haris/OneDrive/Desktop/YOLO_V1/models/benchmarks/models/baseline_r2/weights/best.pt"
+    },
+    {
+      "arm": "mitigated",
+      "repeat": 0,
+      "seconds_total": 50.1,
+      "epoch_seconds": [
+        13.3,
+        12.99,
+        11.39
+      ],
+      "peak_rss_mb": 1070.5,
+      "gpu_memory_mb": null,
+      "precision": 0.0103,
+      "recall": 0.1382,
+      "f1": 0.0192,
+      "mAP50": 0.0309,
+      "mAP50_95": 0.0179,
+      "weights": "C:/Users/haris/OneDrive/Desktop/YOLO_V1/models/benchmarks/models/mitigated_r0/weights/best.pt"
+    },
+    {
+      "arm": "mitigated",
+      "repeat": 1,
+      "seconds_total": 44.6,
+      "epoch_seconds": [
+        11.28,
+        11.29,
+        10.49
+      ],
+      "peak_rss_mb": 1086.7,
+      "gpu_memory_mb": null,
+      "precision": 0.0103,
+      "recall": 0.1382,
+      "f1": 0.0192,
+      "mAP50": 0.0309,
+      "mAP50_95": 0.0179,
+      "weights": "C:/Users/haris/OneDrive/Desktop/YOLO_V1/models/benchmarks/models/mitigated_r1/weights/best.pt"
+    },
+    {
+      "arm": "mitigated",
+      "repeat": 2,
+      "seconds_total": 48.6,
+      "epoch_seconds": [
+        13.64,
+        13.22,
+        10.84
+      ],
+      "peak_rss_mb": 1079.6,
+      "gpu_memory_mb": null,
+      "precision": 0.0103,
+      "recall": 0.1382,
+      "f1": 0.0192,
+      "mAP50": 0.0309,
+      "mAP50_95": 0.0179,
+      "weights": "C:/Users/haris/OneDrive/Desktop/YOLO_V1/models/benchmarks/models/mitigated_r2/weights/best.pt"
+    }
+  ],
+  "microbenchmarks": {
+    "loss_forward": {
+      "stock_ms": 4.047,
+      "masked_ms": 4.124,
+      "overhead_ms": 0.077,
+      "overhead_pct": 1.91,
+      "rounds": 9,
+      "iterations": 20,
+      "batch_size": 16,
+      "stock_round_spread_ms": [
+        3.83,
+        4.18,
+        4.134,
+        4.014,
+        4.217,
+        4.047,
+        4.13,
+        4.031,
+        4.028
+      ],
+      "masked_round_spread_ms": [
+        4.124,
+        4.644,
+        4.043,
+        4.32,
+        4.416,
+        4.106,
+        4.072,
+        4.097,
+        4.269
+      ]
+    },
+    "mask_build": {
+      "lookup_load_s": 0.002,
+      "mask_build_ms": 0.0504,
+      "images_indexed": 188
+    }
+  },
+  "budgets": [
+    {
+      "budget": "wall_time_overhead_pct",
+      "description": "Training wall-time overhead per run",
+      "measured": -25.21,
+      "limit": 5.0,
+      "unit": "%",
+      "status": "PASS"
+    },
+    {
+      "budget": "peak_rss_overhead_pct",
+      "description": "Peak CPU RSS delta",
+      "measured": 0.55,
+      "limit": 5.0,
+      "unit": "%",
+      "status": "PASS"
+    },
+    {
+      "budget": "peak_rss_overhead_mb",
+      "description": "Peak CPU RSS delta (absolute)",
+      "measured": 5.9,
+      "limit": 200.0,
+      "unit": "MB",
+      "status": "PASS"
+    },
+    {
+      "budget": "gpu_memory_overhead_pct",
+      "description": "Peak GPU memory delta",
+      "measured": "n/a (no CUDA)",
+      "limit": 5.0,
+      "unit": "%",
+      "status": "N/A"
+    },
+    {
+      "budget": "loss_forward_overhead_ms",
+      "description": "Loss-forward overhead per call (bs=16)",
+      "measured": 0.077,
+      "limit": 1.0,
+      "unit": "ms",
+      "status": "PASS"
+    },
+    {
+      "budget": "mask_build_ms",
+      "description": "Per-batch mask build (bs=16)",
+      "measured": 0.0504,
+      "limit": 1.0,
+      "unit": "ms",
+      "status": "PASS"
+    },
+    {
+      "budget": "lookup_load_s",
+      "description": "CompletenessLookup.load wall time",
+      "measured": 0.002,
+      "limit": 2.0,
+      "unit": "s",
+      "status": "PASS"
+    }
+  ]
+}

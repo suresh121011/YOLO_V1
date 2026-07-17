@@ -50,3 +50,13 @@ output:
   val: true
   plots: true
   verbose: true
+
+# ─── Missing-Annotation Mitigation (Phase-4) ──────────────────────────────────
+# Same contract as yolo11n_config.yaml — disabled by default; when enabled,
+# gate G8 requires mosaic/mixup/copy_paste = 0. See docs/06_training_engineering/.
+missing_annotation_mitigation:
+  enabled: false
+  completeness_path: data/processed/completeness.json
+  on_unknown_image: error              # error | warn_full_supervision
+  mixing_augmentation_policy: forbid   # forbid | warn | ignore (preflight G8)
+  log_mask_stats: true

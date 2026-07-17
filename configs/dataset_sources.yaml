@@ -43,6 +43,32 @@ paths:
   downloads_cache: data/downloads_cache  # archives/indexes; OUTSIDE DVC outs
                                          # so `dvc repro` never re-downloads them
 
+# ─── Label-completeness policies (Phase-4) ────────────────────────────────────
+# Read by: scripts/dataset/11_generate_completeness.py
+#          (src/dataset/completeness.py via src/dataset/completeness_policies.py)
+# Used as the DVC params section of the generate_completeness stage.
+#
+# Disambiguates the trusted_classes semantics per source — never inferred from
+# source names. Modes (registered in src/dataset/completeness_policies.py):
+#   trusted_list         — sources.<name>.trusted_classes is the exhaustive set
+#                          (cross-checked against the merged manifest)
+#   verified_absence_all — images verified to contain NO taxonomy class;
+#                          absence of every class is trusted supervision
+#                          (negatives: all-ones completeness mask)
+#   per_session          — trusted classes declared per finalized capture
+#                          session manifest (data/raw/custom_captures/manifests)
+#
+# NOTE: deliberately a TOP-LEVEL section. Keys under sources.* would change the
+# DVC params hashes of the acquisition stages and force re-downloads.
+completeness:
+  policies:
+    coco: trusted_list
+    openimages: trusted_list
+    roboflow: trusted_list
+    wider_face: trusted_list
+    negatives: verified_absence_all
+    custom_captures: per_session
+
 # ─── Sources ──────────────────────────────────────────────────────────────────
 # trusted_classes: classes this source labels EXHAUSTIVELY. Any other taxonomy
 # class may appear unlabeled in these images — recorded in manifests so

@@ -90,6 +90,7 @@ All documentation is in [`docs/`](./docs/README.md):
 - **[03 Engineering Appendix](./docs/03_engineering_appendix/README.md)** — YAML examples, Python examples, QA pipeline, DVC pipeline
 - **[04 Dataset Engineering & Governance](./docs/04_dataset_engineering/README.md)** — Phase-2 pipeline, license register, label-completeness policy, split governance
 - **[Capture & Annotation Runbook](./docs/04_dataset_engineering/capture_annotation_runbook.md)** — Phase-3 custom Indian-home data collection SOP
+- **[06 Training Engineering](./docs/06_training_engineering/README.md)** — Phase-4 missing-annotation mitigation: masked BCE loss, preflight gates, benchmarks, ADRs
 
 ### Dataset pipeline (Phase-2)
 
@@ -117,6 +118,24 @@ python scripts/dataset/10_capture_progress.py         # progress vs governance t
 
 Full SOP (consent, capture guidelines, dual-annotator CVAT workflow, DVC
 recording, eval-set locking): [capture_annotation_runbook.md](./docs/04_dataset_engineering/capture_annotation_runbook.md).
+
+### Missing-annotation mitigation (Phase-4)
+
+Public datasets label only part of the 23-class taxonomy (COCO has `person`
+but not `face`), so stock YOLO training pushes unlabeled-but-present classes
+toward background. Phase-4 removes that false supervision with a per-image
+**masked BCE classification loss**, driven by DVC-tracked completeness
+metadata — strictly opt-in, byte-for-byte stock behavior when disabled:
+
+```bash
+dvc repro generate_completeness                    # per-image completeness artifact
+python scripts/training/preflight_check.py         # readiness gates G1–G8
+python scripts/training/train_yolo.py --mitigation on
+python scripts/training/benchmark_mitigation.py --smoke   # baseline vs mitigated A/B
+```
+
+Architecture, ADRs, runbook, and committed validation/benchmark evidence:
+[docs/06_training_engineering](./docs/06_training_engineering/README.md).
 
 ---
 

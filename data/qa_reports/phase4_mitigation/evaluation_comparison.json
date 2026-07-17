@@ -1,0 +1,209 @@
+{
+  "generated_at": "2026-07-17T01:41:05Z",
+  "environment": {
+    "python": "3.14.3",
+    "git_commit": "fd5f3cc",
+    "ultralytics": "8.4.96",
+    "torch": "2.13.0+cpu"
+  },
+  "runs": {
+    "baseline": {
+      "spec": {
+        "weights": "models/benchmarks/models/baseline_r0/weights/best.pt",
+        "label": "baseline",
+        "data_yaml": "configs/data.yaml",
+        "split": "val",
+        "device": "cpu",
+        "imgsz": 320,
+        "seed": 42
+      },
+      "aggregate": {
+        "precision": 0.0066,
+        "recall": 0.1417,
+        "f1": 0.0125,
+        "mAP50": 0.1298,
+        "mAP50_95": 0.089
+      },
+      "per_class": [
+        {
+          "class_id": 1,
+          "class": "face",
+          "precision": 0.0235,
+          "recall": 0.067,
+          "f1": 0.0347,
+          "mAP50": 0.0243,
+          "mAP50_95": 0.0097
+        },
+        {
+          "class_id": 6,
+          "class": "stove",
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "mAP50": 0.0,
+          "mAP50_95": 0.0
+        },
+        {
+          "class_id": 14,
+          "class": "cupboard",
+          "precision": 0.0028,
+          "recall": 0.5,
+          "f1": 0.0055,
+          "mAP50": 0.495,
+          "mAP50_95": 0.3465
+        },
+        {
+          "class_id": 15,
+          "class": "door",
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "mAP50": 0.0,
+          "mAP50_95": 0.0
+        }
+      ],
+      "confusion_matrix": "data/qa_reports/phase4_mitigation/confusion_matrix_baseline.json"
+    },
+    "mitigated": {
+      "spec": {
+        "weights": "models/benchmarks/models/mitigated_r0/weights/best.pt",
+        "label": "mitigated",
+        "data_yaml": "configs/data.yaml",
+        "split": "val",
+        "device": "cpu",
+        "imgsz": 320,
+        "seed": 42
+      },
+      "aggregate": {
+        "precision": 0.0103,
+        "recall": 0.1382,
+        "f1": 0.0192,
+        "mAP50": 0.0309,
+        "mAP50_95": 0.0179
+      },
+      "per_class": [
+        {
+          "class_id": 1,
+          "class": "face",
+          "precision": 0.0383,
+          "recall": 0.0526,
+          "f1": 0.0444,
+          "mAP50": 0.0244,
+          "mAP50_95": 0.0124
+        },
+        {
+          "class_id": 6,
+          "class": "stove",
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "mAP50": 0.0,
+          "mAP50_95": 0.0
+        },
+        {
+          "class_id": 14,
+          "class": "cupboard",
+          "precision": 0.003,
+          "recall": 0.5,
+          "f1": 0.006,
+          "mAP50": 0.099,
+          "mAP50_95": 0.0594
+        },
+        {
+          "class_id": 15,
+          "class": "door",
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "mAP50": 0.0,
+          "mAP50_95": 0.0
+        }
+      ],
+      "confusion_matrix": "data/qa_reports/phase4_mitigation/confusion_matrix_mitigated.json"
+    }
+  },
+  "caveat": "Public-source validation labels are partially annotated; absolute metrics underestimate untrusted classes. Deltas on the same split are meaningful; unbiased numbers require the custom eval set.",
+  "delta": {
+    "aggregate_delta": {
+      "precision": 0.0037,
+      "recall": -0.0035,
+      "f1": 0.0067,
+      "mAP50": -0.0989,
+      "mAP50_95": -0.0711
+    },
+    "per_class_delta": [
+      {
+        "class": "cupboard",
+        "baseline_precision": 0.0028,
+        "mitigated_precision": 0.003,
+        "delta_precision": 0.0002,
+        "baseline_recall": 0.5,
+        "mitigated_recall": 0.5,
+        "delta_recall": 0.0,
+        "baseline_f1": 0.0055,
+        "mitigated_f1": 0.006,
+        "delta_f1": 0.0005,
+        "baseline_mAP50": 0.495,
+        "mitigated_mAP50": 0.099,
+        "delta_mAP50": -0.396,
+        "baseline_mAP50_95": 0.3465,
+        "mitigated_mAP50_95": 0.0594,
+        "delta_mAP50_95": -0.2871
+      },
+      {
+        "class": "door",
+        "baseline_precision": 0.0,
+        "mitigated_precision": 0.0,
+        "delta_precision": 0.0,
+        "baseline_recall": 0.0,
+        "mitigated_recall": 0.0,
+        "delta_recall": 0.0,
+        "baseline_f1": 0.0,
+        "mitigated_f1": 0.0,
+        "delta_f1": 0.0,
+        "baseline_mAP50": 0.0,
+        "mitigated_mAP50": 0.0,
+        "delta_mAP50": 0.0,
+        "baseline_mAP50_95": 0.0,
+        "mitigated_mAP50_95": 0.0,
+        "delta_mAP50_95": 0.0
+      },
+      {
+        "class": "face",
+        "baseline_precision": 0.0235,
+        "mitigated_precision": 0.0383,
+        "delta_precision": 0.0148,
+        "baseline_recall": 0.067,
+        "mitigated_recall": 0.0526,
+        "delta_recall": -0.0144,
+        "baseline_f1": 0.0347,
+        "mitigated_f1": 0.0444,
+        "delta_f1": 0.0097,
+        "baseline_mAP50": 0.0243,
+        "mitigated_mAP50": 0.0244,
+        "delta_mAP50": 0.0001,
+        "baseline_mAP50_95": 0.0097,
+        "mitigated_mAP50_95": 0.0124,
+        "delta_mAP50_95": 0.0027
+      },
+      {
+        "class": "stove",
+        "baseline_precision": 0.0,
+        "mitigated_precision": 0.0,
+        "delta_precision": 0.0,
+        "baseline_recall": 0.0,
+        "mitigated_recall": 0.0,
+        "delta_recall": 0.0,
+        "baseline_f1": 0.0,
+        "mitigated_f1": 0.0,
+        "delta_f1": 0.0,
+        "baseline_mAP50": 0.0,
+        "mitigated_mAP50": 0.0,
+        "delta_mAP50": 0.0,
+        "baseline_mAP50_95": 0.0,
+        "mitigated_mAP50_95": 0.0,
+        "delta_mAP50_95": 0.0
+      }
+    ]
+  }
+}

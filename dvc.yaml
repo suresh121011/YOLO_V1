@@ -181,6 +181,29 @@ stages:
       - data/processed/labels
       - data/processed/split_report
 
+  # ─── Completeness metadata (Phase-4, missing-annotation mitigation) ────────
+  # Compiles per-source/per-session trusted_classes into the per-image
+  # completeness artifact the mitigation trainer masks the cls loss with.
+  # Hard-fails on any ambiguity (unknown image, unmapped source, drift).
+
+  generate_completeness:
+    cmd: python scripts/dataset/11_generate_completeness.py
+    deps:
+      - scripts/dataset/11_generate_completeness.py
+      - src/dataset/completeness.py
+      - src/dataset/completeness_policies.py
+      - configs/data.yaml
+      - data/merged
+      - data/processed/images
+      - data/processed/split_report
+    params:
+      - configs/dataset_sources.yaml:
+          - completeness
+    outs:
+      - data/processed/completeness.json
+      - data/qa_reports/completeness_report.json:
+          cache: false
+
   # ─── QA (runs AFTER split — the leakage check needs splits) ────────────────
 
   qa_check:
@@ -208,6 +231,9 @@ stages:
       - configs/training/yolo11n_config.yaml
       - data/processed/images
       - data/processed/labels
+      # Phase-4: completeness lineage — read at train time when
+      # missing_annotation_mitigation.enabled is true.
+      - data/processed/completeness.json
     outs:
       - models/yolo11n/weights
 

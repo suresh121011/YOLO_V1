@@ -1,0 +1,57 @@
+{
+  "spec": {
+    "weights": "models/benchmarks/models/baseline_r0/weights/best.pt",
+    "label": "baseline",
+    "data_yaml": "configs/data.yaml",
+    "split": "val",
+    "device": "cpu",
+    "imgsz": 320,
+    "seed": 42
+  },
+  "aggregate": {
+    "precision": 0.0066,
+    "recall": 0.1417,
+    "f1": 0.0125,
+    "mAP50": 0.1298,
+    "mAP50_95": 0.089
+  },
+  "per_class": [
+    {
+      "class_id": 1,
+      "class": "face",
+      "precision": 0.0235,
+      "recall": 0.067,
+      "f1": 0.0347,
+      "mAP50": 0.0243,
+      "mAP50_95": 0.0097
+    },
+    {
+      "class_id": 6,
+      "class": "stove",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "mAP50": 0.0,
+      "mAP50_95": 0.0
+    },
+    {
+      "class_id": 14,
+      "class": "cupboard",
+      "precision": 0.0028,
+      "recall": 0.5,
+      "f1": 0.0055,
+      "mAP50": 0.495,
+      "mAP50_95": 0.3465
+    },
+    {
+      "class_id": 15,
+      "class": "door",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "mAP50": 0.0,
+      "mAP50_95": 0.0
+    }
+  ],
+  "confusion_matrix": "data/qa_reports/phase4_mitigation/confusion_matrix_baseline.json"
+}

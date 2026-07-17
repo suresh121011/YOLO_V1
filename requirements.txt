@@ -34,3 +34,8 @@ pytest-cov>=5.0,<6.0
 
 # ─── MLOps ────────────────────────────────────────────────────────────────────
 dvc[s3]>=3.50,<4.0
+
+# Process/memory metrics for the Phase-4 benchmark framework (previously only a
+# transitive dependency via ultralytics — pinned explicitly because
+# src/training/benchmark.py imports it directly).
+psutil>=5.9,<8.0
