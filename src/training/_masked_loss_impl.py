@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import torch
 from torch import nn
@@ -127,8 +127,8 @@ class MaskedDetectionLoss(v8DetectionLoss):
                 f"taxonomy this model trains on (dvc repro generate_completeness)."
             )
         # Typed handle for set/clear; self.bce is what the stock loss calls.
-        self._masking_bce = _MaskingBCE(self.bce)
-        self.bce = self._masking_bce  # type: ignore[assignment]
+        self._masking_bce = _MaskingBCE(cast(nn.Module, self.bce))
+        self.bce = self._masking_bce
         self._lookup = lookup
         self._config = config
         self._warned_unknown: set[str] = set()
