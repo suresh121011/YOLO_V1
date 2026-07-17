@@ -72,13 +72,15 @@ report with residual-risk quantification (`17_dataset_quality_report.py`).
   before any `mode: full` build (gates FB1–FB6: disk, remote, Roboflow,
   GPU, OneDrive hazard, mode). Report triplet:
   `data/qa_reports/full_build_preflight.{json,csv,md}`.
-- **GPU note (M0 finding):** the repo `.venv` currently carries a CPU-only
-  torch build — FB4 warns. M1 environment provisioning must install a
-  CUDA-enabled torch matching the local NVIDIA GPU before the
-  `auto_annotate` stage first runs.
+- **GPU note (M0 finding, resolved at M1):** the M0 finding was a CPU-only
+  torch build resolving from a bare `python`/`dvc` on `PATH` — a *different*
+  interpreter than the project's own `.venv`, which already carries a
+  CUDA-enabled torch matching the local NVIDIA GPU. Always invoke tooling
+  via `.venv/Scripts/python.exe` explicitly (or prepend it to `PATH`) —
+  see `auto_annotation_runbook.md` §0 for the verification command.
 - **Self-hosted CVAT** — required from the M2 verification drill onward
   (privacy: custom-capture images never leave the machine); version pinned
-  in `verification_runbook.md`.
+  in `verification_runbook.md` §0.
 
 ## Key risks
 
