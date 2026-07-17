@@ -42,6 +42,13 @@ dev = [
 mlops = [
     "dvc>=3.50",
 ]
+# Phase-5 auto-annotation extra (mirrors requirements-annotation.txt; the
+# CLIP git pin lives only in the requirements file — PEP 508 direct
+# references would make this package uninstallable from PyPI).
+annotation = [
+    "transformers>=4.45,<5.0",
+    "Pillow>=10.0,<12.0",
+]
 
 # ─── Package Discovery ────────────────────────────────────────────────────────
 

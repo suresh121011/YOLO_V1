@@ -85,12 +85,16 @@ docs/
 ├── 05_audit/                            ← Production readiness audits
 │   └── pre_phase4_production_readiness_audit.md
 │
-└── 06_training_engineering/             ← Phase-4 training pipeline (4 files + 5 ADRs)
-    ├── README.md                         ← Missing-annotation mitigation index
-    ├── phase4_engineering_report.md
-    ├── masked_loss_architecture.md       ← Masking mechanism, gates, budgets
-    ├── mitigation_runbook.md             ← Operate: generate/preflight/train/benchmark
-    └── adr/ADR-P4-01 … ADR-P4-05         ← Architecture decision records
+├── 06_training_engineering/             ← Phase-4 training pipeline (4 files + 5 ADRs)
+│   ├── README.md                         ← Missing-annotation mitigation index
+│   ├── phase4_engineering_report.md
+│   ├── masked_loss_architecture.md       ← Masking mechanism, gates, budgets
+│   ├── mitigation_runbook.md             ← Operate: generate/preflight/train/benchmark
+│   └── adr/ADR-P4-01 … ADR-P4-05         ← Architecture decision records
+│
+└── 07_dataset_production/               ← Phase-5 production dataset engineering
+    └── README.md                         ← Auto-annotation + verification + release ladder
+                                            (runbooks + ADR-P5-* land per milestone)
 ```
 
 ---

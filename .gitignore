@@ -58,6 +58,8 @@ data/qa_reports/*
 !data/qa_reports/completeness_report.json
 # Phase-4 validation/benchmark evidence is committed (referenced by docs/06)
 !data/qa_reports/phase4_mitigation/
+# Phase-5 full-build preflight evidence is committed (referenced by docs/07)
+!data/qa_reports/full_build_preflight.*
 
 # ─── Custom Capture Workflow (Phase-3) ────────────────────────────────────────
 # Staging inbox for raw phone photos — transient, never tracked

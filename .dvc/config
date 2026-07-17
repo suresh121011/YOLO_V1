@@ -1,9 +1,16 @@
 [core]
     analytics = false
-    remote = storage
+    remote = localstore
 ['remote "storage"']
     # Credentials come from the standard AWS chain (env vars / ~/.aws)
     # — NEVER from this tracked file.
     url = s3://elderly-assistant-mlops/datasets/yolo_v1
     # For S3-compatible providers (Cloudflare R2, Backblaze B2, MinIO):
     # endpointurl = https://<provider-endpoint>
+['remote "localstore"']
+    # Phase-5 default remote (closes audit risk C-1: single-copy dataset).
+    # Local disk OUTSIDE the OneDrive-synced tree — protects against sync
+    # corruption and accidental deletion; NOT against disk failure. Migrate to
+    # a second physical disk or the "storage" S3 remote when available:
+    #   copy C:\dvc_remote to the new location, update this url, dvc push.
+    url = C:\dvc_remote

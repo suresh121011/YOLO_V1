@@ -1,0 +1,120 @@
+# ─── Auto-Annotation & Verification Configuration ─────────────────────────────
+# Elderly Assistant System — Phase-5 Missing-Annotation Resolution Settings
+#
+# Read by: scripts/dataset/12_auto_annotate.py          (auto_annotation)
+#          scripts/dataset/13_build_verification_batches.py (verification)
+#          scripts/dataset/14_import_verified_batch.py  (verification)
+#          scripts/dataset/16_coverage_report.py        (coverage)
+# Used as the DVC params file for the Phase-5 annotation stages (see dvc.yaml).
+#
+# Deliberately a SEPARATE file from configs/dataset_sources.yaml: annotation
+# params must never invalidate the acquisition stages' DVC params hashes
+# (Phase-4 lesson, ADR-P5-09 hygiene), and prompt tuning re-runs only the
+# annotation stages.
+#
+# Core invariant (ADR-P5-01): auto-generated labels NEVER touch labels/
+# directly — candidates live under data/annotation/candidates/ and only reach
+# training labels through the human CVAT verification loop (ledger + deltas).
+# ─────────────────────────────────────────────────────────────────────────────
+
+auto_annotation:
+  device: cuda:0
+
+  backends:
+    # Primary open-vocabulary backend (ADR-P5-02). Ultralytics-native —
+    # zero new heavy dependencies. Weights are sha256-pinned for determinism;
+    # the backend hard-fails on digest mismatch at load.
+    yolo_world:
+      enabled: true
+      weights: models/annotators/yolov8x-worldv2.pt
+      weights_sha256: ""            # pinned at M1 when the weight file lands
+      imgsz: 640
+      conf_floor: 0.05              # record everything above this; per-class
+                                    # thresholds below decide candidate status
+      max_det: 100
+      # Taxonomy class → text prompts. ALL 23 classes are listed; an empty
+      # list means the class is never prompted (L2 scope honesty — see the
+      # plan/ADR-P5-02: custom-capture classes are L1 territory; open-vocab
+      # models cannot deliver usable precision there and junk candidates
+      # flood human verification, risk R30).
+      prompts:
+        person: []                  # broadly trusted (COCO) — not an L2 target
+        face: ["human face", "person's face"]
+        medicine_strip: []          # L1 custom capture (R23; blister packs too small/ambiguous)
+        medicine_bottle: ["medicine bottle", "pill bottle", "prescription bottle"]
+        water_bottle: []            # trusted via COCO
+        knife: []                   # trusted via COCO
+        stove: []                   # Indian stove = L1 custom capture
+        gas_cylinder: []            # Indian LPG = L1 custom capture (R20)
+        passport: []                # L1 custom capture (privacy-sensitive)
+        book: []                    # trusted via COCO
+        charger: ["phone charger", "power adapter", "charging brick plugged into wall socket"]
+        wire: ["electrical wire", "power cable", "charging cable on the floor"]
+        laptop: []                  # trusted via COCO
+        monitor: []                 # trusted via COCO
+        cupboard: ["cupboard", "wardrobe", "steel almirah", "kitchen cabinet"]
+        door: []                    # trusted via Open Images
+        chair: []                   # trusted via COCO
+        bed: []                     # trusted via COCO
+        toilet: []                  # trusted via COCO
+        sink: []                    # trusted via COCO
+        wet_floor: []               # L1 custom capture, R24 pilot pending
+        walking_stick: []           # L1 custom capture
+        support_handle: []          # L1 custom capture
+      # Candidate acceptance thresholds (confidence). `default` applies to any
+      # prompted class without an explicit entry.
+      thresholds:
+        default: 0.25
+        charger: 0.20               # small object — recall matters, humans filter
+        wire: 0.20
+
+    # Second-opinion grounding backend (optional extra — requirements-
+    # annotation.txt). Disabled by default; enable ONLY if measured yolo_world
+    # precision on priority classes is < 0.4 (decision recorded at M8).
+    grounding_dino:
+      enabled: false
+      hf_model: IDEA-Research/grounding-dino-base
+      hf_revision: ""               # commit sha — pinned when first enabled
+      box_threshold: 0.30
+      text_threshold: 0.25
+
+    # L3 cross-dataset candidates (ADR-P5-08): near-duplicate images whose
+    # dropped twin carried trusted-class labels. Exact-sha256 twins are
+    # salvaged at merge time; near-dups become candidates for human review.
+    cross_dataset:
+      enabled: true
+      match: exact_sha256
+
+  # Optional SAM box-refinement post-pass. Only tightens existing candidate
+  # boxes — never creates or deletes detections (ADR-P5-02).
+  refinement:
+    enabled: true
+    weights: models/annotators/mobile_sam.pt
+    weights_sha256: ""              # pinned at M1
+  # Which (image, class) cells to target: skip cells already trusted by the
+  # source policy or already verified in the ledger.
+  targeting:
+    skip_trusted_cells: true
+    # Batch-ranking priority (expected annotation gain). Custom-capture-only
+    # classes are deliberately absent — see prompts above.
+    priority_classes: [charger, wire, medicine_bottle, cupboard, face]
+
+verification:
+  batches_root: data/annotation/batches
+  ledger_path: data/annotation/verification_ledger.json
+  verified_labels_dir: data/annotation/verified_labels
+  batch_size: 200                   # images per CVAT verification batch
+  iaa_sample_fraction: 0.10         # fraction dual-annotated per batch
+  # IAA gate for verification batches: below capture's 0.75 because verifying
+  # pre-labels is an easier task than de-novo labeling — the gate guards
+  # process failure, not annotator skill. Cumulative per-class IAA is
+  # tracked in the dataset quality report.
+  min_agreement: 0.70
+  min_labeled_fraction: 0.95
+
+coverage:
+  # L4 coverage estimation (ADR-P5-06): pure arithmetic over the pinned
+  # candidates artifact + ledger + labels. No inference at report time.
+  iou_match_threshold: 0.5
+  estimation_conf:
+    default: 0.35
