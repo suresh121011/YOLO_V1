@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-17T20:01:04Z",
+  "generated_at": "2026-07-18T05:26:49Z",
   "generator": {
     "script": "scripts/dataset/17_dataset_quality_report.py"
   },
@@ -255,6 +255,16 @@
     },
     "batches_total": 1,
     "mean_iaa_agreement": null,
-    "batches_with_measured_iaa": 0
+    "batches_with_measured_iaa": 0,
+    "batch_throughput": [
+      {
+        "batch_id": "vb001_yolo_world",
+        "status": "created",
+        "images_count": 80,
+        "expected_gain": 139.6955,
+        "cells_verified": 0
+      }
+    ],
+    "mean_cells_verified_per_imported_batch": null
   }
 }

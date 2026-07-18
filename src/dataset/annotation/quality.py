@@ -107,11 +107,28 @@ def _build_dataset_scale(
     }
 
 
+def _batch_cells_verified(batch: VerificationBatchManifest, ledger_view: LedgerView) -> int:
+    """Count of this batch's (image, class) cells now settled in the ledger.
+
+    Best-effort attribution: the ledger records only the MOST RECENT
+    batch_id per image (``ledger.py``'s ``record_verdict``), not per class,
+    so a cell re-verified by a later batch on the same image is attributed
+    to that later batch here too — scoped to ``batch.images`` x
+    ``batch.target_classes`` (the only cells this batch could plausibly have
+    touched), which avoids crediting a batch with classes it never targeted.
+    """
+    target = frozenset(batch.target_classes)
+    if not target:
+        return 0
+    return sum(len(ledger_view.verified_class_names(image) & target) for image in batch.images)
+
+
 def _build_verification_progress(ledger_view: LedgerView, batches_root: Path) -> dict[str, Any]:
     ledger_stats = dict(ledger_view.raw.get("stats", {}))
 
     by_status: Counter[str] = Counter()
     measured_iaa: list[float] = []
+    throughput: list[dict[str, Any]] = []
     if batches_root.exists():
         for path in sorted(batches_root.glob(f"vb*_*/{BATCH_MANIFEST_FILENAME}")):
             try:
@@ -122,6 +139,17 @@ def _build_verification_progress(ledger_view: LedgerView, batches_root: Path) ->
             by_status[batch.status] += 1
             if batch.iaa_agreement >= 0.0:
                 measured_iaa.append(batch.iaa_agreement)
+            throughput.append(
+                {
+                    "batch_id": batch.batch_id,
+                    "status": batch.status,
+                    "images_count": len(batch.images),
+                    "expected_gain": batch.expected_gain,
+                    "cells_verified": _batch_cells_verified(batch, ledger_view),
+                }
+            )
+
+    imported_cells = [row["cells_verified"] for row in throughput if row["status"] == "imported"]
 
     return {
         "ledger_stats": ledger_stats,
@@ -129,6 +157,14 @@ def _build_verification_progress(ledger_view: LedgerView, batches_root: Path) ->
         "batches_total": sum(by_status.values()),
         "mean_iaa_agreement": (round(statistics.fmean(measured_iaa), 4) if measured_iaa else None),
         "batches_with_measured_iaa": len(measured_iaa),
+        # M8 (ADR-P5-02/plan §M8): per-batch predicted (expected_gain) vs.
+        # achieved (cells_verified) throughput — prerequisite evidence for
+        # any future expected-gain weight tuning, not itself a tuning
+        # decision (no data exists yet to justify changing the D1 weights).
+        "batch_throughput": throughput,
+        "mean_cells_verified_per_imported_batch": (
+            round(statistics.fmean(imported_cells), 4) if imported_cells else None
+        ),
     }
 
 

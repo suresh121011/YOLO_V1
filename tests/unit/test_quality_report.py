@@ -276,6 +276,115 @@ class TestBuildQualityReport:
         assert progress["batches_by_status"] == {"imported": 1}
         assert progress["mean_iaa_agreement"] == pytest.approx(0.9)
 
+    def test_batch_throughput_counts_only_target_class_cells_actually_verified(
+        self, tmp_path: Path
+    ) -> None:
+        data_yaml = _write_data_yaml(tmp_path / "data.yaml")
+        _write_completeness(
+            tmp_path / "completeness.json",
+            images={"a.jpg": {"policy": "coco", "split": "train"}},
+            policies={"coco": {"mode": "trusted_list", "trusted_class_ids": [0]}},
+            mean_trusted=1.0,
+        )
+        _write_coverage(tmp_path / "coverage_report.json")
+        _write_merged_manifest(
+            tmp_path / "merged_manifest.json",
+            provenance={"a.jpg": "coco"},
+            sources=[{"source": "coco", "total": 1, "accepted": 1}],
+        )
+
+        ledger = new_ledger()
+        # Only "charger" gets a verdict — "wire" (also targeted by the batch
+        # below) stays unverified, so throughput must count 1, not 2.
+        record_verdict(
+            ledger,
+            filename="a.jpg",
+            source="coco",
+            class_name="charger",
+            status="present_labeled",
+            boxes=[(0.5, 0.5, 0.2, 0.2)],
+            batch_id="vb001_yolo_world",
+            verifier="tester",
+            method="cvat",
+            cvat_task_ref="task-1",
+        )
+        recompute_stats(ledger, LIVE_FP)
+        save_ledger(ledger, tmp_path / "ledger.json")
+
+        batch_dir = tmp_path / "batches" / "vb001_yolo_world"
+        batch_dir.mkdir(parents=True)
+        (batch_dir / "batch_manifest.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "batch_id": "vb001_yolo_world",
+                    "status": "imported",
+                    "images": ["a.jpg"],
+                    "target_classes": ["charger", "wire"],
+                    "expected_gain": 1.5,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_quality_report(
+            completeness_path=tmp_path / "completeness.json",
+            coverage_report_path=tmp_path / "coverage_report.json",
+            merged_manifest_path=tmp_path / "merged_manifest.json",
+            ledger_path=tmp_path / "ledger.json",
+            batches_root=tmp_path / "batches",
+            data_yaml_path=data_yaml,
+        )
+
+        progress = report["verification_progress"]
+        assert progress["batch_throughput"] == [
+            {
+                "batch_id": "vb001_yolo_world",
+                "status": "imported",
+                "images_count": 1,
+                "expected_gain": 1.5,
+                "cells_verified": 1,
+            }
+        ]
+        assert progress["mean_cells_verified_per_imported_batch"] == pytest.approx(1.0)
+
+    def test_batch_throughput_empty_target_classes_counts_zero(self, tmp_path: Path) -> None:
+        """Legacy/minimal batch manifests (no images/target_classes) never crash."""
+        data_yaml = _write_data_yaml(tmp_path / "data.yaml")
+        _write_completeness(
+            tmp_path / "completeness.json",
+            images={"a.jpg": {"policy": "coco", "split": "train"}},
+            policies={"coco": {"mode": "trusted_list", "trusted_class_ids": [0]}},
+            mean_trusted=1.0,
+        )
+        _write_coverage(tmp_path / "coverage_report.json")
+        _write_merged_manifest(
+            tmp_path / "merged_manifest.json",
+            provenance={"a.jpg": "coco"},
+            sources=[{"source": "coco", "total": 1, "accepted": 1}],
+        )
+
+        batch_dir = tmp_path / "batches" / "vb001_yolo_world"
+        batch_dir.mkdir(parents=True)
+        (batch_dir / "batch_manifest.json").write_text(
+            json.dumps({"schema_version": 1, "batch_id": "vb001_yolo_world", "status": "created"}),
+            encoding="utf-8",
+        )
+
+        report = build_quality_report(
+            completeness_path=tmp_path / "completeness.json",
+            coverage_report_path=tmp_path / "coverage_report.json",
+            merged_manifest_path=tmp_path / "merged_manifest.json",
+            ledger_path=tmp_path / "ledger.json",
+            batches_root=tmp_path / "batches",
+            data_yaml_path=data_yaml,
+        )
+
+        row = report["verification_progress"]["batch_throughput"][0]
+        assert row["cells_verified"] == 0
+        # "created" (not "imported") is excluded from the throughput mean.
+        assert report["verification_progress"]["mean_cells_verified_per_imported_batch"] is None
+
     def test_taxonomy_drift_in_completeness_raises(self, tmp_path: Path) -> None:
         data_yaml = _write_data_yaml(tmp_path / "data.yaml")
         _write_completeness(
