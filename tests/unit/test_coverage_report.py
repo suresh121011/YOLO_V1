@@ -11,6 +11,7 @@ import pytest
 from src.dataset.annotation.base import AnnotationError
 from src.dataset.annotation.coverage import (
     build_coverage_report,
+    grounding_dino_decision,
     iou_xywhn,
     match_candidates_to_verified,
     validate_coverage_report,
@@ -417,3 +418,50 @@ class TestValidateCoverageReport:
         }
         problems = validate_coverage_report(report)
         assert any("residual_missing_total" in p for p in problems)
+
+
+class TestGroundingDinoDecision:
+    """M8 ADR-P5-02 enablement decision — pure function over calibration."""
+
+    def test_no_calibration_data_defers_and_does_not_recommend(self) -> None:
+        decision = grounding_dino_decision({}, frozenset({"charger", "wire"}), 0.4)
+        assert decision["recommend_enable"] is False
+        assert decision["priority_class_precisions"] == {"charger": None, "wire": None}
+        assert "deferred" in decision["reason"]
+
+    def test_below_threshold_priority_class_triggers_recommendation(self) -> None:
+        calibration = {
+            "charger": {"verified_cells": 20, "estimator_precision": 0.35},
+            "wire": {"verified_cells": 15, "estimator_precision": 0.8},
+        }
+        decision = grounding_dino_decision(calibration, frozenset({"charger", "wire"}), 0.4)
+        assert decision["recommend_enable"] is True
+        assert decision["below_threshold_classes"] == ["charger"]
+        assert decision["priority_class_precisions"] == {"charger": 0.35, "wire": 0.8}
+
+    def test_all_above_threshold_does_not_recommend(self) -> None:
+        calibration = {
+            "charger": {"verified_cells": 20, "estimator_precision": 0.5},
+            "wire": {"verified_cells": 15, "estimator_precision": 0.8},
+        }
+        decision = grounding_dino_decision(calibration, frozenset({"charger", "wire"}), 0.4)
+        assert decision["recommend_enable"] is False
+        assert decision["below_threshold_classes"] == []
+
+    def test_partial_calibration_only_judges_calibrated_classes(self) -> None:
+        calibration = {"charger": {"verified_cells": 5, "estimator_precision": 0.2}}
+        decision = grounding_dino_decision(
+            calibration, frozenset({"charger", "wire", "medicine_bottle"}), 0.4
+        )
+        assert decision["recommend_enable"] is True
+        assert decision["priority_class_precisions"] == {
+            "charger": 0.2,
+            "medicine_bottle": None,
+            "wire": None,
+        }
+
+    def test_exactly_at_threshold_is_not_below(self) -> None:
+        calibration = {"charger": {"verified_cells": 5, "estimator_precision": 0.4}}
+        decision = grounding_dino_decision(calibration, frozenset({"charger"}), 0.4)
+        assert decision["recommend_enable"] is False
+        assert decision["below_threshold_classes"] == []

@@ -396,6 +396,71 @@ def build_coverage_report(
     return report
 
 
+def grounding_dino_decision(
+    calibration: Mapping[str, Mapping[str, Any]],
+    priority_classes: frozenset[str],
+    precision_threshold: float,
+) -> dict[str, Any]:
+    """ADR-P5-02 M8 decision: recommend the grounding_dino second-opinion backend.
+
+    Enable-worthy iff any priority class's CALIBRATED yolo_world precision —
+    real TP/FP counted against verified ledger cells, never the uncalibrated
+    ``coverage.estimation_conf`` prior — falls below ``precision_threshold``.
+    A priority class with zero verified cells yet has nothing calibrated to
+    judge: it is reported (so the caller can see what's still uncalibrated)
+    but does not itself trigger a recommendation — enabling an extra heavy
+    backend off speculative, unverified data would defeat the point of
+    calibration-based evidence.
+
+    Args:
+        calibration:          ``coverage_report.json``'s ``"calibration"``
+                              section (class -> verified_cells/estimator_*).
+        priority_classes:     ``configs/annotation.yaml``
+                              ``targeting.priority_classes``.
+        precision_threshold:  ``configs/annotation.yaml``
+                              ``grounding_dino.enable_below_precision``.
+
+    Returns:
+        Decision dict: ``recommend_enable``, ``precision_threshold``,
+        ``priority_class_precisions`` (None where uncalibrated),
+        ``below_threshold_classes``, ``reason``.
+    """
+    precisions: dict[str, float | None] = {}
+    below_threshold: list[str] = []
+    calibrated_any = False
+    for class_name in sorted(priority_classes):
+        entry = calibration.get(class_name)
+        precision = entry.get("estimator_precision") if entry else None
+        precisions[class_name] = precision
+        if precision is not None:
+            calibrated_any = True
+            if precision < precision_threshold:
+                below_threshold.append(class_name)
+
+    if not calibrated_any:
+        recommend = False
+        reason = (
+            "no priority class has any calibrated (verified-ledger) precision yet — "
+            "decision deferred until H-C verification produces calibration data"
+        )
+    elif below_threshold:
+        recommend = True
+        reason = (
+            f"calibrated precision below {precision_threshold} for: {', '.join(below_threshold)}"
+        )
+    else:
+        recommend = False
+        reason = f"all calibrated priority classes meet the {precision_threshold} precision floor"
+
+    return {
+        "recommend_enable": recommend,
+        "precision_threshold": precision_threshold,
+        "priority_class_precisions": precisions,
+        "below_threshold_classes": below_threshold,
+        "reason": reason,
+    }
+
+
 def validate_coverage_report(report: Mapping[str, Any]) -> list[str]:
     """Self-consistency validation. Returns problems (empty = valid)."""
     problems: list[str] = []

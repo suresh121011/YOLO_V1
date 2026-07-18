@@ -77,6 +77,10 @@ auto_annotation:
       hf_revision: ""               # commit sha — pinned when first enabled
       box_threshold: 0.30
       text_threshold: 0.25
+      # M8 decision threshold (ADR-P5-02): coverage_report.json's
+      # grounding_dino_recommendation.recommend_enable flips true iff a
+      # priority class's CALIBRATED yolo_world precision falls below this.
+      enable_below_precision: 0.4
 
     # L3 cross-dataset candidates (ADR-P5-08): near-duplicate images whose
     # dropped twin carried trusted-class labels. Exact-sha256 twins are

@@ -1151,5 +1151,18 @@
   "dataset": {
     "residual_missing_total": 122.85,
     "unknown_objects_total": 351
+  },
+  "grounding_dino_recommendation": {
+    "recommend_enable": false,
+    "precision_threshold": 0.4,
+    "priority_class_precisions": {
+      "charger": null,
+      "cupboard": null,
+      "face": null,
+      "medicine_bottle": null,
+      "wire": null
+    },
+    "below_threshold_classes": [],
+    "reason": "no priority class has any calibrated (verified-ledger) precision yet — decision deferred until H-C verification produces calibration data"
   }
 }

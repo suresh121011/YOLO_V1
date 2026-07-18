@@ -32,7 +32,11 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.dataset.annotation.base import AnnotationError
-from src.dataset.annotation.coverage import build_coverage_report, validate_coverage_report
+from src.dataset.annotation.coverage import (
+    build_coverage_report,
+    grounding_dino_decision,
+    validate_coverage_report,
+)
 from src.utils.config_helpers import load_yaml
 from src.utils.report_utils import write_all_formats
 
@@ -106,12 +110,28 @@ def build_report_sections(report: dict[str, Any], csv_rows: list[dict[str, Any]]
                 },
             }
         )
+    if "grounding_dino_recommendation" in report:
+        rec = report["grounding_dino_recommendation"]
+        sections.append(
+            {
+                "heading": "grounding_dino enablement decision (M8, ADR-P5-02)",
+                "content": (f"**Recommend enable: {rec['recommend_enable']}** — {rec['reason']}"),
+                "table": {
+                    "headers": ["Priority class", "Calibrated precision"],
+                    "rows": [
+                        [name, precision if precision is not None else "uncalibrated"]
+                        for name, precision in sorted(rec["priority_class_precisions"].items())
+                    ],
+                },
+            }
+        )
     return sections
 
 
 def run(args: argparse.Namespace) -> int:
     """Build, validate, save, and report the coverage artifact."""
-    coverage_cfg = load_yaml(args.annotation_config).get("coverage", {})
+    annotation_cfg = load_yaml(args.annotation_config)
+    coverage_cfg = annotation_cfg.get("coverage", {})
     iou_threshold = float(coverage_cfg.get("iou_match_threshold", 0.5))
     estimation_conf = {
         str(k): float(v) for k, v in (coverage_cfg.get("estimation_conf") or {}).items()
@@ -131,6 +151,19 @@ def run(args: argparse.Namespace) -> int:
     except (AnnotationError, FileNotFoundError, ValueError) as e:
         logger.error(f"Coverage report generation failed: {e}")
         return 1
+
+    auto_annotation_cfg = annotation_cfg.get("auto_annotation", {})
+    priority_classes = frozenset(
+        str(c) for c in auto_annotation_cfg.get("targeting", {}).get("priority_classes", [])
+    )
+    precision_threshold = float(
+        auto_annotation_cfg.get("backends", {})
+        .get("grounding_dino", {})
+        .get("enable_below_precision", 0.4)
+    )
+    report["grounding_dino_recommendation"] = grounding_dino_decision(
+        report["calibration"], priority_classes, precision_threshold
+    )
 
     errors = validate_coverage_report(report)
     if errors:
