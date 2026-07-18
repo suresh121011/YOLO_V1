@@ -272,6 +272,28 @@ class TestRoboflowSkips:
             downloader.fetch(limit=None)
 
 
+@pytest.mark.unit
+class TestRoboflowQueryExtras:
+    """M7: per-dataset license strings recorded for the release-gate machinery."""
+
+    def test_dataset_licenses_recorded_per_slug(self, tmp_path: Path) -> None:
+        datasets = [
+            {"slug": "ws/med-bottle", "version": 2, "license": "CC BY 4.0"},
+            {"slug": "ws/gas-cylinder", "version": 1, "license": "MIT"},
+        ]
+        downloader = _roboflow_downloader(tmp_path, datasets=datasets)
+        extras = downloader._query_extras()
+        assert extras["dataset_licenses"] == {
+            "ws/med-bottle": "CC BY 4.0",
+            "ws/gas-cylinder": "MIT",
+        }
+        assert extras["datasets"] == ["ws/med-bottle:2", "ws/gas-cylinder:1"]
+
+    def test_no_datasets_yields_empty_licenses(self, tmp_path: Path) -> None:
+        downloader = _roboflow_downloader(tmp_path, datasets=[])
+        assert downloader._query_extras()["dataset_licenses"] == {}
+
+
 # ─── Roboflow: consolidation + cross-dataset image budget ─────────────────────
 
 

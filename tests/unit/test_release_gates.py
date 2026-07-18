@@ -15,6 +15,7 @@ from src.dataset.release.gates import (
     check_build_mode,
     evaluate_release,
     load_release_config,
+    read_roboflow_dataset_licenses,
     rg1_qa_check,
     rg2_completeness_freshness,
     rg3_coverage_quality,
@@ -195,6 +196,39 @@ class TestRg7LicenseGate:
             entries, allow_noncommercial=True, roboflow_slug_licenses={"slug-a": "CC-BY-4.0"}
         )
         assert result.status == GATE_STATUS_PASS
+
+
+class TestReadRoboflowDatasetLicenses:
+    """M7: per-slug licenses auto-derived from the raw Roboflow manifest."""
+
+    def _write_manifest(self, raw_root: Path, dataset_licenses: dict[str, str]) -> None:
+        manifest_dir = raw_root / "roboflow_imports"
+        manifest_dir.mkdir(parents=True, exist_ok=True)
+        (manifest_dir / "manifest.json").write_text(
+            json.dumps(
+                {
+                    "source": "roboflow",
+                    "query": {"dataset_licenses": dataset_licenses},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    def test_no_manifest_yields_empty(self, tmp_path: Path) -> None:
+        assert read_roboflow_dataset_licenses(tmp_path) == {}
+
+    def test_reads_dataset_licenses_from_manifest(self, tmp_path: Path) -> None:
+        self._write_manifest(tmp_path, {"ws/med-bottle": "CC BY 4.0"})
+        assert read_roboflow_dataset_licenses(tmp_path) == {"ws/med-bottle": "CC BY 4.0"}
+
+    def test_ignores_non_roboflow_manifests(self, tmp_path: Path) -> None:
+        coco_dir = tmp_path / "coco_filtered"
+        coco_dir.mkdir(parents=True)
+        (coco_dir / "manifest.json").write_text(
+            json.dumps({"source": "coco", "query": {"dataset_licenses": {"x": "y"}}}),
+            encoding="utf-8",
+        )
+        assert read_roboflow_dataset_licenses(tmp_path) == {}
 
 
 # ─── RG8 ───────────────────────────────────────────────────────────────────────

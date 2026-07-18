@@ -38,6 +38,7 @@ from src.dataset.release.gates import (
     collect_license_entries,
     evaluate_release,
     load_release_config,
+    read_roboflow_dataset_licenses,
 )
 from src.dataset.release.manifest import (
     RELEASE_MANIFEST_FILENAME,
@@ -116,7 +117,8 @@ def cmd_make(args: argparse.Namespace) -> int:
     )
     track = load_release_config(args.release_config)[args.version]
     roboflow_slug_licenses = {
-        str(k): str(v) for k, v in (track.get("roboflow_slug_licenses") or {}).items()
+        **read_roboflow_dataset_licenses(args.raw_root),
+        **{str(k): str(v) for k, v in (track.get("roboflow_slug_licenses") or {}).items()},
     }
 
     manifest = build_release_manifest(

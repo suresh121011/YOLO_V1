@@ -491,6 +491,27 @@ def collect_license_entries(raw_root: Path, sources_cfg: SourcesConfig) -> list[
     return entries
 
 
+def read_roboflow_dataset_licenses(raw_root: Path) -> dict[str, str]:
+    """Per-slug license strings recorded by ``RoboflowDownloader`` itself.
+
+    RG7's "Roboflow slug licenses recorded" check should never require
+    hand-duplicating license strings into ``configs/release.yaml`` — the
+    downloader already records ``query.dataset_licenses`` (slug -> license)
+    in the raw manifest at acquisition time, which is the actual source of
+    truth. Returns ``{}`` before any Roboflow dataset has been downloaded
+    (manifest absent) — RG7 then falls back to whatever the caller merges
+    in from ``release.yaml`` (a documented override, not the primary path).
+    """
+    for manifest_path in sorted(raw_root.glob(f"*/{MANIFEST_FILENAME}")):
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if str(data.get("source", "")) != "roboflow":
+            continue
+        licenses = (data.get("query") or {}).get("dataset_licenses")
+        if isinstance(licenses, dict):
+            return {str(k): str(v) for k, v in licenses.items()}
+    return {}
+
+
 def _rg2_errors(completeness_path: Path, data_yaml_path: Path) -> tuple[list[str], list[str]]:
     """(validation_errors, freshness_errors) for RG2, or a single not-found error."""
     if not completeness_path.exists():
@@ -599,8 +620,12 @@ def evaluate_release(
 
     if needs("RG7"):
         license_entries = collect_license_entries(raw_root, sources_cfg)
+        # Auto-derived from the Roboflow manifest (source of truth) with any
+        # configs/release.yaml override layered on top — never require
+        # hand-duplicating license strings once datasets are downloaded.
         roboflow_slugs = {
-            str(k): str(v) for k, v in (track.get("roboflow_slug_licenses") or {}).items()
+            **read_roboflow_dataset_licenses(raw_root),
+            **{str(k): str(v) for k, v in (track.get("roboflow_slug_licenses") or {}).items()},
         }
         results.append(
             rg7_license_gate(license_entries, sources_cfg.allow_noncommercial, roboflow_slugs)
