@@ -326,6 +326,19 @@ stages:
       - data/qa_reports/dataset_quality_report.json:
           cache: false
 
+  # ─── Phase-5 releases as code (ADR-P5-07) ──────────────────────────────────
+  # FROZEN, no deps (mirrors the human-loop annotation stages): humans run
+  # `python scripts/dataset/18_make_release.py make dataset-vX.Y.Z` directly
+  # (gates RG1-RG10 + MODE checked against the current build first — a FAIL
+  # verdict refuses to write a manifest), then `dvc commit -f record_release`
+  # to pin data/releases/ into dvc.lock alongside the git tag.
+
+  record_release:
+    frozen: true
+    cmd: python scripts/dataset/18_make_release.py make dataset-v0.5.0
+    outs:
+      - data/releases
+
   # ─── Training (Phase-5 — declared but frozen until the dataset is released) ─
 
   train_yolo11n:

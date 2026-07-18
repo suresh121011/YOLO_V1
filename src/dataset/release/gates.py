@@ -473,7 +473,7 @@ def load_release_config(release_yaml_path: Path) -> dict[str, Any]:
     return releases
 
 
-def _collect_license_entries(raw_root: Path, sources_cfg: SourcesConfig) -> list[dict[str, Any]]:
+def collect_license_entries(raw_root: Path, sources_cfg: SourcesConfig) -> list[dict[str, Any]]:
     """Per-source (source, license, noncommercial, image_count) from raw manifests."""
     entries: list[dict[str, Any]] = []
     for manifest_path in sorted(raw_root.glob(f"*/{MANIFEST_FILENAME}")):
@@ -598,7 +598,7 @@ def evaluate_release(
         results.append(rg6_dvc_push_verified(dvc_status_cache(repo_root)))
 
     if needs("RG7"):
-        license_entries = _collect_license_entries(raw_root, sources_cfg)
+        license_entries = collect_license_entries(raw_root, sources_cfg)
         roboflow_slugs = {
             str(k): str(v) for k, v in (track.get("roboflow_slug_licenses") or {}).items()
         }
