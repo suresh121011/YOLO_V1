@@ -138,6 +138,10 @@ sources:
     annotations_url: "https://huggingface.co/datasets/CUHK-CSE/wider_face/resolve/main/data/wider_face_split.zip"
     remap_table: wider_face
     trusted_classes: [face]
+    class_caps:               # M7: full-mode WIDER_train has ~160k face
+                              # instances uncapped — would dwarf the rest of
+                              # the ~30k-image full-mode budget
+      face: 3000
 
   negatives:
     enabled: true
