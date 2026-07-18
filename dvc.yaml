@@ -356,5 +356,26 @@ stages:
     outs:
       - models/yolo11n/weights
 
-  # evaluate/export stages will be added in Phase-5 together with
-  # scripts/training/evaluate_model.py and export_model.py (not yet written).
+  # FROZEN, same rationale as train_yolo11n (declared+deps'd but not
+  # auto-repro'd — a checkpoint doesn't exist on a fresh checkout, and this
+  # stage's real invocation is the locked eval set, which is itself a
+  # human-loop artifact). Humans run scripts/training/evaluate_model.py
+  # --split eval directly (M10), then `dvc commit -f evaluate_yolo11n` to
+  # pin data/qa_reports/eval_report.json into dvc.lock — the artifact
+  # release gate RG10 (dataset-v1.0.0 track) checks for.
+  evaluate_yolo11n:
+    frozen: true
+    cmd: python scripts/training/evaluate_model.py --weights models/yolo11n/weights/best.pt
+      --split eval
+    deps:
+      - scripts/training/evaluate_model.py
+      - src/training/evaluation.py
+      - configs/eval_data.yaml
+      - models/yolo11n/weights
+      - data/eval/indian_home_v0
+    outs:
+      - data/qa_reports/eval_report.json:
+          cache: false
+
+  # export_model.py (ONNX/TFLite export for Raspberry Pi/Android targets)
+  # will be added alongside its own DVC stage in Phase 6 — not Phase-5 scope.

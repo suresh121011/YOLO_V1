@@ -154,8 +154,13 @@ def export_confusion_matrix(results: Any, names: dict[int, str], out_path: Path)
     return save_json_report(payload, out_path)
 
 
-def _run_single_eval(spec: EvalRunSpec, out_dir: Path) -> dict[str, Any]:
-    """Evaluate one checkpoint and export its artifacts."""
+def run_single_eval(spec: EvalRunSpec, out_dir: Path) -> dict[str, Any]:
+    """Evaluate one checkpoint and export its artifacts.
+
+    Public: used by both :func:`run_evaluation` (baseline-vs-mitigated A/B)
+    and ``scripts/training/evaluate_model.py`` (standalone single-checkpoint
+    evaluation, M10).
+    """
     from ultralytics import YOLO
 
     if not spec.weights.exists():
@@ -200,7 +205,7 @@ def build_delta_report(baseline: dict[str, Any], mitigated: dict[str, Any]) -> d
     """Compute mitigated-minus-baseline deltas (aggregate and per class).
 
     Args:
-        baseline:  Summary dict of the baseline run (_run_single_eval output).
+        baseline:  Summary dict of the baseline run (run_single_eval output).
         mitigated: Summary dict of the mitigated run.
 
     Returns:
@@ -244,7 +249,7 @@ def run_evaluation(specs: list[EvalRunSpec], out_dir: Path) -> Path:
         Path to the comparison report JSON.
     """
     out_dir.mkdir(parents=True, exist_ok=True)
-    summaries = {spec.label: _run_single_eval(spec, out_dir) for spec in specs}
+    summaries = {spec.label: run_single_eval(spec, out_dir) for spec in specs}
 
     report: dict[str, Any] = {
         "generated_at": timestamp_str(),

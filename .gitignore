@@ -82,6 +82,8 @@ data/qa_reports/*
 !data/qa_reports/phase4_mitigation/
 # Phase-5 full-build preflight evidence is committed (referenced by docs/07)
 !data/qa_reports/full_build_preflight.*
+# Phase-5 M10 locked eval-set evaluation (RG10, dataset-v1.0.0 track)
+!data/qa_reports/eval_report.json
 
 # ─── Custom Capture Workflow (Phase-3) ────────────────────────────────────────
 # Staging inbox for raw phone photos — transient, never tracked
