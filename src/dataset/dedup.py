@@ -129,9 +129,16 @@ class DedupIndex:
     def _check_vectorized(self, a_int: int, flip_int: int | None, threshold: int) -> Path | None:
         """Numpy-vectorized scan over all kept aHashes at once.
 
-        Must make the IDENTICAL decision as :meth:`_check_naive` for every
-        (a_int, flip_int, threshold, kept set) — pinned by
-        ``tests/unit/test_dedup_vectorized.py``.
+        Must make the IDENTICAL decision — including WHICH kept path is
+        attributed — as :meth:`_check_naive` for every (a_int, flip_int,
+        threshold, kept set): pinned by
+        ``tests/unit/test_dedup_vectorized.py``. This means both the a_int
+        and flip_int comparisons must be combined into one per-item mask
+        BEFORE picking the first hit; checking "a_int across all items,
+        then flip_int across all items" (two separate first-hit searches)
+        would silently reorder which duplicate wins whenever one
+        earlier-inserted item matches only via flip and a later one matches
+        only via a_int directly — naive always prefers the earlier item.
         """
         if self._kept_ahash_arr is None:
             self._kept_ahash_arr = np.array(
@@ -139,17 +146,12 @@ class DedupIndex:
             )
         arr = self._kept_ahash_arr
 
-        distances = _vectorized_popcount(arr ^ np.uint64(a_int))
-        hit = _first_below(distances, threshold)
-        if hit is not None:
-            return self._kept_paths[hit]
-
+        mask = _vectorized_popcount(arr ^ np.uint64(a_int)) < threshold
         if flip_int is not None:
-            flip_distances = _vectorized_popcount(arr ^ np.uint64(flip_int))
-            hit = _first_below(flip_distances, threshold)
-            if hit is not None:
-                return self._kept_paths[hit]
-        return None
+            mask = mask | (_vectorized_popcount(arr ^ np.uint64(flip_int)) < threshold)
+
+        hits = np.flatnonzero(mask)
+        return self._kept_paths[int(hits[0])] if hits.size else None
 
     @property
     def kept_count(self) -> int:

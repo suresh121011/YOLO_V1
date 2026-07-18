@@ -82,6 +82,26 @@ class TestVectorizedMatchesNaive:
         assert index._check_naive(base, None, threshold=5) == Path("first.jpg")
         assert index._check_vectorized(base, None, threshold=5) == Path("first.jpg")
 
+    def test_earlier_flip_match_beats_later_direct_match(self) -> None:
+        """Adversarial case (M7 audit finding): item0 matches ONLY via flip,
+        item1 (inserted after) matches ONLY via direct hash. Naive checks
+        item0's a_int-then-flip_int before ever reaching item1, so it must
+        return item0 — a vectorized scan that checked a_int across ALL
+        items before flip_int across ALL items would wrongly prefer item1.
+        """
+        far = 0xFFFFFFFFFFFFFFFF
+        index = _make_index(
+            {
+                Path("item0.jpg"): (far, None),  # far from a_int; flip_int hits it
+                Path("item1.jpg"): (0x0000000000000000, None),  # a_int hits it directly
+            }
+        )
+        a_int = 0x0000000000000000  # distance 0 from item1, far from item0
+        flip_int = 0xFFFFFFFFFFFFFFFF  # distance 0 from item0
+
+        assert index._check_naive(a_int, flip_int, threshold=1) == Path("item0.jpg")
+        assert index._check_vectorized(a_int, flip_int, threshold=1) == Path("item0.jpg")
+
     def test_vectorization_threshold_boundary_still_agrees(self) -> None:
         """Same decision right at VECTORIZE_THRESHOLD, not just far above it."""
         from src.dataset.dedup import VECTORIZE_THRESHOLD
