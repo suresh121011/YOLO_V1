@@ -180,5 +180,6 @@ exclude_lines = [
 show_missing = true
 # Floor set from the measured Phase-2 baseline (43% overall; the untested
 # remainder is mostly the Phase-6 runtime in src/pipeline). Ratchet upward —
-# never lower — as coverage grows.
-fail_under = 40
+# never lower — as coverage grows. Raised 40->50 at Phase-5 M6 (the mandatory
+# correctness-validation gate) — measured coverage is ~80% at this point.
+fail_under = 50
