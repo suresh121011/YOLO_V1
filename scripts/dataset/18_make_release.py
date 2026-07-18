@@ -71,6 +71,8 @@ def cmd_check(args: argparse.Namespace) -> int:
         captures_root=args.captures_root,
         eval_report_path=args.eval_report,
         ab_benchmark_dir=args.ab_benchmark_dir,
+        qa_reports_root=args.qa_reports_root,
+        capture_config_path=args.capture_config,
     )
     for line in report.format_lines():
         logger.info(line)
@@ -93,6 +95,8 @@ def cmd_make(args: argparse.Namespace) -> int:
         captures_root=args.captures_root,
         eval_report_path=args.eval_report,
         ab_benchmark_dir=args.ab_benchmark_dir,
+        qa_reports_root=args.qa_reports_root,
+        capture_config_path=args.capture_config,
     )
     for line in report.format_lines():
         logger.info(line)
@@ -223,6 +227,8 @@ def _add_common_paths(parser: argparse.ArgumentParser) -> None:
         "--split-config", type=Path, default=Path("configs/dataset_split_config.yaml")
     )
     parser.add_argument("--releases-root", type=Path, default=Path("data/releases"))
+    parser.add_argument("--qa-reports-root", type=Path, default=Path("data/qa_reports"))
+    parser.add_argument("--capture-config", type=Path, default=Path("configs/capture_config.yaml"))
 
 
 def parse_args() -> argparse.Namespace:

@@ -22,12 +22,19 @@ evaluate_model = importlib.import_module("scripts.training.evaluate_model")
 
 pytestmark = pytest.mark.unit
 
-_FAKE_SUMMARY: dict[str, Any] = {
-    "spec": {"weights": "models/yolo11n/weights/best.pt", "label": "val"},
-    "aggregate": {"precision": 0.7, "recall": 0.6, "f1": 0.65, "mAP50": 0.72, "mAP50_95": 0.5},
-    "per_class": [],
-    "confusion_matrix": "confusion_matrix_val.json",
-}
+
+def _fake_summary(**overrides: Any) -> dict[str, Any]:
+    """A fresh summary dict each call — evaluate_model.run() mutates its
+    input in place (merges wet_floor_checkpoint), so tests must never share
+    one dict instance across calls."""
+    base: dict[str, Any] = {
+        "spec": {"weights": "models/yolo11n/weights/best.pt", "label": "val"},
+        "aggregate": {"precision": 0.7, "recall": 0.6, "f1": 0.65, "mAP50": 0.72, "mAP50_95": 0.5},
+        "per_class": [],
+        "confusion_matrix": "confusion_matrix_val.json",
+    }
+    base.update(overrides)
+    return base
 
 
 def _args(tmp_path: Path, **overrides: Any) -> Namespace:
@@ -54,7 +61,7 @@ class TestSplitToDataYamlWiring:
 
         def fake_run_single_eval(spec: Any, out_dir: Path) -> dict[str, Any]:
             captured["spec"] = spec
-            return _FAKE_SUMMARY
+            return _fake_summary()
 
         monkeypatch.setattr(evaluate_model, "run_single_eval", fake_run_single_eval)
         assert evaluate_model.run(_args(tmp_path)) == 0
@@ -68,7 +75,7 @@ class TestSplitToDataYamlWiring:
 
         def fake_run_single_eval(spec: Any, out_dir: Path) -> dict[str, Any]:
             captured["spec"] = spec
-            return _FAKE_SUMMARY
+            return _fake_summary()
 
         monkeypatch.setattr(evaluate_model, "run_single_eval", fake_run_single_eval)
         assert evaluate_model.run(_args(tmp_path, split="eval")) == 0
@@ -83,7 +90,7 @@ class TestSplitToDataYamlWiring:
 
         def fake_run_single_eval(spec: Any, out_dir: Path) -> dict[str, Any]:
             captured["spec"] = spec
-            return _FAKE_SUMMARY
+            return _fake_summary()
 
         monkeypatch.setattr(evaluate_model, "run_single_eval", fake_run_single_eval)
         assert evaluate_model.run(_args(tmp_path, split="eval", data=override)) == 0
@@ -94,7 +101,9 @@ class TestEvalReportOutput:
     def test_eval_split_writes_flat_eval_report_json(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr(evaluate_model, "run_single_eval", lambda spec, out_dir: _FAKE_SUMMARY)
+        monkeypatch.setattr(
+            evaluate_model, "run_single_eval", lambda spec, out_dir: _fake_summary()
+        )
         args = _args(tmp_path, split="eval")
         assert evaluate_model.run(args) == 0
         payload = json.loads(args.eval_report_out.read_text(encoding="utf-8"))
@@ -103,10 +112,52 @@ class TestEvalReportOutput:
     def test_non_eval_split_does_not_write_eval_report_json(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr(evaluate_model, "run_single_eval", lambda spec, out_dir: _FAKE_SUMMARY)
+        monkeypatch.setattr(
+            evaluate_model, "run_single_eval", lambda spec, out_dir: _fake_summary()
+        )
         args = _args(tmp_path, split="val")
         assert evaluate_model.run(args) == 0
         assert not args.eval_report_out.exists()
+
+
+class TestWetFloorCheckpointWiring:
+    def test_low_wet_floor_ap50_is_flagged_in_written_report(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            evaluate_model,
+            "run_single_eval",
+            lambda spec, out_dir: _fake_summary(per_class=[{"class": "wet_floor", "mAP50": 0.10}]),
+        )
+        args = _args(tmp_path, split="eval")
+        assert evaluate_model.run(args) == 0
+        payload = json.loads(args.eval_report_out.read_text(encoding="utf-8"))
+        assert payload["wet_floor_checkpoint"]["available"] is True
+        assert payload["wet_floor_checkpoint"]["reopen_demotion"] is True
+
+    def test_healthy_wet_floor_ap50_does_not_reopen(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            evaluate_model,
+            "run_single_eval",
+            lambda spec, out_dir: _fake_summary(per_class=[{"class": "wet_floor", "mAP50": 0.50}]),
+        )
+        args = _args(tmp_path, split="eval")
+        assert evaluate_model.run(args) == 0
+        payload = json.loads(args.eval_report_out.read_text(encoding="utf-8"))
+        assert payload["wet_floor_checkpoint"]["reopen_demotion"] is False
+
+    def test_no_wet_floor_ground_truth_is_unavailable_not_a_crash(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            evaluate_model, "run_single_eval", lambda spec, out_dir: _fake_summary()
+        )
+        args = _args(tmp_path, split="eval")
+        assert evaluate_model.run(args) == 0
+        payload = json.loads(args.eval_report_out.read_text(encoding="utf-8"))
+        assert payload["wet_floor_checkpoint"]["available"] is False
 
 
 class TestErrorHandling:

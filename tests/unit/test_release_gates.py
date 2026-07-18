@@ -13,9 +13,11 @@ from src.dataset.release.gates import (
     GATE_STATUS_FAIL,
     GATE_STATUS_PASS,
     check_build_mode,
+    check_wet_floor_pilot_decision,
     evaluate_release,
     load_release_config,
     read_roboflow_dataset_licenses,
+    read_wet_floor_pilot_decision,
     rg1_qa_check,
     rg2_completeness_freshness,
     rg3_coverage_quality,
@@ -231,6 +233,72 @@ class TestReadRoboflowDatasetLicenses:
         assert read_roboflow_dataset_licenses(tmp_path) == {}
 
 
+# ─── WETFLOOR (R24 pilot gate) ─────────────────────────────────────────────────
+
+
+class TestReadWetFloorPilotDecision:
+    """M9: R24 pilot decision derived from the recorded IAA evidence."""
+
+    def _write_iaa_report(self, qa_root: Path, name: str, agreement: float | None) -> None:
+        qa_root.mkdir(parents=True, exist_ok=True)
+        per_class = {"charger": {"agreement": 0.9}}
+        if agreement is not None:
+            per_class["wet_floor"] = {"agreement": agreement}
+        (qa_root / name).write_text(json.dumps({"per_class": per_class}), encoding="utf-8")
+
+    def test_no_iaa_reports_yields_none(self, tmp_path: Path) -> None:
+        assert read_wet_floor_pilot_decision(tmp_path, 0.60) is None
+
+    def test_iaa_report_without_wet_floor_yields_none(self, tmp_path: Path) -> None:
+        self._write_iaa_report(tmp_path, "iaa_h01_kitchen_s001.json", agreement=None)
+        assert read_wet_floor_pilot_decision(tmp_path, 0.60) is None
+
+    def test_agreement_at_or_above_threshold_keeps(self, tmp_path: Path) -> None:
+        self._write_iaa_report(tmp_path, "iaa_h01_kitchen_s001.json", agreement=0.75)
+        decision = read_wet_floor_pilot_decision(tmp_path, 0.60)
+        assert decision is not None
+        assert decision["decision"] == "keep"
+        assert decision["agreement"] == 0.75
+
+    def test_agreement_below_threshold_demotes(self, tmp_path: Path) -> None:
+        self._write_iaa_report(tmp_path, "iaa_h01_kitchen_s001.json", agreement=0.40)
+        decision = read_wet_floor_pilot_decision(tmp_path, 0.60)
+        assert decision is not None
+        assert decision["decision"] == "demote_to_scene_level"
+
+    def test_first_report_by_filename_wins(self, tmp_path: Path) -> None:
+        """The runbook's "first pilot session" — sorted by filename (sequential session ids)."""
+        self._write_iaa_report(tmp_path, "iaa_h01_kitchen_s002.json", agreement=0.90)
+        self._write_iaa_report(tmp_path, "iaa_h01_kitchen_s001.json", agreement=0.30)
+        decision = read_wet_floor_pilot_decision(tmp_path, 0.60)
+        assert decision is not None
+        assert decision["decision"] == "demote_to_scene_level"  # from s001, not s002
+
+
+class TestCheckWetFloorPilotDecision:
+    def test_no_decision_fails(self) -> None:
+        result = check_wet_floor_pilot_decision(None)
+        assert result.status == GATE_STATUS_FAIL
+        assert result.gate_id == "WETFLOOR"
+
+    def test_keep_decision_passes(self) -> None:
+        decision = {"source": "iaa_h01.json", "agreement": 0.75, "decision": "keep"}
+        result = check_wet_floor_pilot_decision(decision)
+        assert result.status == GATE_STATUS_PASS
+        assert "keep" in result.details
+
+    def test_demote_decision_still_passes(self) -> None:
+        """A recorded demotion IS the required decision — the gate checks a
+        decision was made, not which way it went."""
+        decision = {
+            "source": "iaa_h01.json",
+            "agreement": 0.30,
+            "decision": "demote_to_scene_level",
+        }
+        result = check_wet_floor_pilot_decision(decision)
+        assert result.status == GATE_STATUS_PASS
+
+
 # ─── RG8 ───────────────────────────────────────────────────────────────────────
 
 
@@ -380,3 +448,86 @@ class TestEvaluateRelease:
         gate_ids = {r.gate_id for r in report.results}
         assert gate_ids == {"MODE", "RG1"}
         assert report.verdict == "PASS"
+
+    def test_wet_floor_decision_required_fails_without_iaa_evidence(self, tmp_path: Path) -> None:
+        release_yaml = _write_yaml(
+            tmp_path / "release.yaml",
+            {
+                "releases": {
+                    "dataset-v0.9.0": {
+                        "mode": "smoke",
+                        "gates": ["RG1"],
+                        "wet_floor_decision_required": True,
+                    }
+                }
+            },
+        )
+        sources_yaml = _write_yaml(
+            tmp_path / "sources.yaml",
+            {"mode": "smoke", "allow_noncommercial": True, "sources": {"coco": {}}},
+        )
+        report = evaluate_release(
+            "dataset-v0.9.0",
+            release_yaml_path=release_yaml,
+            sources_yaml_path=sources_yaml,
+            qa_report_path=tmp_path / "missing_qa.json",
+            qa_reports_root=tmp_path / "qa_reports",  # empty — no iaa_*.json yet
+        )
+        assert report.verdict == "FAIL"
+        assert any(r.gate_id == "WETFLOOR" and r.status == GATE_STATUS_FAIL for r in report.results)
+
+    def test_wet_floor_decision_required_passes_with_recorded_decision(
+        self, tmp_path: Path
+    ) -> None:
+        release_yaml = _write_yaml(
+            tmp_path / "release.yaml",
+            {
+                "releases": {
+                    "dataset-v0.9.0": {
+                        "mode": "smoke",
+                        "gates": ["RG1"],
+                        "wet_floor_decision_required": True,
+                    }
+                }
+            },
+        )
+        sources_yaml = _write_yaml(
+            tmp_path / "sources.yaml",
+            {"mode": "smoke", "allow_noncommercial": True, "sources": {"coco": {}}},
+        )
+        qa_reports_root = tmp_path / "qa_reports"
+        qa_reports_root.mkdir(parents=True)
+        (qa_reports_root / "iaa_h01_kitchen_s001.json").write_text(
+            json.dumps({"per_class": {"wet_floor": {"agreement": 0.75}}}), encoding="utf-8"
+        )
+        capture_config = _write_yaml(
+            tmp_path / "capture_config.yaml",
+            {"annotation": {"iaa": {"wet_floor_min_agreement": 0.60}}},
+        )
+        report = evaluate_release(
+            "dataset-v0.9.0",
+            release_yaml_path=release_yaml,
+            sources_yaml_path=sources_yaml,
+            qa_report_path=tmp_path / "missing_qa.json",
+            qa_reports_root=qa_reports_root,
+            capture_config_path=capture_config,
+        )
+        assert any(r.gate_id == "WETFLOOR" and r.status == GATE_STATUS_PASS for r in report.results)
+
+    def test_wet_floor_decision_not_required_skips_the_check(self, tmp_path: Path) -> None:
+        release_yaml = _write_yaml(
+            tmp_path / "release.yaml",
+            {"releases": {"dataset-v0.5.0": {"mode": "smoke", "gates": ["RG1"]}}},
+        )
+        sources_yaml = _write_yaml(
+            tmp_path / "sources.yaml",
+            {"mode": "smoke", "allow_noncommercial": True, "sources": {"coco": {}}},
+        )
+        report = evaluate_release(
+            "dataset-v0.5.0",
+            release_yaml_path=release_yaml,
+            sources_yaml_path=sources_yaml,
+            qa_report_path=tmp_path / "missing_qa.json",
+            qa_reports_root=tmp_path / "qa_reports",
+        )
+        assert not any(r.gate_id == "WETFLOOR" for r in report.results)

@@ -201,6 +201,46 @@ def run_single_eval(spec: EvalRunSpec, out_dir: Path) -> dict[str, Any]:
     return summary
 
 
+def wet_floor_ap50_checkpoint(
+    per_class: list[dict[str, Any]], ap50_threshold: float = 0.30
+) -> dict[str, Any]:
+    """R24 checkpoint 2 (docs/04 capture_annotation_runbook.md §8).
+
+    Regardless of the M9 pilot's dual-annotator-agreement decision, if
+    wet_floor is kept as a bbox class and the trained model's wet_floor
+    AP50 comes in below ``ap50_threshold`` on this evaluation, the
+    demotion-to-scene-level path reopens.
+
+    Args:
+        per_class:      :func:`extract_per_class_metrics` output (or an
+                        equivalent list of ``{"class", "mAP50", ...}`` rows)
+                        from a real evaluation run.
+        ap50_threshold: ``0.30`` per the runbook.
+
+    Returns:
+        ``{"available": bool, "ap50": float|None, "ap50_threshold": float,
+        "reopen_demotion": bool}`` — ``available=False`` (and
+        ``reopen_demotion=False``) when wet_floor has no ground truth in
+        this evaluation's split, e.g. it was already demoted and dropped
+        from the taxonomy's bbox scope.
+    """
+    row = next((r for r in per_class if r.get("class") == "wet_floor"), None)
+    if row is None:
+        return {
+            "available": False,
+            "ap50": None,
+            "ap50_threshold": ap50_threshold,
+            "reopen_demotion": False,
+        }
+    ap50 = float(row["mAP50"])
+    return {
+        "available": True,
+        "ap50": ap50,
+        "ap50_threshold": ap50_threshold,
+        "reopen_demotion": ap50 < ap50_threshold,
+    }
+
+
 def build_delta_report(baseline: dict[str, Any], mitigated: dict[str, Any]) -> dict[str, Any]:
     """Compute mitigated-minus-baseline deltas (aggregate and per class).
 

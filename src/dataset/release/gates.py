@@ -33,8 +33,9 @@ import subprocess
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
+from src.dataset.capture.config import load_capture_config
 from src.dataset.capture.ingest import load_session_manifests
 from src.dataset.completeness import load_completeness, validate_completeness
 from src.dataset.manifest import MANIFEST_FILENAME
@@ -78,13 +79,19 @@ class ReleaseReport:
     required_gate_ids: tuple[str, ...]
     results: tuple[GateResult, ...]
 
+    #: Prerequisite gate ids that count toward the verdict even though they
+    #: are never listed in a track's ``gates:`` array (MODE always runs;
+    #: WETFLOOR runs only when a track sets ``wet_floor_decision_required``
+    #: — both conditions live outside RG1-RG10's per-track opt-in list).
+    _PREREQUISITE_GATE_IDS: ClassVar[frozenset[str]] = frozenset({"MODE", "WETFLOOR"})
+
     @property
     def verdict(self) -> str:
         """PASS, WARN, or FAIL — computed only over required gates."""
         required = {
             r.status
             for r in self.results
-            if r.gate_id in self.required_gate_ids or r.gate_id == "MODE"
+            if r.gate_id in self.required_gate_ids or r.gate_id in self._PREREQUISITE_GATE_IDS
         }
         if GATE_STATUS_FAIL in required:
             return "FAIL"
@@ -93,12 +100,12 @@ class ReleaseReport:
         return "PASS"
 
     def failures(self) -> list[GateResult]:
-        """Required gates (+MODE) that failed."""
+        """Required gates (+prerequisites) that failed."""
         return [
             r
             for r in self.results
             if r.status == GATE_STATUS_FAIL
-            and (r.gate_id in self.required_gate_ids or r.gate_id == "MODE")
+            and (r.gate_id in self.required_gate_ids or r.gate_id in self._PREREQUISITE_GATE_IDS)
         ]
 
     def to_dict(self) -> dict[str, Any]:
@@ -135,6 +142,69 @@ def check_build_mode(actual_mode: str, required_mode: str) -> GateResult:
             f"`dvc repro` before checking this release.",
         )
     return GateResult("MODE", "build-mode", GATE_STATUS_PASS, f"build mode '{actual_mode}' matches")
+
+
+# ─── WETFLOOR prerequisite (R24 pilot gate, docs/04 §8) ────────────────────────
+# Only evaluated when a track sets ``wet_floor_decision_required: true``
+# (currently dataset-v0.9.0+ in configs/release.yaml) — never one of RG1-RG10.
+
+
+def read_wet_floor_pilot_decision(
+    qa_reports_root: Path, min_agreement: float
+) -> dict[str, Any] | None:
+    """Derive the R24 wet_floor pilot decision from the recorded IAA evidence.
+
+    ``09_import_annotations.py --compare`` writes one ``iaa_<session>.json``
+    per dual-annotated capture session (``report_as_dict`` in
+    ``src/dataset/capture/agreement.py``); this reads that artifact as the
+    source of truth rather than requiring a human to hand-type the decision
+    anywhere (same pattern as :func:`read_roboflow_dataset_licenses`). The
+    runbook's "first ~50-image pilot session" is whichever ``iaa_*.json``
+    (sorted by filename — session ids are sequential) is the first to
+    record a ``wet_floor`` per-class result.
+
+    Args:
+        qa_reports_root: ``data/qa_reports``.
+        min_agreement:   ``capture.iaa.wet_floor_min_agreement`` (0.60).
+
+    Returns:
+        ``{"source", "agreement", "decision"}`` (``decision`` is ``"keep"``
+        or ``"demote_to_scene_level"``), or ``None`` if no dual-annotated
+        session has recorded a wet_floor result yet.
+    """
+    for path in sorted(qa_reports_root.glob("iaa_*.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        wet_floor = data.get("per_class", {}).get("wet_floor")
+        if wet_floor is None:
+            continue
+        agreement = float(wet_floor.get("agreement", 0.0))
+        decision = "keep" if agreement >= min_agreement else "demote_to_scene_level"
+        return {"source": path.as_posix(), "agreement": agreement, "decision": decision}
+    return None
+
+
+def check_wet_floor_pilot_decision(decision: Mapping[str, Any] | None) -> GateResult:
+    """R24 checkpoint 1: the wet_floor dual-annotator pilot decision must exist.
+
+    Args:
+        decision: :func:`read_wet_floor_pilot_decision`'s return value.
+    """
+    if decision is None:
+        return GateResult(
+            "WETFLOOR",
+            "wet-floor-pilot-decision",
+            GATE_STATUS_FAIL,
+            "no dual-annotated wet_floor pilot session found (data/qa_reports/iaa_*.json) — "
+            "run `09_import_annotations.py --compare` on the first ~50-image session "
+            "(docs/04_dataset_engineering/capture_annotation_runbook.md §8) before this release.",
+        )
+    return GateResult(
+        "WETFLOOR",
+        "wet-floor-pilot-decision",
+        GATE_STATUS_PASS,
+        f"decision={decision['decision']} (agreement={decision['agreement']:.2f}, "
+        f"source={decision['source']})",
+    )
 
 
 # ─── RG1: QA zero-criticals + artifact sweeps clean ───────────────────────────
@@ -551,6 +621,8 @@ def evaluate_release(
     captures_root: Path = Path("data/raw/custom_captures"),
     eval_report_path: Path = Path("data/qa_reports/eval_report.json"),
     ab_benchmark_dir: Path = Path("data/qa_reports/ab_benchmark"),
+    qa_reports_root: Path = Path("data/qa_reports"),
+    capture_config_path: Path = Path("configs/capture_config.yaml"),
     repo_root: str = ".",
 ) -> ReleaseReport:
     """Evaluate a release version's declared gates against the current build.
@@ -577,6 +649,13 @@ def evaluate_release(
 
     sources_cfg = load_sources_config(sources_yaml_path)
     results: list[GateResult] = [check_build_mode(sources_cfg.mode, str(track.get("mode", "full")))]
+
+    if track.get("wet_floor_decision_required"):
+        capture_cfg = load_capture_config(capture_config_path)
+        decision = read_wet_floor_pilot_decision(
+            qa_reports_root, capture_cfg.annotation.iaa.wet_floor_min_agreement
+        )
+        results.append(check_wet_floor_pilot_decision(decision))
 
     qa_report = _load_json(qa_report_path)
 

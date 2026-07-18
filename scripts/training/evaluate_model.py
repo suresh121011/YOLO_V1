@@ -30,7 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from src.training.evaluation import EvalRunSpec, run_single_eval
+from src.training.evaluation import EvalRunSpec, run_single_eval, wet_floor_ap50_checkpoint
 from src.utils.config_helpers import resolve_device
 from src.utils.report_utils import save_json_report
 
@@ -79,6 +79,18 @@ def run(args: argparse.Namespace) -> int:
     except FileNotFoundError as e:
         logger.error(f"Evaluation failed: {e}")
         return 1
+
+    # R24 checkpoint 2 (docs/04 capture_annotation_runbook.md §8): a low
+    # wet_floor AP50 on ANY real evaluation reopens the demotion path,
+    # independent of --split — merged into the summary so it's visible
+    # wherever this run's report lands, not only on --split eval.
+    summary["wet_floor_checkpoint"] = wet_floor_ap50_checkpoint(summary["per_class"])
+    if summary["wet_floor_checkpoint"]["reopen_demotion"]:
+        logger.warning(
+            f"R24 checkpoint 2: wet_floor AP50={summary['wet_floor_checkpoint']['ap50']} < "
+            f"{summary['wet_floor_checkpoint']['ap50_threshold']} — demotion path reopened "
+            "(docs/04_dataset_engineering/capture_annotation_runbook.md §8)."
+        )
 
     if is_eval_split:
         save_json_report(summary, args.eval_report_out)
