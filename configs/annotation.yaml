@@ -101,7 +101,6 @@ auto_annotation:
         medicine_bottle: ["cross_dataset"]
         cupboard: ["cross_dataset"]
         face: ["cross_dataset"]
-      match: exact_sha256
 
   # Optional SAM box-refinement post-pass. Only tightens existing candidate
   # boxes — never creates or deletes detections (ADR-P5-02).
