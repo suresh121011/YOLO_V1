@@ -84,9 +84,23 @@ auto_annotation:
 
     # L3 cross-dataset candidates (ADR-P5-08): near-duplicate images whose
     # dropped twin carried trusted-class labels. Exact-sha256 twins are
-    # salvaged at merge time; near-dups become candidates for human review.
+    # salvaged directly at merge time (src/dataset/cross_dataset_salvage.py);
+    # near-dups land here as ordinary human-verified candidates instead —
+    # no ML, this backend only replays merge.py's own link file.
     cross_dataset:
-      enabled: false             # flips true when the backend lands (L3 merge-salvage work)
+      enabled: true
+      match: exact_sha256        # documentation only; near-dup path always also runs
+      links_path: data/merged/cross_dataset_links.json
+      # No text prompts (no ML) — non-empty entries only mark which classes
+      # this backend is "promptable" for (targeting.py's gate). Mirrors
+      # targeting.priority_classes below: D7's real cross-source overlap is
+      # Roboflow<->COCO derivatives on exactly these classes.
+      prompts:
+        charger: ["cross_dataset"]
+        wire: ["cross_dataset"]
+        medicine_bottle: ["cross_dataset"]
+        cupboard: ["cross_dataset"]
+        face: ["cross_dataset"]
       match: exact_sha256
 
   # Optional SAM box-refinement post-pass. Only tightens existing candidate
