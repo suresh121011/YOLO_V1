@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -12,6 +13,7 @@ import yaml
 from src.dataset.release.gates import (
     GATE_STATUS_FAIL,
     GATE_STATUS_PASS,
+    aggregate_custom_class_counts,
     check_build_mode,
     check_wet_floor_pilot_decision,
     evaluate_release,
@@ -330,13 +332,62 @@ class TestRg8SplitEvalLeakage:
 
 class TestRg9CaptureTargets:
     def test_targets_met_passes(self) -> None:
-        assert rg9_capture_targets(2000, 3, 2000, 3).status == GATE_STATUS_PASS
+        counts = {"charger": 200, "wire": 200}
+        assert rg9_capture_targets(2000, 3, counts, 2000, 3, 200).status == GATE_STATUS_PASS
 
     def test_insufficient_images_fails(self) -> None:
-        assert rg9_capture_targets(500, 3, 2000, 3).status == GATE_STATUS_FAIL
+        assert rg9_capture_targets(500, 3, {}, 2000, 3, 0).status == GATE_STATUS_FAIL
 
     def test_insufficient_houses_fails(self) -> None:
-        assert rg9_capture_targets(2000, 1, 2000, 3).status == GATE_STATUS_FAIL
+        assert rg9_capture_targets(2000, 1, {}, 2000, 3, 0).status == GATE_STATUS_FAIL
+
+    def test_zero_min_instances_skips_per_class_check(self) -> None:
+        """v0.7.0/v0.9.0 tracks don't set min_instances_per_class — 0 means skip."""
+        counts = {"gas_cylinder": 0}
+        assert rg9_capture_targets(2000, 3, counts, 2000, 3, 0).status == GATE_STATUS_PASS
+
+    def test_class_below_minimum_fails(self) -> None:
+        counts = {"charger": 200, "gas_cylinder": 5}
+        result = rg9_capture_targets(2000, 3, counts, 2000, 3, 200)
+        assert result.status == GATE_STATUS_FAIL
+        assert "gas_cylinder" in result.details
+
+    def test_all_classes_at_exactly_the_minimum_passes(self) -> None:
+        counts = {"charger": 200, "wire": 200}
+        assert rg9_capture_targets(2000, 3, counts, 2000, 3, 200).status == GATE_STATUS_PASS
+
+
+class TestAggregateCustomClassCounts:
+    """The real bug fixed here: a configured custom class with zero captures
+    must still appear as 0 in the aggregated dict, not be silently absent —
+    otherwise RG9's per-class check would never see it and wrongly pass."""
+
+    def test_zero_defaults_every_configured_class(self) -> None:
+        sessions = [SimpleNamespace(class_counts={"charger": 50})]
+        counts = aggregate_custom_class_counts(sessions, ["charger", "gas_cylinder"])
+        assert counts == {"charger": 50, "gas_cylinder": 0}
+
+    def test_class_never_captured_in_any_session_is_zero(self) -> None:
+        sessions = [SimpleNamespace(class_counts={"charger": 10})]
+        counts = aggregate_custom_class_counts(sessions, ["charger", "gas_cylinder"])
+        assert counts["gas_cylinder"] == 0
+
+    def test_sums_across_multiple_sessions(self) -> None:
+        sessions = [
+            SimpleNamespace(class_counts={"charger": 50}),
+            SimpleNamespace(class_counts={"charger": 30, "wire": 10}),
+        ]
+        counts = aggregate_custom_class_counts(sessions, ["charger", "wire"])
+        assert counts == {"charger": 80, "wire": 10}
+
+    def test_class_outside_configured_list_is_ignored(self) -> None:
+        sessions = [SimpleNamespace(class_counts={"charger": 50, "unrelated_class": 999})]
+        counts = aggregate_custom_class_counts(sessions, ["charger"])
+        assert counts == {"charger": 50}
+
+    def test_no_sessions_yields_all_zeros(self) -> None:
+        counts = aggregate_custom_class_counts([], ["charger", "wire"])
+        assert counts == {"charger": 0, "wire": 0}
 
 
 # ─── RG10 ──────────────────────────────────────────────────────────────────────
@@ -531,3 +582,55 @@ class TestEvaluateRelease:
             qa_reports_root=tmp_path / "qa_reports",
         )
         assert not any(r.gate_id == "WETFLOOR" for r in report.results)
+
+    def test_rg9_fails_when_one_custom_class_has_zero_captures(self, tmp_path: Path) -> None:
+        """End-to-end reproduction of the real RG9 bug: a v1.0.0-style track
+        with min_instances_per_class set must FAIL when a whole configured
+        custom class was never captured, even though total images/houses
+        both clear their own targets."""
+        from src.dataset.manifest import CaptureSessionManifest
+
+        release_yaml = _write_yaml(
+            tmp_path / "release.yaml",
+            {
+                "releases": {
+                    "dataset-v1.0.0": {
+                        "mode": "smoke",
+                        "gates": ["RG9"],
+                        "min_custom_images": 1,
+                        "min_houses": 1,
+                        "min_instances_per_class": 200,
+                    }
+                }
+            },
+        )
+        sources_yaml = _write_yaml(
+            tmp_path / "sources.yaml",
+            {"mode": "smoke", "allow_noncommercial": True, "sources": {"coco": {}}},
+        )
+        captures_root = tmp_path / "custom_captures"
+        (captures_root / "manifests").mkdir(parents=True)
+        CaptureSessionManifest(
+            source="custom_captures",
+            license="proprietary",
+            session_id="h01_kitchen_s001",
+            house_id="h01",
+            room="kitchen",
+            image_count=250,
+            class_counts={"charger": 250},  # gas_cylinder never captured
+        ).save(captures_root / "manifests" / "h01_kitchen_s001.json")
+        capture_config = _write_yaml(
+            tmp_path / "capture_config.yaml",
+            {"targets": {"custom_classes": ["charger", "gas_cylinder"]}},
+        )
+
+        report = evaluate_release(
+            "dataset-v1.0.0",
+            release_yaml_path=release_yaml,
+            sources_yaml_path=sources_yaml,
+            captures_root=captures_root,
+            capture_config_path=capture_config,
+        )
+        rg9 = next(r for r in report.results if r.gate_id == "RG9")
+        assert rg9.status == GATE_STATUS_FAIL
+        assert "gas_cylinder" in rg9.details

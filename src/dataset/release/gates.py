@@ -487,14 +487,39 @@ def rg8_split_eval_leakage(qa_checks: Mapping[str, Any], eval_set: Mapping[str, 
 
 
 def rg9_capture_targets(
-    total_custom_images: int, houses: int, min_custom_images: int, min_houses: int
+    total_custom_images: int,
+    houses: int,
+    class_counts: Mapping[str, int],
+    min_custom_images: int,
+    min_houses: int,
+    min_instances_per_class: int,
 ) -> GateResult:
-    """Custom-capture image/house counts vs. this track's targets."""
+    """Custom-capture image/house/per-class-instance counts vs. this track's targets.
+
+    Args:
+        class_counts:            Custom class name -> instance count, ZERO-defaulted
+                                 for every configured custom class (a class with no
+                                 captures at all must still fail, not be silently
+                                 absent from the dict — see
+                                 :func:`aggregate_custom_class_counts`).
+        min_instances_per_class: ``track.get("min_instances_per_class", 0)``; ``0``
+                                 skips the per-class check entirely (v0.7.0/v0.9.0
+                                 tracks don't require it, only v1.0.0 does).
+    """
     problems: list[str] = []
     if total_custom_images < min_custom_images:
         problems.append(f"custom images {total_custom_images} < required {min_custom_images}")
     if houses < min_houses:
         problems.append(f"houses {houses} < required {min_houses}")
+    if min_instances_per_class > 0:
+        short = {
+            name: count
+            for name, count in sorted(class_counts.items())
+            if count < min_instances_per_class
+        }
+        if short:
+            detail = ", ".join(f"{name}={count}" for name, count in short.items())
+            problems.append(f"classes below {min_instances_per_class} instances: {detail}")
     if problems:
         return GateResult("RG9", "capture-targets", GATE_STATUS_FAIL, "; ".join(problems))
     return GateResult(
@@ -503,6 +528,24 @@ def rg9_capture_targets(
         GATE_STATUS_PASS,
         f"{total_custom_images} custom images across {houses} house(s)",
     )
+
+
+def aggregate_custom_class_counts(
+    sessions: Sequence[Any], custom_classes: Sequence[str]
+) -> dict[str, int]:
+    """Per-class instance counts across capture sessions.
+
+    Zero-defaulted for every ``custom_classes`` entry FIRST — a class that
+    has never appeared in any session must still show up as ``0`` rather
+    than being silently absent from the dict, or :func:`rg9_capture_targets`
+    would never notice a whole missing class (the exact bug this fixes).
+    """
+    counts: dict[str, int] = {name: 0 for name in custom_classes}
+    for session in sessions:
+        for name, count in session.class_counts.items():
+            if name in counts:
+                counts[name] += count
+    return counts
 
 
 # ─── RG10: A/B benchmark + eval evidence ───────────────────────────────────────
@@ -719,12 +762,16 @@ def evaluate_release(
         sessions = load_session_manifests(captures_root)
         total_images = sum(s.image_count for s in sessions)
         houses = len({s.house_id for s in sessions if s.house_id})
+        capture_cfg = load_capture_config(capture_config_path)
+        class_counts = aggregate_custom_class_counts(sessions, capture_cfg.targets.custom_classes)
         results.append(
             rg9_capture_targets(
                 total_images,
                 houses,
+                class_counts,
                 int(track.get("min_custom_images", 0)),
                 int(track.get("min_houses", 0)),
+                int(track.get("min_instances_per_class", 0)),
             )
         )
 

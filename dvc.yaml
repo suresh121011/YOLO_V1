@@ -303,6 +303,10 @@ stages:
     params:
       - configs/annotation.yaml:
           - coverage
+          # M8 grounding_dino_decision() reads targeting.priority_classes and
+          # backends.grounding_dino.enable_below_precision (16_coverage_report.py) —
+          # tracked so editing either re-triggers this stage, not just `coverage:`.
+          - auto_annotation
     outs:
       - data/qa_reports/coverage_report.json:
           cache: false
@@ -322,6 +326,9 @@ stages:
       - data/merged/merged_manifest.json
       - data/annotation/verification_ledger.json
       - data/annotation/batches
+      # dataset_scale.houses_total (_count_houses in quality.py) reads this
+      # directly via --capture-manifests, independent of merged_manifest.json.
+      - data/raw/custom_captures/manifests
     metrics:
       - data/qa_reports/dataset_quality_report.json:
           cache: false
