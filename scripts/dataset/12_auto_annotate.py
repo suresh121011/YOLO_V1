@@ -140,6 +140,17 @@ def run_backend(
                 f"data/merged/images disagree; re-run the merge stage."
             )
         detections = annotator.annotate(image_path, targets[filename])
+        # Backends return everything above the low conf_floor (AutoAnnotator's
+        # contract); per-class thresholds decide candidate status HERE, once,
+        # for every backend uniformly — R30's verification-flooding mitigation
+        # only holds if this actually runs (configs/annotation.yaml's own
+        # comment: "conf_floor: record everything above this; per-class
+        # thresholds below decide candidate status downstream").
+        detections = [
+            det
+            for det in detections
+            if det.conf >= backend_cfg.threshold_for(names_by_id.get(det.class_id, ""))
+        ]
         if refiner is not None and detections:
             detections = refiner.refine(image_path, detections)
         images[filename] = ImageCandidates(
