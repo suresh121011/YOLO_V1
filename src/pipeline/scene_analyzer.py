@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from typing import Any
 
 from . import Detection, SceneContext
 
@@ -66,8 +67,8 @@ class SmolVLM2Analyzer:
         self.max_new_tokens = max_new_tokens
         self.timeout_seconds = timeout_seconds
 
-        self._model = None
-        self._processor = None
+        self._model: Any = None
+        self._processor: Any = None
         self._available = False
 
         self._try_load()
@@ -99,7 +100,7 @@ class SmolVLM2Analyzer:
 
     def analyze(
         self,
-        frame,
+        frame: Any,
         detections: list[Detection],
         frame_id: int = 0,
     ) -> SceneContext | None:

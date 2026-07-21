@@ -15,6 +15,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+from typing import Any
 
 from . import BoundingBox, Detection
 
@@ -77,7 +78,7 @@ class YOLODetector:
         if expected_hash:
             self._verify_hash(expected_hash)
 
-        self.model = self._load_model()
+        self.model: Any = self._load_model()
         logger.info(f"YOLODetector loaded: {self.model_path.name} on {device}")
 
     def _verify_hash(self, expected: str) -> None:
@@ -91,7 +92,7 @@ class YOLODetector:
             )
         logger.info("Model hash verified OK")
 
-    def _load_model(self):
+    def _load_model(self) -> Any:
         """Load model using appropriate backend for the file format."""
         suffix = self.model_path.suffix.lower()
         try:
