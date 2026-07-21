@@ -42,7 +42,7 @@ class WiderFaceDownloader(BaseDownloader):
         return {"0": "face"}
 
     def _query_extras(self) -> dict[str, Any]:
-        return {"split": self._split()}
+        return {"split": self._split(), "class_caps": self.source.options.get("class_caps", {})}
 
     def _split(self) -> str:
         return "val" if self.config.mode == "smoke" else "train"
@@ -69,12 +69,22 @@ class WiderFaceDownloader(BaseDownloader):
         ground_truth = self._parse_ground_truth(annotations_zip, split)
         logger.info(f"[wider_face] {len(ground_truth)} annotated images in {split}")
 
+        # Full mode has no image `limit` — WIDER_train alone would otherwise
+        # contribute ~160k face instances, dwarfing the rest of the ~30k-image
+        # full-mode budget (M7 full-mode config review). Caps the single
+        # "face" class the same way COCO caps per-class instances, just with
+        # one class instead of many.
+        face_cap = (self.source.options.get("class_caps") or {}).get("face")
+
         class_counts: dict[str, int] = {"face": 0}
         selected = 0
         with zipfile.ZipFile(images_zip) as zf:
             members = set(zf.namelist())
             for rel_name in sorted(ground_truth):  # deterministic
                 if limit is not None and selected >= limit:
+                    break
+                if face_cap is not None and class_counts["face"] >= int(face_cap):
+                    logger.info(f"[wider_face] face class_cap {face_cap} reached — stopping")
                     break
                 member = f"WIDER_{split}/images/{rel_name}"
                 if member not in members:

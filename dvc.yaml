@@ -173,6 +173,9 @@ stages:
       - src/dataset/split_config.py
       - src/dataset/splitting
       - data/merged
+      # M3 (ADR-P5-05): labels come from the verified-labels overlay
+      # (split.source_labels_dir), images still from data/merged above.
+      - data/merged_verified
     params:
       - configs/dataset_split_config.yaml:
           - split
@@ -196,6 +199,8 @@ stages:
       - data/merged
       - data/processed/images
       - data/processed/split_report
+      # M3 (ADR-P5-04): trusted_list_with_ledger sources read this directly.
+      - data/annotation/verification_ledger.json
     params:
       - configs/dataset_sources.yaml:
           - completeness
@@ -220,6 +225,127 @@ stages:
       - data/qa_reports/annotation_qa_report.json:
           cache: false
 
+  # ─── Phase-5 missing-annotation resolution (L2 auto-annotation) ────────────
+  # Candidates NEVER touch labels/ directly (ADR-P5-01) — they land under
+  # data/annotation/candidates/ and only reach training labels through the
+  # human CVAT verification loop (M2: build_verification_batches →
+  # import_verified_annotations → ledger → apply_verified_labels). This stage
+  # declares the (currently empty, git-bootstrapped) ledger as a dep so its
+  # DAG edge exists from day one — see dvc.yaml header note in the M2 commit
+  # for why the human-loop stages that produce it declare no deps in return
+  # (breaks the conceptual auto_annotate→...→ledger→auto_annotate cycle in
+  # the declared graph; freshness is enforced by sha256 cross-checks instead,
+  # G9/RG2 — council-verified, plan §"DAG acyclicity").
+
+  auto_annotate:
+    cmd: python scripts/dataset/12_auto_annotate.py
+    deps:
+      - scripts/dataset/12_auto_annotate.py
+      - src/dataset/annotation
+      - configs/data.yaml
+      - data/merged
+      - data/annotation/verification_ledger.json
+    params:
+      - configs/annotation.yaml:
+          - auto_annotation
+    outs:
+      - data/annotation/candidates
+
+  # FROZEN (mirrors ingest_custom_captures/ingest_eval_set): regenerating
+  # mid-flight would orphan live CVAT tasks whose pre-annotations no longer
+  # match a fresh batch plan. Humans run 13_build_verification_batches.py
+  # directly, then `dvc commit -f build_verification_batches`.
+  build_verification_batches:
+    frozen: true
+    cmd: python scripts/dataset/13_build_verification_batches.py
+    outs:
+      - data/annotation/batches
+
+  # FROZEN, no deps (same rationale). Humans run 14_import_verified_batch.py
+  # per batch (--batch, --export, --verifier), then
+  # `dvc commit -f import_verified_annotations`. The ledger is a small,
+  # git-tracked, append-only audit trail (cache: false) — like the QA
+  # reports; verified_labels is DVC-cached (grows with scale).
+  import_verified_annotations:
+    frozen: true
+    cmd: python scripts/dataset/14_import_verified_batch.py
+    outs:
+      - data/annotation/verification_ledger.json:
+          cache: false
+      - data/annotation/verified_labels
+
+  # Pure deterministic derivation of already-frozen outputs — a normal
+  # (non-frozen) stage, unlike the two human-loop stages above (ADR-P5-05).
+  apply_verified_labels:
+    cmd: python scripts/dataset/15_apply_verified_labels.py
+    deps:
+      - scripts/dataset/15_apply_verified_labels.py
+      - src/dataset/annotation/apply.py
+      - data/merged/labels
+      - data/annotation/verification_ledger.json
+      - data/annotation/verified_labels
+    outs:
+      - data/merged_verified
+
+  # ─── Phase-5 missing-annotation resolution (L4 coverage estimation) ───────
+  # Pure arithmetic over already-pinned inputs (ADR-P5-06) — no inference.
+
+  coverage_report:
+    cmd: python scripts/dataset/16_coverage_report.py
+    deps:
+      - scripts/dataset/16_coverage_report.py
+      - src/dataset/annotation/coverage.py
+      - configs/data.yaml
+      - data/annotation/candidates
+      - data/annotation/verification_ledger.json
+      - data/processed/labels
+      - data/processed/completeness.json
+    params:
+      - configs/annotation.yaml:
+          - coverage
+          # M8 grounding_dino_decision() reads targeting.priority_classes and
+          # backends.grounding_dino.enable_below_precision (16_coverage_report.py) —
+          # tracked so editing either re-triggers this stage, not just `coverage:`.
+          - auto_annotation
+    outs:
+      - data/qa_reports/coverage_report.json:
+          cache: false
+
+  # ─── Phase-5 missing-annotation resolution (L5 dataset quality report) ────
+  # Aggregates completeness + coverage + ledger + merged-manifest — read by
+  # the v0.7+/v1.0 release gate RG3 for per-class threshold checks (M5+).
+
+  dataset_quality_report:
+    cmd: python scripts/dataset/17_dataset_quality_report.py
+    deps:
+      - scripts/dataset/17_dataset_quality_report.py
+      - src/dataset/annotation/quality.py
+      - configs/data.yaml
+      - data/processed/completeness.json
+      - data/qa_reports/coverage_report.json
+      - data/merged/merged_manifest.json
+      - data/annotation/verification_ledger.json
+      - data/annotation/batches
+      # dataset_scale.houses_total (_count_houses in quality.py) reads this
+      # directly via --capture-manifests, independent of merged_manifest.json.
+      - data/raw/custom_captures/manifests
+    metrics:
+      - data/qa_reports/dataset_quality_report.json:
+          cache: false
+
+  # ─── Phase-5 releases as code (ADR-P5-07) ──────────────────────────────────
+  # FROZEN, no deps (mirrors the human-loop annotation stages): humans run
+  # `python scripts/dataset/18_make_release.py make dataset-vX.Y.Z` directly
+  # (gates RG1-RG10 + MODE checked against the current build first — a FAIL
+  # verdict refuses to write a manifest), then `dvc commit -f record_release`
+  # to pin data/releases/ into dvc.lock alongside the git tag.
+
+  record_release:
+    frozen: true
+    cmd: python scripts/dataset/18_make_release.py make dataset-v0.5.0
+    outs:
+      - data/releases
+
   # ─── Training (Phase-5 — declared but frozen until the dataset is released) ─
 
   train_yolo11n:
@@ -237,5 +363,26 @@ stages:
     outs:
       - models/yolo11n/weights
 
-  # evaluate/export stages will be added in Phase-5 together with
-  # scripts/training/evaluate_model.py and export_model.py (not yet written).
+  # FROZEN, same rationale as train_yolo11n (declared+deps'd but not
+  # auto-repro'd — a checkpoint doesn't exist on a fresh checkout, and this
+  # stage's real invocation is the locked eval set, which is itself a
+  # human-loop artifact). Humans run scripts/training/evaluate_model.py
+  # --split eval directly (M10), then `dvc commit -f evaluate_yolo11n` to
+  # pin data/qa_reports/eval_report.json into dvc.lock — the artifact
+  # release gate RG10 (dataset-v1.0.0 track) checks for.
+  evaluate_yolo11n:
+    frozen: true
+    cmd: python scripts/training/evaluate_model.py --weights models/yolo11n/weights/best.pt
+      --split eval
+    deps:
+      - scripts/training/evaluate_model.py
+      - src/training/evaluation.py
+      - configs/eval_data.yaml
+      - models/yolo11n/weights
+      - data/eval/indian_home_v0
+    outs:
+      - data/qa_reports/eval_report.json:
+          cache: false
+
+  # export_model.py (ONNX/TFLite export for Raspberry Pi/Android targets)
+  # will be added alongside its own DVC stage in Phase 6 — not Phase-5 scope.

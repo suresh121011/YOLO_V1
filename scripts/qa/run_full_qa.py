@@ -299,6 +299,161 @@ def check_house_exclusivity(captures_root: Path, eval_dir: Path) -> dict[str, An
     }
 
 
+def sweep_annotation_artifacts(
+    candidates_root: Path,
+    batches_root: Path,
+    ledger_path: Path,
+    verified_labels_dir: Path,
+    merged_manifest_path: Path,
+) -> dict[str, Any]:
+    """M3 QA sweeps over the Phase-5 annotation artifacts.
+
+    Findings are WARNINGs, not CRITICALs — artifact-hygiene signals for a
+    human to investigate, not training-blocking corruption (that is
+    preflight gate G9's job, run at train time against the artifacts
+    actually consumed). Returns ``{"available": False}`` when none of the
+    annotation directories exist yet (pre-M1 checkouts stay green).
+
+    Sweeps:
+        orphan_candidates         — candidate images absent from the merged
+                                    manifest's provenance (stale re-run vs a
+                                    rebuilt merge).
+        duplicate_ledger_claims   — one image claimed by more than one
+                                    ``imported`` batch (should be impossible
+                                    via record_verdict's conflict guard
+                                    unless batch bookkeeping itself drifted).
+        unused_batches            — ``imported`` batches with zero of their
+                                    images actually present in the ledger
+                                    (the import silently wrote nothing).
+        verified_labels_orphans   — delta label files with no corresponding
+                                    ledger entry at all.
+    """
+    if not any(p.exists() for p in (candidates_root, batches_root, ledger_path)):
+        return {"available": False}
+
+    from src.dataset.annotation.batches import BATCH_MANIFEST_FILENAME, VerificationBatchManifest
+    from src.dataset.annotation.candidates import CANDIDATES_FILENAME, load_candidates
+    from src.dataset.annotation.ledger import LedgerView
+
+    provenance: dict[str, str] = {}
+    if merged_manifest_path.exists():
+        provenance = json.loads(merged_manifest_path.read_text(encoding="utf-8")).get(
+            "image_provenance", {}
+        )
+
+    orphan_candidates: list[str] = []
+    for candidates_path in sorted(candidates_root.glob(f"*/{CANDIDATES_FILENAME}")):
+        try:
+            artifact = load_candidates(candidates_path)
+        except (FileNotFoundError, ValueError) as e:
+            logger.warning(f"Skipping unreadable candidates artifact {candidates_path}: {e}")
+            continue
+        if provenance:
+            for filename in artifact.get("images", {}):
+                if filename not in provenance:
+                    orphan_candidates.append(f"{candidates_path.parent.name}/{filename}")
+
+    ledger_images = LedgerView.load(ledger_path).all_images()
+
+    batches: list[VerificationBatchManifest] = []
+    for manifest_path in sorted(batches_root.glob(f"vb*_*/{BATCH_MANIFEST_FILENAME}")):
+        try:
+            batches.append(VerificationBatchManifest.load(manifest_path))
+        except (FileNotFoundError, ValueError) as e:
+            logger.warning(f"Skipping unreadable batch manifest {manifest_path}: {e}")
+
+    claimants: dict[str, list[str]] = {}
+    unused_batches: list[str] = []
+    for batch in batches:
+        if batch.status != "imported":
+            continue
+        for img in batch.images:
+            claimants.setdefault(img, []).append(batch.batch_id)
+        if not any(img in ledger_images for img in batch.images):
+            unused_batches.append(batch.batch_id)
+
+    duplicate_claims = [
+        f"{img}: {sorted(ids)}" for img, ids in sorted(claimants.items()) if len(ids) > 1
+    ]
+
+    verified_labels_orphans: list[str] = []
+    if verified_labels_dir.exists():
+        ledger_stems = {Path(img).stem for img in ledger_images}
+        for path in sorted(verified_labels_dir.glob("*.txt")):
+            if path.stem not in ledger_stems:
+                verified_labels_orphans.append(path.name)
+
+    return {
+        "available": True,
+        "orphan_candidates_count": len(orphan_candidates),
+        "orphan_candidates": orphan_candidates[:MAX_LISTED_FILES],
+        "duplicate_ledger_claims_count": len(duplicate_claims),
+        "duplicate_ledger_claims": duplicate_claims[:MAX_LISTED_FILES],
+        "unused_batches_count": len(unused_batches),
+        "unused_batches": unused_batches[:MAX_LISTED_FILES],
+        "verified_labels_orphans_count": len(verified_labels_orphans),
+        "verified_labels_orphans": verified_labels_orphans[:MAX_LISTED_FILES],
+    }
+
+
+def sweep_l4_l5_reports(
+    coverage_report_path: Path,
+    quality_report_path: Path,
+    data_yaml_path: Path,
+) -> dict[str, Any]:
+    """M4 QA sweep over the L4 coverage / L5 dataset quality reports.
+
+    Schema-validates whichever report(s) exist and flags a stale taxonomy
+    fingerprint (the report's embedded fingerprint no longer matching the
+    live ``configs/data.yaml`` — a sign ``dvc repro`` needs to be re-run
+    after a taxonomy edit). WARNING level, like :func:`sweep_annotation_artifacts`
+    — schema/staleness hygiene for a human to investigate, not training-
+    blocking. Returns ``{"available": False}`` before either report exists
+    (pre-M4 checkouts stay green).
+    """
+    if not coverage_report_path.exists() and not quality_report_path.exists():
+        return {"available": False}
+
+    from src.dataset.annotation.coverage import validate_coverage_report
+    from src.dataset.annotation.quality import validate_quality_report
+    from src.dataset.completeness import taxonomy_fingerprint
+    from src.utils.config_helpers import get_class_names_from_data_yaml, load_data_config
+
+    data_cfg = load_data_config(data_yaml_path)
+    names = get_class_names_from_data_yaml(data_cfg)
+    live_fp = taxonomy_fingerprint(int(data_cfg["nc"]), names)
+
+    problems: list[str] = []
+    coverage_present = coverage_report_path.exists()
+    quality_present = quality_report_path.exists()
+
+    if coverage_present:
+        coverage = json.loads(coverage_report_path.read_text(encoding="utf-8"))
+        problems.extend(f"coverage_report: {p}" for p in validate_coverage_report(coverage))
+        if coverage.get("taxonomy_fingerprint") != live_fp:
+            problems.append(
+                "coverage_report: taxonomy fingerprint stale vs live configs/data.yaml — "
+                "re-run `dvc repro coverage_report`"
+            )
+
+    if quality_present:
+        quality = json.loads(quality_report_path.read_text(encoding="utf-8"))
+        problems.extend(f"dataset_quality_report: {p}" for p in validate_quality_report(quality))
+        if quality.get("taxonomy_fingerprint") != live_fp:
+            problems.append(
+                "dataset_quality_report: taxonomy fingerprint stale vs live "
+                "configs/data.yaml — re-run `dvc repro dataset_quality_report`"
+            )
+
+    return {
+        "available": True,
+        "coverage_report_present": coverage_present,
+        "quality_report_present": quality_present,
+        "problems_count": len(problems),
+        "problems": problems[:MAX_LISTED_FILES],
+    }
+
+
 def parse_args() -> argparse.Namespace:
     """Parse CLI arguments."""
     parser = argparse.ArgumentParser(
@@ -322,6 +477,22 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--config", type=Path, default=Path("configs/data.yaml"))
     parser.add_argument("--sources-config", type=Path, default=DEFAULT_SOURCES_CONFIG_PATH)
+    parser.add_argument("--candidates-root", type=Path, default=Path("data/annotation/candidates"))
+    parser.add_argument("--batches-root", type=Path, default=Path("data/annotation/batches"))
+    parser.add_argument(
+        "--ledger-path", type=Path, default=Path("data/annotation/verification_ledger.json")
+    )
+    parser.add_argument(
+        "--verified-labels-dir", type=Path, default=Path("data/annotation/verified_labels")
+    )
+    parser.add_argument(
+        "--coverage-report", type=Path, default=Path("data/qa_reports/coverage_report.json")
+    )
+    parser.add_argument(
+        "--quality-report",
+        type=Path,
+        default=Path("data/qa_reports/dataset_quality_report.json"),
+    )
     parser.add_argument("--output", type=Path, default=Path("data/qa_reports"))
     parser.add_argument("--strict", action="store_true", help="Treat warnings as critical.")
     parser.add_argument(
@@ -396,6 +567,27 @@ def main() -> int:
     )
     house_report = check_house_exclusivity(args.captures_root, args.eval_dir)
 
+    # M3: Phase-5 annotation artifact hygiene sweeps
+    annotation_sweeps = sweep_annotation_artifacts(
+        args.candidates_root,
+        args.batches_root,
+        args.ledger_path,
+        args.verified_labels_dir,
+        args.merged_dir / MERGED_MANIFEST_FILENAME,
+    )
+    sweep_warnings = (
+        annotation_sweeps.get("orphan_candidates_count", 0)
+        + annotation_sweeps.get("duplicate_ledger_claims_count", 0)
+        + annotation_sweeps.get("unused_batches_count", 0)
+        + annotation_sweeps.get("verified_labels_orphans_count", 0)
+        if annotation_sweeps.get("available")
+        else 0
+    )
+
+    # M4: L4/L5 report schema + staleness sweep
+    l4_l5_reports = sweep_l4_l5_reports(args.coverage_report, args.quality_report, args.config)
+    l4_l5_warnings = l4_l5_reports.get("problems_count", 0) if l4_l5_reports.get("available") else 0
+
     # Merge everything into the DVC metric file
     report_path = args.output / "annotation_qa_report.json"
     report: dict[str, Any] = {}
@@ -405,12 +597,16 @@ def main() -> int:
     report["label_completeness"] = completeness
     report["image_quality"] = quality_report
     report["eval_set"] = {"overlap": eval_report, "house_exclusivity": house_report}
+    report["annotation_sweeps"] = annotation_sweeps
+    report["l4_l5_reports"] = l4_l5_reports
     report["orchestrator"] = {
         "check_annotations_exit": annotations_exit,
         "dataset_stats_exit": stats_exit,
         "license_critical": license_critical,
         "image_quality_warnings": quality_warnings,
         "eval_overlap_critical": eval_critical,
+        "annotation_sweep_warnings": sweep_warnings,
+        "l4_l5_report_warnings": l4_l5_warnings,
     }
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(
@@ -424,6 +620,8 @@ def main() -> int:
         or stats_exit != 0
         or quality_warnings > 0
         or bool(house_report.get("shared_houses"))
+        or sweep_warnings > 0
+        or l4_l5_warnings > 0
     )
     if license_critical:
         logger.error("LICENSE GATE VIOLATION — see license_report in the QA report")

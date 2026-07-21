@@ -1,0 +1,50 @@
+# ─── Locked Evaluation Set — data/eval/indian_home_v0 (M9/M10) ────────────────
+# Elderly Assistant System — 23-Class Object Taxonomy
+#
+# Standalone Ultralytics data yaml for `scripts/training/evaluate_model.py
+# --split eval`. Points at the human-verified, zero-overlap-checked custom
+# eval set (RG8's eval-set overlap + house-exclusivity checks in
+# scripts/qa/run_full_qa.py), NOT the train/val/test split in
+# configs/data.yaml. All three split keys point at the same flat directory —
+# evaluate_model.py only ever calls `model.val(split="test")` against this
+# file; train/val are declared solely because Ultralytics dataset-yaml
+# validation expects them, never read at eval time.
+#
+# The `names`/`nc` block below MUST stay byte-identical to configs/data.yaml
+# (enforced by tests/unit/test_evaluate_model.py::test_eval_data_yaml_matches_taxonomy)
+# — a locked eval set scored against a drifted taxonomy would silently
+# misattribute classes.
+# ─────────────────────────────────────────────────────────────────────────────
+
+path: ./data/eval/indian_home_v0
+
+train: images
+val: images
+test: images
+
+nc: 23
+
+names:
+  0: person
+  1: face
+  2: medicine_strip
+  3: medicine_bottle
+  4: water_bottle
+  5: knife
+  6: stove
+  7: gas_cylinder
+  8: passport
+  9: book
+  10: charger
+  11: wire
+  12: laptop
+  13: monitor
+  14: cupboard
+  15: door
+  16: chair
+  17: bed
+  18: toilet
+  19: sink
+  20: wet_floor
+  21: walking_stick
+  22: support_handle

@@ -154,8 +154,13 @@ def export_confusion_matrix(results: Any, names: dict[int, str], out_path: Path)
     return save_json_report(payload, out_path)
 
 
-def _run_single_eval(spec: EvalRunSpec, out_dir: Path) -> dict[str, Any]:
-    """Evaluate one checkpoint and export its artifacts."""
+def run_single_eval(spec: EvalRunSpec, out_dir: Path) -> dict[str, Any]:
+    """Evaluate one checkpoint and export its artifacts.
+
+    Public: used by both :func:`run_evaluation` (baseline-vs-mitigated A/B)
+    and ``scripts/training/evaluate_model.py`` (standalone single-checkpoint
+    evaluation, M10).
+    """
     from ultralytics import YOLO
 
     if not spec.weights.exists():
@@ -196,11 +201,51 @@ def _run_single_eval(spec: EvalRunSpec, out_dir: Path) -> dict[str, Any]:
     return summary
 
 
+def wet_floor_ap50_checkpoint(
+    per_class: list[dict[str, Any]], ap50_threshold: float = 0.30
+) -> dict[str, Any]:
+    """R24 checkpoint 2 (docs/04 capture_annotation_runbook.md §8).
+
+    Regardless of the M9 pilot's dual-annotator-agreement decision, if
+    wet_floor is kept as a bbox class and the trained model's wet_floor
+    AP50 comes in below ``ap50_threshold`` on this evaluation, the
+    demotion-to-scene-level path reopens.
+
+    Args:
+        per_class:      :func:`extract_per_class_metrics` output (or an
+                        equivalent list of ``{"class", "mAP50", ...}`` rows)
+                        from a real evaluation run.
+        ap50_threshold: ``0.30`` per the runbook.
+
+    Returns:
+        ``{"available": bool, "ap50": float|None, "ap50_threshold": float,
+        "reopen_demotion": bool}`` — ``available=False`` (and
+        ``reopen_demotion=False``) when wet_floor has no ground truth in
+        this evaluation's split, e.g. it was already demoted and dropped
+        from the taxonomy's bbox scope.
+    """
+    row = next((r for r in per_class if r.get("class") == "wet_floor"), None)
+    if row is None:
+        return {
+            "available": False,
+            "ap50": None,
+            "ap50_threshold": ap50_threshold,
+            "reopen_demotion": False,
+        }
+    ap50 = float(row["mAP50"])
+    return {
+        "available": True,
+        "ap50": ap50,
+        "ap50_threshold": ap50_threshold,
+        "reopen_demotion": ap50 < ap50_threshold,
+    }
+
+
 def build_delta_report(baseline: dict[str, Any], mitigated: dict[str, Any]) -> dict[str, Any]:
     """Compute mitigated-minus-baseline deltas (aggregate and per class).
 
     Args:
-        baseline:  Summary dict of the baseline run (_run_single_eval output).
+        baseline:  Summary dict of the baseline run (run_single_eval output).
         mitigated: Summary dict of the mitigated run.
 
     Returns:
@@ -244,7 +289,7 @@ def run_evaluation(specs: list[EvalRunSpec], out_dir: Path) -> Path:
         Path to the comparison report JSON.
     """
     out_dir.mkdir(parents=True, exist_ok=True)
-    summaries = {spec.label: _run_single_eval(spec, out_dir) for spec in specs}
+    summaries = {spec.label: run_single_eval(spec, out_dir) for spec in specs}
 
     report: dict[str, Any] = {
         "generated_at": timestamp_str(),

@@ -44,11 +44,19 @@ class RoboflowDownloader(BaseDownloader):
         return dict(self._combined_classes)
 
     def _query_extras(self) -> dict[str, Any]:
+        datasets = self.source.options.get("datasets") or []
         return {
-            "datasets": [
-                f"{entry.get('slug')}:{entry.get('version')}"
-                for entry in self.source.options.get("datasets") or []
-            ]
+            "datasets": [f"{entry.get('slug')}:{entry.get('version')}" for entry in datasets],
+            # Per-Universe-dataset license strings — the source of truth
+            # RG7 (release gate) and the release manifest read from, so a
+            # real download never requires hand-duplicating license text
+            # into configs/release.yaml (src/dataset/release/gates.py
+            # read_roboflow_dataset_licenses()).
+            "dataset_licenses": {
+                str(entry["slug"]): str(entry.get("license", ""))
+                for entry in datasets
+                if entry.get("slug")
+            },
         }
 
     def fetch(self, limit: int | None) -> dict[str, int]:

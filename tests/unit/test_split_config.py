@@ -67,6 +67,16 @@ split:
         settings = load_split_settings(repo_config)
         assert settings.strategy == "group_aware"
         assert abs(settings.train_ratio + settings.val_ratio + settings.test_ratio - 1.0) < 1e-6
+        assert settings.source_labels_dir == Path("data/merged_verified/labels")
+
+    def test_source_labels_dir_default_is_none(self, tmp_path: Path) -> None:
+        settings = load_split_settings(tmp_path / "missing.yaml")
+        assert settings.source_labels_dir is None
+
+    def test_source_labels_dir_from_yaml(self, tmp_path: Path) -> None:
+        path = _write_config(tmp_path, "split:\n  source_labels_dir: data/merged_verified/labels\n")
+        settings = load_split_settings(path)
+        assert settings.source_labels_dir == Path("data/merged_verified/labels")
 
     def test_house_settings_default(self, tmp_path: Path) -> None:
         settings = load_split_settings(tmp_path / "missing.yaml")
@@ -115,3 +125,13 @@ class TestWithOverrides:
         resolved = base.with_overrides(seed=1)
         assert resolved.house_pattern == "custom"
         assert resolved.holdout_houses == ("h01",)
+
+    def test_source_labels_dir_override_wins(self) -> None:
+        base = SplitSettings(source_labels_dir=Path("a"))
+        resolved = base.with_overrides(source_labels_dir=Path("b"))
+        assert resolved.source_labels_dir == Path("b")
+
+    def test_source_labels_dir_none_override_keeps_config_value(self) -> None:
+        base = SplitSettings(source_labels_dir=Path("a"))
+        resolved = base.with_overrides(source_labels_dir=None)
+        assert resolved.source_labels_dir == Path("a")

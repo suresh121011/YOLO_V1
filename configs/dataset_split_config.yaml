@@ -40,6 +40,13 @@ split:
   # Output directory for split images/ and labels/ subdirectories
   output_dir: data/processed
 
+  # M3 (ADR-P5-05): read labels from the verified-labels overlay (base
+  # data/merged/labels UNION M2's human-verified deltas) instead of
+  # source_dir/labels. Images still come from source_dir/images — no
+  # duplication. Empty ledger ⇒ this overlay is byte-identical to
+  # data/merged/labels (golden regression, M3 commit 2).
+  source_labels_dir: data/merged_verified/labels
+
 qa:
   # Minimum number of instances required per class
   min_instances_per_class: 200

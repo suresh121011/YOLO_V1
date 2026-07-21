@@ -190,4 +190,8 @@ class MergedManifest(_JsonManifest):
     class_counts: dict[str, int] = field(default_factory=dict)
     label_completeness: dict[str, list[str]] = field(default_factory=dict)
     notes: str = ""
+    # L3 label salvage (ADR-P5-08, D7) — counts additive; 0 on manifests
+    # written before this landed (forward-compat default).
+    labels_salvaged: int = 0
+    cross_dataset_candidates_linked: int = 0
     schema_version: int = SCHEMA_VERSION
