@@ -35,7 +35,6 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from src.dataset.annotation.ledger import LedgerView
 from src.dataset.completeness_policies import (
     CompletenessError,
     CompletenessPolicyProvider,
@@ -274,48 +273,6 @@ def build_completeness(
 
     sources_used = sorted({provenance[n] for n in split_by_name})
 
-    # M3: load + validate the human-verification ledger, only when a source
-    # actually opts into it (explicit per-source, never inferred — D9).
-    uses_ledger = any(
-        policy_modes.get(source) == "trusted_list_with_ledger" for source in sources_used
-    )
-    ledger_view: LedgerView | None = None
-    ledger_input_record: dict[str, Any] | None = None
-    if uses_ledger:
-        ledger_path_str = completeness_cfg.get("ledger_path")
-        if not ledger_path_str:
-            raise CompletenessError(
-                f"A source uses policy 'trusted_list_with_ledger' but {sources_yaml_path} "
-                f"has no 'completeness.ledger_path' — declare it alongside "
-                f"'completeness.policies'."
-            )
-        ledger_path = Path(str(ledger_path_str))
-        ledger_view = LedgerView.load(ledger_path)
-
-        live_fp = taxonomy_fingerprint(nc, names)
-        recorded_fp = ledger_view.taxonomy_fingerprint()
-        if recorded_fp and recorded_fp != live_fp:
-            raise CompletenessError(
-                f"Ledger taxonomy fingerprint drift: ledger recorded {recorded_fp!r}, live "
-                f"taxonomy is {live_fp!r} — reconcile before generating completeness."
-            )
-        for filename in sorted(ledger_view.all_images()):
-            if filename not in provenance:
-                raise CompletenessError(
-                    f"Ledger entry '{filename}' is absent from the merged manifest's "
-                    f"image_provenance — re-run merge_datasets or reconcile the ledger."
-                )
-            declared_source = ledger_view.entry_source(filename)
-            actual_source = provenance[filename]
-            if declared_source != actual_source:
-                raise CompletenessError(
-                    f"Ledger entry '{filename}' is attributed to source '{declared_source}' "
-                    f"but the merged manifest attributes it to '{actual_source}' — "
-                    f"provenance drift; reconcile before generating completeness."
-                )
-        if ledger_path.exists():
-            ledger_input_record = _hash_input(ledger_path, ("updated_at",))
-
     # Resolve policies per source through the provider registry.
     policies: dict[str, tuple[int, ...]] = {}
     policy_mode_by_key: dict[str, str] = {}
@@ -341,7 +298,6 @@ def build_completeness(
             class_ids_by_name=class_ids_by_name,
             nc=nc,
             capture_manifests_dir=capture_manifests_dir,
-            verification_ledger=ledger_view,
         )
         provider = get_policy_provider(policy_modes[source])
         resolved = provider.resolve_policies(ctx)
@@ -392,7 +348,6 @@ def build_completeness(
             "merged_manifest": _hash_input(merged_manifest_path, ("created_at",)),
             "split_summary": _hash_input(split_summary_path, ("seed", "timestamp", "strategy")),
             "dataset_sources_mode": str(sources_cfg.get("mode", "unknown")),
-            **({"ledger": ledger_input_record} if ledger_input_record is not None else {}),
         },
         "policies": {
             key: {"mode": policy_mode_by_key[key], "trusted_class_ids": list(ids)}

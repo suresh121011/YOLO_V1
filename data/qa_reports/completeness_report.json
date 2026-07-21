@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-17T19:21:52Z",
+  "generated_at": "2026-07-16T15:06:52Z",
   "artifact_path": "data/processed/completeness.json",
   "taxonomy_fingerprint": "sha256:a831924bb82e23ffbc6cc1d56647a78cc72ff5e329920569b05bd5ae99c2f125",
   "stats": {
@@ -45,7 +45,7 @@
   "policies": [
     {
       "policy": "coco",
-      "mode": "trusted_list_with_ledger",
+      "mode": "trusted_list",
       "images": 53,
       "trusted_count": 10,
       "untrusted_count": 13,
@@ -61,7 +61,7 @@
     },
     {
       "policy": "openimages",
-      "mode": "trusted_list_with_ledger",
+      "mode": "trusted_list",
       "images": 57,
       "trusted_count": 3,
       "untrusted_count": 20,
@@ -69,7 +69,7 @@
     },
     {
       "policy": "wider_face",
-      "mode": "trusted_list_with_ledger",
+      "mode": "trusted_list",
       "images": 60,
       "trusted_count": 1,
       "untrusted_count": 22,

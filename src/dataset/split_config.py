@@ -39,11 +39,6 @@ class SplitSettings:
     group_by_capture: bool = True
     source_dir: Path = Path("data/processed")
     output_dir: Path = Path("data/processed")
-    # M3 (ADR-P5-05): when set, labels are read from this overlay directory
-    # instead of ``source_dir / "labels"`` — images still come from
-    # ``source_dir / "images"`` (no image duplication). None preserves the
-    # pre-M3 behavior exactly.
-    source_labels_dir: Path | None = None
     # leave_one_house_out settings (ignored by other strategies)
     house_pattern: str = r"(?:^|_)(h\d{2,})(?=_)"
     holdout_houses: tuple[str, ...] = ()
@@ -57,7 +52,6 @@ class SplitSettings:
         strategy: str | None = None,
         source_dir: Path | None = None,
         output_dir: Path | None = None,
-        source_labels_dir: Path | None = None,
     ) -> SplitSettings:
         """Return a copy with any non-``None`` CLI overrides applied."""
         return SplitSettings(
@@ -69,9 +63,6 @@ class SplitSettings:
             group_by_capture=self.group_by_capture,
             source_dir=self.source_dir if source_dir is None else source_dir,
             output_dir=self.output_dir if output_dir is None else output_dir,
-            source_labels_dir=(
-                self.source_labels_dir if source_labels_dir is None else source_labels_dir
-            ),
             house_pattern=self.house_pattern,
             holdout_houses=self.holdout_houses,
         )
@@ -117,9 +108,6 @@ def load_split_settings(path: Path | None = None) -> SplitSettings:
         group_by_capture=bool(section.get("group_by_capture", defaults.group_by_capture)),
         source_dir=Path(section.get("source_dir", defaults.source_dir)),
         output_dir=Path(section.get("output_dir", defaults.output_dir)),
-        source_labels_dir=(
-            Path(section["source_labels_dir"]) if section.get("source_labels_dir") else None
-        ),
         house_pattern=str(section.get("house_pattern", defaults.house_pattern)),
         holdout_houses=tuple(section.get("holdout_houses", []) or []),
     )

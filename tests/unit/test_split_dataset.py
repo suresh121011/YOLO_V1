@@ -11,7 +11,6 @@ import pytest
 from scripts.dataset.split_dataset import (
     compute_split_assignments,
     copy_split_files,
-    main,
     verify_no_leakage,
 )
 from src.utils.dataset_utils import group_files_by_key
@@ -148,66 +147,3 @@ class TestVerifyNoLeakage:
         for split in ["train", "val", "test"]:
             (tmp_path / "images" / split).mkdir(parents=True)
         assert verify_no_leakage(tmp_path) == []
-
-
-@pytest.mark.unit
-class TestSourceLabelsDirCli:
-    """M3: --source-labels-dir reads labels from the verified-labels overlay."""
-
-    def _run(self, monkeypatch: pytest.MonkeyPatch, argv: list[str]) -> int:
-        monkeypatch.setattr("sys.argv", ["split_dataset.py", *argv])
-        return main()
-
-    def test_labels_read_from_overlay_not_source(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        img_dir, lbl_dir = _create_test_dataset(tmp_path / "merged", n_groups=6, images_per_group=2)
-        # The overlay directory has DIFFERENT content than data/merged/labels —
-        # if the CLI reads the overlay, copied labels must match IT, not lbl_dir.
-        overlay_dir = tmp_path / "overlay"
-        overlay_dir.mkdir()
-        for lbl in lbl_dir.glob("*.txt"):
-            (overlay_dir / lbl.name).write_text("9 0.1 0.1 0.1 0.1\n", encoding="utf-8")
-
-        output = tmp_path / "processed"
-        exit_code = self._run(
-            monkeypatch,
-            [
-                "--source",
-                str(tmp_path / "merged"),
-                "--output",
-                str(output),
-                "--source-labels-dir",
-                str(overlay_dir),
-                "--split-config",
-                str(tmp_path / "absent_split_config.yaml"),
-            ],
-        )
-        assert exit_code == 0
-
-        copied_labels = list((output / "labels").rglob("*.txt"))
-        assert copied_labels
-        for lbl in copied_labels:
-            assert lbl.read_text(encoding="utf-8") == "9 0.1 0.1 0.1 0.1\n"
-
-    def test_no_source_labels_dir_falls_back_to_source_labels(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        _create_test_dataset(tmp_path / "merged", n_groups=6, images_per_group=2)
-        output = tmp_path / "processed"
-        exit_code = self._run(
-            monkeypatch,
-            [
-                "--source",
-                str(tmp_path / "merged"),
-                "--output",
-                str(output),
-                "--split-config",
-                str(tmp_path / "absent_split_config.yaml"),
-            ],
-        )
-        assert exit_code == 0
-        copied_labels = list((output / "labels").rglob("*.txt"))
-        assert copied_labels
-        for lbl in copied_labels:
-            assert lbl.read_text(encoding="utf-8") == "5 0.5 0.5 0.2 0.3\n"
