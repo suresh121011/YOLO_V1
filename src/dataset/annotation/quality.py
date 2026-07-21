@@ -271,7 +271,7 @@ def validate_quality_report(report: dict[str, Any]) -> list[str]:
         return problems
 
     fraction = report["completeness_summary"].get("masked_cell_fraction")
-    if not isinstance(fraction, (int, float)) or not 0.0 <= float(fraction) <= 1.0:
+    if not isinstance(fraction, int | float) or not 0.0 <= float(fraction) <= 1.0:
         problems.append(f"completeness_summary.masked_cell_fraction {fraction!r} outside [0, 1]")
 
     scale = report["dataset_scale"]

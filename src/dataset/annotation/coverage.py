@@ -476,7 +476,7 @@ def validate_coverage_report(report: Mapping[str, Any]) -> list[str]:
     else:
         for name, entry in per_class.items():
             score = entry.get("coverage_score")
-            if not isinstance(score, (int, float)) or not 0.0 <= float(score) <= 1.0:
+            if not isinstance(score, int | float) or not 0.0 <= float(score) <= 1.0:
                 problems.append(f"per_class[{name!r}].coverage_score {score!r} outside [0, 1]")
 
     per_image = report["per_image"]
@@ -485,7 +485,7 @@ def validate_coverage_report(report: Mapping[str, Any]) -> list[str]:
     else:
         for name, entry in per_image.items():
             score = entry.get("completeness")
-            if not isinstance(score, (int, float)) or not 0.0 <= float(score) <= 1.0:
+            if not isinstance(score, int | float) or not 0.0 <= float(score) <= 1.0:
                 problems.append(f"per_image[{name!r}].completeness {score!r} outside [0, 1]")
 
     computed_total = (
@@ -495,7 +495,7 @@ def validate_coverage_report(report: Mapping[str, Any]) -> list[str]:
     )
     recorded_total = report["dataset"].get("residual_missing_total")
     if (
-        isinstance(recorded_total, (int, float))
+        isinstance(recorded_total, int | float)
         and abs(float(recorded_total) - computed_total) > 1e-3
     ):
         problems.append(

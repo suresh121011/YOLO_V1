@@ -142,7 +142,7 @@ class TestTrustedListPolicy:
 
 
 def _ledger_with(
-    entries: list[tuple[str, str, str, list[tuple[float, float, float, float]]]]
+    entries: list[tuple[str, str, str, list[tuple[float, float, float, float]]]],
 ) -> LedgerView:
     """Build a LedgerView from (filename, source, class_name, boxes) tuples.
 

@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, phase-5-production-dataset-engineering]
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, phase-5-production-dataset-engineering]
 
 jobs:
   lint-and-typecheck:

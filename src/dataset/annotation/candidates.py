@@ -261,13 +261,13 @@ def validate_candidates(
                     f"waste verification time)"
                 )
             conf = det.get("conf")
-            if not isinstance(conf, (int, float)) or not 0.0 <= float(conf) <= 1.0:
+            if not isinstance(conf, int | float) or not 0.0 <= float(conf) <= 1.0:
                 problems.append(f"{where}: conf {conf!r} outside [0, 1]")
             bbox = det.get("bbox_xywhn")
             if (
                 not isinstance(bbox, list)
                 or len(bbox) != 4
-                or not all(isinstance(v, (int, float)) for v in bbox)
+                or not all(isinstance(v, int | float) for v in bbox)
             ):
                 problems.append(f"{where}: bbox_xywhn must be 4 numbers, got {bbox!r}")
             else:
