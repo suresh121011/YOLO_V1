@@ -99,6 +99,9 @@ class MaskedDetectionLoss(v8DetectionLoss):
     mask is bit-identical to stock v8DetectionLoss (unit-tested).
     """
 
+    # Annotate attribute so mypy can infer the base class bce type.
+    bce: nn.BCEWithLogitsLoss
+
     def __init__(
         self,
         model: Any,
@@ -133,8 +136,8 @@ class MaskedDetectionLoss(v8DetectionLoss):
                 f"taxonomy this model trains on (dvc repro generate_completeness)."
             )
         # Typed handle for set/clear; self.bce is what the stock loss calls.
-        self._masking_bce = _MaskingBCE(self.bce)
-        self.bce = self._masking_bce
+        self._masking_bce: _MaskingBCE = _MaskingBCE(self.bce)
+        self.bce: nn.BCEWithLogitsLoss = self._masking_bce
         self._lookup = lookup
         self._config = config
         self._warned_unknown: set[str] = set()
