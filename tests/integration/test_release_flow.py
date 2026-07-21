@@ -18,6 +18,8 @@ import pytest
 import yaml
 
 from src.dataset.completeness import taxonomy_fingerprint
+from src.dataset.manifest import MANIFEST_FILENAME
+from src.dataset.release import gates as gates_mod
 from src.dataset.release.gates import ReleaseReport, evaluate_release
 from src.dataset.release.manifest import ReleaseManifest, build_release_manifest
 from src.utils.dataset_utils import compute_file_hash
@@ -245,3 +247,102 @@ class TestReleaseFlowEndToEnd:
         report = fixture.evaluate()
         assert report.verdict == "FAIL"
         assert any(f.gate_id == "RG3" for f in report.failures())
+
+
+def _rewrite_release_track(fixture: _Fixture, gates: list[str]) -> None:
+    """Point the fixture's release.yaml at a track requiring exactly ``gates``."""
+    fixture.release_yaml = _write_yaml(
+        fixture.root / "release.yaml",
+        {"releases": {"dataset-v0.5.0": {"mode": "full", "gates": gates, "min_verified_cells": 0}}},
+    )
+
+
+@pytest.fixture
+def _clean_git_dvc(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Make the RG5/RG6 git/dvc probes report a clean, tagged, in-sync repo.
+
+    RG5/RG6 shell out to git/dvc via module-level helpers; patching those
+    keeps the orchestration test deterministic and independent of the real
+    working tree (the M2 lesson: never let a test depend on real repo state).
+    """
+    monkeypatch.setattr(gates_mod, "git_porcelain_status", lambda repo_root=".": "")
+    monkeypatch.setattr(gates_mod, "git_tags_at_head", lambda repo_root=".": ["dataset-v0.5.0"])
+    monkeypatch.setattr(gates_mod, "dvc_status_cache", lambda repo_root=".": "")
+
+
+class TestOrchestrationRG5ToRG10:
+    """Drive RG5/RG6/RG7/RG8/RG10 THROUGH ``evaluate_release`` (final-audit
+    Fix-7: these gate branches in the orchestrator were only ever unit-tested
+    on the ``rgN_*`` functions in isolation, never via a track that lists
+    them). Each gate gets a pass path (all together) and a fail path."""
+
+    def test_all_selected_gates_pass_together(self, tmp_path: Path, _clean_git_dvc: None) -> None:
+        fixture = _Fixture(tmp_path)
+        _rewrite_release_track(fixture, ["RG1", "RG5", "RG6", "RG7", "RG8", "RG10"])
+        fixture.eval_report.write_text("{}", encoding="utf-8")
+        fixture.ab_benchmark_dir.mkdir(parents=True, exist_ok=True)
+
+        report = fixture.evaluate()
+
+        assert report.verdict == "PASS"
+        ran = {r.gate_id for r in report.results}
+        assert {"RG5", "RG6", "RG7", "RG8", "RG10"} <= ran
+
+    def test_rg5_fails_on_dirty_untagged_tree(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(gates_mod, "git_porcelain_status", lambda repo_root=".": " M f.py\n")
+        monkeypatch.setattr(gates_mod, "git_tags_at_head", lambda repo_root=".": [])
+        fixture = _Fixture(tmp_path)
+        _rewrite_release_track(fixture, ["RG5"])
+        report = fixture.evaluate()
+        assert report.verdict == "FAIL"
+        assert any(f.gate_id == "RG5" for f in report.failures())
+
+    def test_rg6_fails_when_cache_out_of_sync(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(gates_mod, "dvc_status_cache", lambda repo_root=".": "new: data/merged")
+        fixture = _Fixture(tmp_path)
+        _rewrite_release_track(fixture, ["RG6"])
+        report = fixture.evaluate()
+        assert report.verdict == "FAIL"
+        assert any(f.gate_id == "RG6" for f in report.failures())
+
+    def test_rg7_fails_when_roboflow_licenses_missing(self, tmp_path: Path) -> None:
+        fixture = _Fixture(tmp_path)
+        _rewrite_release_track(fixture, ["RG7"])
+        roboflow_manifest = fixture.raw_root / "roboflow" / MANIFEST_FILENAME
+        roboflow_manifest.parent.mkdir(parents=True, exist_ok=True)
+        roboflow_manifest.write_text(
+            json.dumps({"source": "roboflow", "image_count": 5, "license": "unknown", "query": {}}),
+            encoding="utf-8",
+        )
+        report = fixture.evaluate()
+        assert report.verdict == "FAIL"
+        assert any(f.gate_id == "RG7" for f in report.failures())
+
+    def test_rg8_fails_on_train_val_leakage(self, tmp_path: Path) -> None:
+        fixture = _Fixture(tmp_path)
+        _rewrite_release_track(fixture, ["RG8"])
+        fixture.qa_report.write_text(
+            json.dumps(
+                {
+                    "summary": {"critical_issues": 0},
+                    "orchestrator": {},
+                    "checks": {"train_val_leakage": {"count": 3}},
+                }
+            ),
+            encoding="utf-8",
+        )
+        report = fixture.evaluate()
+        assert report.verdict == "FAIL"
+        assert any(f.gate_id == "RG8" for f in report.failures())
+
+    def test_rg10_fails_without_ab_and_eval_evidence(self, tmp_path: Path) -> None:
+        fixture = _Fixture(tmp_path)
+        _rewrite_release_track(fixture, ["RG10"])
+        # Neither eval_report nor ab_benchmark_dir is created.
+        report = fixture.evaluate()
+        assert report.verdict == "FAIL"
+        assert any(f.gate_id == "RG10" for f in report.failures())
