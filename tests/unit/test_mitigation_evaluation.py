@@ -15,6 +15,7 @@ from src.training.evaluation import (
     extract_aggregate_metrics,
     extract_per_class_metrics,
     f1_score,
+    wet_floor_ap50_checkpoint,
 )
 
 _NAMES = {0: "person", 1: "face", 2: "knife"}
@@ -164,3 +165,32 @@ class TestEvalRunSpec:
         assert spec.device == "cpu"
         assert spec.imgsz == 640
         assert spec.seed == 42
+
+
+@pytest.mark.unit
+class TestWetFloorAp50Checkpoint:
+    """R24 checkpoint 2 (docs/04 capture_annotation_runbook.md §8)."""
+
+    def test_below_threshold_reopens_demotion(self) -> None:
+        per_class = [{"class": "wet_floor", "mAP50": 0.22}]
+        result = wet_floor_ap50_checkpoint(per_class)
+        assert result["available"] is True
+        assert result["ap50"] == 0.22
+        assert result["reopen_demotion"] is True
+
+    def test_at_or_above_threshold_does_not_reopen(self) -> None:
+        per_class = [{"class": "wet_floor", "mAP50": 0.30}]
+        result = wet_floor_ap50_checkpoint(per_class)
+        assert result["reopen_demotion"] is False
+
+    def test_wet_floor_absent_from_ground_truth_is_unavailable(self) -> None:
+        per_class = [{"class": "charger", "mAP50": 0.6}]
+        result = wet_floor_ap50_checkpoint(per_class)
+        assert result["available"] is False
+        assert result["ap50"] is None
+        assert result["reopen_demotion"] is False
+
+    def test_custom_threshold_respected(self) -> None:
+        per_class = [{"class": "wet_floor", "mAP50": 0.35}]
+        result = wet_floor_ap50_checkpoint(per_class, ap50_threshold=0.40)
+        assert result["reopen_demotion"] is True

@@ -24,6 +24,7 @@ from __future__ import annotations
 import csv
 import json
 import logging
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -41,6 +42,25 @@ def timestamp_str() -> str:
         e.g., "2026-07-13T05:30:00Z"
     """
     return datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def git_commit_short() -> str:
+    """Return the current short git commit hash, or 'unknown'.
+
+    Reproducibility metadata for generated artifacts/reports (candidates
+    artifact, completeness artifact, release manifests).
+    """
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=True,
+        )
+        return out.stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return "unknown"
 
 
 # ─── JSON Reports ─────────────────────────────────────────────────────────────

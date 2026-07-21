@@ -243,7 +243,10 @@ def microbenchmark_loss_forward(
     sample_files = list(lookup._policy_by_image)[:16] or ["missing.jpg"]
 
     model = DetectionModel(cfg="yolo11n.yaml", nc=lookup.nc, verbose=False)
-    model.args = get_cfg()
+    # Launder through Any: newer torch stubs type nn.Module.__setattr__ as
+    # Tensor | Module, rejecting the namespace get_cfg() returns.
+    cfg_ns: Any = get_cfg()
+    model.args = cfg_ns
     model.eval()
 
     batch_size = 16

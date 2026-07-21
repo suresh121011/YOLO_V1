@@ -343,6 +343,14 @@ def parse_args() -> argparse.Namespace:
         help="Random seed for reproducible splits (default: from split config).",
     )
     parser.add_argument(
+        "--source-labels-dir",
+        type=Path,
+        default=None,
+        help="Read labels from this directory instead of --source/labels (M3 verified-"
+        "labels overlay, e.g. data/merged_verified/labels) — images still come from "
+        "--source/images. Default: from split config.",
+    )
+    parser.add_argument(
         "--config",
         type=Path,
         default=Path("configs/data.yaml"),
@@ -375,6 +383,7 @@ def main() -> int:
             seed=args.seed,
             source_dir=args.source,
             output_dir=args.output,
+            source_labels_dir=args.source_labels_dir,
         )
     except ValueError as e:
         logger.error(str(e))
@@ -402,9 +411,16 @@ def main() -> int:
         logger.error(f"Ratios must sum to 1.0, got {total:.6f}")
         return 1
 
-    # Discover images
+    # Discover images. Labels come from the verified-labels overlay when
+    # configured (M3, ADR-P5-05) — images are never duplicated there, so
+    # image discovery always reads data/merged (args.source) directly.
     images_dir = args.source / "images"
-    labels_dir = args.source / "labels"
+    labels_dir = (
+        settings.source_labels_dir
+        if settings.source_labels_dir is not None
+        else args.source / "labels"
+    )
+    logger.info(f"Labels:  {labels_dir.absolute()}")
 
     if not images_dir.exists():
         logger.error(f"Images directory not found: {images_dir.absolute()}")

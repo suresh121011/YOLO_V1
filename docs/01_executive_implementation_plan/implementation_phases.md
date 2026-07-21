@@ -68,6 +68,28 @@ gantt
 | **6** | Pipeline Integration | 1–2 weeks | SmolVLM2 + Rule Engine + Piper TTS assembled, end-to-end tested |
 | **7** | Production Validation | 1–2 weeks | Field-tested in 3 Indian homes, latency benchmarked, exportable model |
 
+## Executed-Phase Reconciliation (audit finding D-1)
+
+The table above is the original planning roadmap. The **executed** engineering
+phases (git history, `CHANGELOG.md`) diverged from it deliberately as the work
+revealed better sequencing — this addendum is the mapping of record
+(pre-Phase-4 audit finding D-1, resolved in Phase 5 M0):
+
+| Executed phase | What actually shipped | Roadmap phase(s) absorbed |
+|:---|:---|:---|
+| Phase 1 — Foundation | Scaffold, taxonomy, configs, runtime skeleton, docs 01–03 | 1 |
+| Phase 2 — Public Dataset Platform | Downloaders, remap, dedup, merge+provenance, splits, QA suite, DVC pipeline (smoke build `dataset-v0.1.0-smoke`) | 2 + QA/versioning half of 4 |
+| Phase 3 — Capture & Annotation Tooling | Consent/EXIF ingest, CVAT import + IAA gates, progress tracking, eval-set mechanics (tooling only — collection is a Phase-5 human track) | tooling half of 3 |
+| Phase 4 — Missing-Annotation Mitigation | Completeness artifact + policy registry, preflight G1–G8, masked BCE loss, eval/benchmark frameworks, docs/06 | (not on the original roadmap — de-risks 5) |
+| Phase 5 — Production Dataset Engineering | Auto-annotation + CVAT verification ledger, coverage/quality reports, release automation, full-mode build, custom-capture campaign (human track H-A completes roadmap Phase 3), Dataset v0.5→v1.0, full-scale A/B evidence | remainder of 3 + remainder of 4 + evaluation half of 5 |
+| Phase 6 (next) — Model Training & Integration | Production training/tuning on Dataset v1.0, model export (`export_model.py`), runtime pipeline integration | training half of 5 + 6 |
+| Phase 7 (unchanged) — Production Validation | Field testing, latency benchmarks | 7 |
+
+Documents in docs/01–03 that reference "Phase 4 = Dataset QA" or "Phase 5 =
+Training" describe the original roadmap; for execution status always consult
+`CHANGELOG.md` and the per-phase engineering reports (docs/04 §Phase-3,
+docs/06, docs/07).
+
 ## 23-Class Object Taxonomy
 
 | Category | Classes | Source |

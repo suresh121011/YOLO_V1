@@ -61,11 +61,17 @@ paths:
 # NOTE: deliberately a TOP-LEVEL section. Keys under sources.* would change the
 # DVC params hashes of the acquisition stages and force re-downloads.
 completeness:
+  # M3 (ADR-P5-04): the human-verification ledger — masking shrinks exactly
+  # as it grows. Sibling of `policies`, not a source (never a policy-mode
+  # value); every `trusted_list_with_ledger` source reads the same ledger.
+  ledger_path: data/annotation/verification_ledger.json
   policies:
-    coco: trusted_list
-    openimages: trusted_list
-    roboflow: trusted_list
-    wider_face: trusted_list
+    # Public sources opt into ledger-expanded masking explicitly (never
+    # inferred) — M2 verification batches target these images.
+    coco: trusted_list_with_ledger
+    openimages: trusted_list_with_ledger
+    roboflow: trusted_list_with_ledger
+    wider_face: trusted_list_with_ledger
     negatives: verified_absence_all
     custom_captures: per_session
 
@@ -132,6 +138,10 @@ sources:
     annotations_url: "https://huggingface.co/datasets/CUHK-CSE/wider_face/resolve/main/data/wider_face_split.zip"
     remap_table: wider_face
     trusted_classes: [face]
+    class_caps:               # M7: full-mode WIDER_train has ~160k face
+                              # instances uncapped — would dwarf the rest of
+                              # the ~30k-image full-mode budget
+      face: 3000
 
   negatives:
     enabled: true

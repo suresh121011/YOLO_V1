@@ -387,3 +387,230 @@ class TestCheckHouseExclusivity:
         assert report["shared_houses"] == ["h01"]
         assert report["train_houses"] == ["h01"]
         assert report["eval_houses"] == ["h01"]
+
+
+# ─── M3 annotation artifact sweeps (scripts.qa.run_full_qa) ───────────────────
+
+from scripts.qa.run_full_qa import sweep_annotation_artifacts  # noqa: E402
+from src.dataset.annotation.base import ModelFingerprint  # noqa: E402
+from src.dataset.annotation.batches import (  # noqa: E402
+    BATCH_MANIFEST_FILENAME,
+    VerificationBatchManifest,
+)
+from src.dataset.annotation.candidates import (  # noqa: E402
+    CANDIDATES_FILENAME,
+    build_candidates_artifact,
+    save_candidates,
+)
+from src.dataset.annotation.ledger import new_ledger, record_verdict, save_ledger  # noqa: E402
+
+
+def _fingerprint() -> ModelFingerprint:
+    return ModelFingerprint(
+        backend="fake",
+        weights_path="",
+        weights_sha256="",
+        library_versions={},
+        device="cpu",
+        prompt_fingerprint="sha256:x",
+    )
+
+
+@pytest.mark.unit
+class TestSweepAnnotationArtifacts:
+    """M3: orphan candidates, duplicate ledger claims, unused batches, orphan deltas."""
+
+    def _paths(self, tmp_path: Path) -> dict[str, Path]:
+        return {
+            "candidates_root": tmp_path / "candidates",
+            "batches_root": tmp_path / "batches",
+            "ledger_path": tmp_path / "ledger.json",
+            "verified_labels_dir": tmp_path / "verified_labels",
+            "merged_manifest_path": tmp_path / "merged_manifest.json",
+        }
+
+    def test_nothing_exists_is_not_available(self, tmp_path: Path) -> None:
+        report = sweep_annotation_artifacts(**self._paths(tmp_path))
+        assert report == {"available": False}
+
+    def test_clean_state_no_findings(self, tmp_path: Path) -> None:
+        paths = self._paths(tmp_path)
+        paths["ledger_path"].parent.mkdir(parents=True, exist_ok=True)
+        save_ledger(new_ledger(), paths["ledger_path"])
+        report = sweep_annotation_artifacts(**paths)
+        assert report["available"] is True
+        assert report["orphan_candidates_count"] == 0
+        assert report["duplicate_ledger_claims_count"] == 0
+        assert report["unused_batches_count"] == 0
+        assert report["verified_labels_orphans_count"] == 0
+
+    def test_orphan_candidate_detected(self, tmp_path: Path) -> None:
+        paths = self._paths(tmp_path)
+        paths["merged_manifest_path"].write_text(
+            '{"image_provenance": {"a.jpg": "coco"}}', encoding="utf-8"
+        )
+        artifact = build_candidates_artifact(
+            backend="fake",
+            model=_fingerprint(),
+            taxonomy_fp="sha256:x",
+            inputs={},
+            determinism={},
+            images={},
+            runtime_s=0.0,
+            class_names_by_id={0: "person"},
+        )
+        artifact["images"] = {"ghost.jpg": {"targeted_class_ids": [], "detections": []}}
+        candidates_path = paths["candidates_root"] / "fake" / CANDIDATES_FILENAME
+        save_candidates(artifact, candidates_path)
+        report = sweep_annotation_artifacts(**paths)
+        assert report["orphan_candidates_count"] == 1
+        assert "fake/ghost.jpg" in report["orphan_candidates"]
+
+    def _write_batch(
+        self, batches_root: Path, batch_id: str, images: list[str], status: str
+    ) -> None:
+        VerificationBatchManifest(batch_id=batch_id, images=images, status=status).save(
+            batches_root / batch_id / BATCH_MANIFEST_FILENAME
+        )
+
+    def test_duplicate_ledger_claim_detected(self, tmp_path: Path) -> None:
+        paths = self._paths(tmp_path)
+        self._write_batch(paths["batches_root"], "vb001_x", ["a.jpg"], "imported")
+        self._write_batch(paths["batches_root"], "vb002_x", ["a.jpg"], "imported")
+        ledger = new_ledger()
+        record_verdict(
+            ledger, "a.jpg", "coco", "person", "verified_absent", [], "vb001_x", "v", "cvat", ""
+        )
+        paths["ledger_path"].parent.mkdir(parents=True, exist_ok=True)
+        save_ledger(ledger, paths["ledger_path"])
+        report = sweep_annotation_artifacts(**paths)
+        assert report["duplicate_ledger_claims_count"] == 1
+
+    def test_unused_batch_detected(self, tmp_path: Path) -> None:
+        paths = self._paths(tmp_path)
+        self._write_batch(paths["batches_root"], "vb001_x", ["a.jpg"], "imported")
+        paths["ledger_path"].parent.mkdir(parents=True, exist_ok=True)
+        save_ledger(new_ledger(), paths["ledger_path"])  # empty — nothing was actually recorded
+        report = sweep_annotation_artifacts(**paths)
+        assert report["unused_batches_count"] == 1
+        assert "vb001_x" in report["unused_batches"]
+
+    def test_verified_labels_orphan_detected(self, tmp_path: Path) -> None:
+        paths = self._paths(tmp_path)
+        paths["verified_labels_dir"].mkdir(parents=True, exist_ok=True)
+        (paths["verified_labels_dir"] / "orphan.txt").write_text("0 0.5 0.5 0.1 0.1\n")
+        paths["ledger_path"].parent.mkdir(parents=True, exist_ok=True)
+        save_ledger(new_ledger(), paths["ledger_path"])
+        report = sweep_annotation_artifacts(**paths)
+        assert report["verified_labels_orphans_count"] == 1
+        assert "orphan.txt" in report["verified_labels_orphans"]
+
+
+# ─── M4 L4/L5 report sweep (scripts.qa.run_full_qa) ───────────────────────────
+
+import json  # noqa: E402
+
+from scripts.qa.run_full_qa import sweep_l4_l5_reports  # noqa: E402
+
+_NAMES = {0: "person", 1: "charger"}
+_NC = 2
+
+
+def _write_data_yaml(path: Path) -> Path:
+    path.write_text(
+        json.dumps({"nc": _NC, "names": {str(k): v for k, v in _NAMES.items()}}),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _live_fp() -> str:
+    from src.dataset.completeness import taxonomy_fingerprint
+
+    return taxonomy_fingerprint(_NC, _NAMES)
+
+
+@pytest.mark.unit
+class TestSweepL4L5Reports:
+    """M4: coverage_report.json / dataset_quality_report.json schema + staleness."""
+
+    def test_neither_report_exists_is_not_available(self, tmp_path: Path) -> None:
+        data_yaml = _write_data_yaml(tmp_path / "data.yaml")
+        report = sweep_l4_l5_reports(
+            tmp_path / "coverage_report.json", tmp_path / "dataset_quality_report.json", data_yaml
+        )
+        assert report == {"available": False}
+
+    def test_valid_fresh_reports_no_problems(self, tmp_path: Path) -> None:
+        data_yaml = _write_data_yaml(tmp_path / "data.yaml")
+        fp = _live_fp()
+        coverage_path = tmp_path / "coverage_report.json"
+        coverage_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "taxonomy_fingerprint": fp,
+                    "per_class": {
+                        "person": {"coverage_score": 1.0, "residual_missing_estimate": 0.0}
+                    },
+                    "per_image": {},
+                    "per_image_summary": {},
+                    "dataset": {"residual_missing_total": 0.0, "unknown_objects_total": 0},
+                }
+            ),
+            encoding="utf-8",
+        )
+        quality_path = tmp_path / "dataset_quality_report.json"
+        quality_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "taxonomy_fingerprint": fp,
+                    "dataset_scale": {"images_total": 1},
+                    "completeness_summary": {"masked_cell_fraction": 0.5},
+                    "coverage_summary": {},
+                    "per_class_risk": {},
+                    "verification_progress": {},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        report = sweep_l4_l5_reports(coverage_path, quality_path, data_yaml)
+        assert report["available"] is True
+        assert report["coverage_report_present"] is True
+        assert report["quality_report_present"] is True
+        assert report["problems_count"] == 0
+
+    def test_stale_taxonomy_fingerprint_flagged(self, tmp_path: Path) -> None:
+        data_yaml = _write_data_yaml(tmp_path / "data.yaml")
+        coverage_path = tmp_path / "coverage_report.json"
+        coverage_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "taxonomy_fingerprint": "sha256:stale",
+                    "per_class": {},
+                    "per_image": {},
+                    "per_image_summary": {},
+                    "dataset": {"residual_missing_total": 0.0, "unknown_objects_total": 0},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        report = sweep_l4_l5_reports(coverage_path, tmp_path / "missing.json", data_yaml)
+        assert report["available"] is True
+        assert report["quality_report_present"] is False
+        assert report["problems_count"] == 1
+        assert "stale" in report["problems"][0]
+
+    def test_invalid_schema_flagged(self, tmp_path: Path) -> None:
+        data_yaml = _write_data_yaml(tmp_path / "data.yaml")
+        quality_path = tmp_path / "dataset_quality_report.json"
+        quality_path.write_text(json.dumps({"schema_version": 1}), encoding="utf-8")
+
+        report = sweep_l4_l5_reports(tmp_path / "missing.json", quality_path, data_yaml)
+        assert report["available"] is True
+        assert report["problems_count"] >= 1
+        assert any("missing required dimension" in p for p in report["problems"])

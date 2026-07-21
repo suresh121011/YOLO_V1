@@ -6,13 +6,16 @@ from pathlib import Path
 
 import pytest
 
+from src.dataset.annotation.ledger import LedgerView, new_ledger, record_verdict
 from src.dataset.completeness_policies import (
     _PROVIDERS,
     CompletenessError,
     CompletenessPolicyProvider,
+    LedgerLike,
     PerSessionPolicy,
     PolicyContext,
     TrustedListPolicy,
+    TrustedListWithLedgerPolicy,
     VerifiedAbsenceAllPolicy,
     get_policy_provider,
     register_policy_provider,
@@ -29,6 +32,7 @@ def make_ctx(
     manifest_trusted: tuple[str, ...] | None = ("person", "knife"),
     config_trusted: tuple[str, ...] | None = ("person", "knife"),
     capture_manifests_dir: Path | None = None,
+    verification_ledger: LedgerLike | None = None,
 ) -> PolicyContext:
     """Build a PolicyContext with small-taxonomy defaults."""
     return PolicyContext(
@@ -38,6 +42,7 @@ def make_ctx(
         class_ids_by_name=_NAMES,
         nc=_NC,
         capture_manifests_dir=capture_manifests_dir,
+        verification_ledger=verification_ledger,
     )
 
 
@@ -68,6 +73,7 @@ class TestRegistry:
         assert registered_policy_modes() == [
             "per_session",
             "trusted_list",
+            "trusted_list_with_ledger",
             "verified_absence_all",
         ]
 
@@ -133,6 +139,99 @@ class TestTrustedListPolicy:
         ctx = make_ctx(manifest_trusted=("person", "unicorn"), config_trusted=None)
         with pytest.raises(CompletenessError, match="unicorn"):
             TrustedListPolicy().resolve_policies(ctx)
+
+
+def _ledger_with(
+    entries: list[tuple[str, str, str, list[tuple[float, float, float, float]]]],
+) -> LedgerView:
+    """Build a LedgerView from (filename, source, class_name, boxes) tuples.
+
+    Empty ``boxes`` records a ``verified_absent`` verdict; non-empty records
+    ``present_labeled``.
+    """
+    ledger = new_ledger()
+    for i, (filename, source, class_name, boxes) in enumerate(entries):
+        status = "present_labeled" if boxes else "verified_absent"
+        record_verdict(
+            ledger, filename, source, class_name, status, boxes, f"vb{i:03d}", "anno_1", "cvat", ""
+        )
+    return LedgerView(raw=ledger)
+
+
+@pytest.mark.unit
+class TestTrustedListWithLedgerPolicy:
+    """trusted_list_with_ledger: base trusted_list, expanded by the ledger."""
+
+    def test_no_ledger_is_byte_identical_to_base(self) -> None:
+        ctx = make_ctx(verification_ledger=None)
+        assert TrustedListWithLedgerPolicy().resolve_policies(ctx) == {"coco": (0, 2)}
+
+    def test_empty_ledger_is_byte_identical_to_base(self) -> None:
+        ctx = make_ctx(verification_ledger=LedgerView(raw=new_ledger()))
+        assert TrustedListWithLedgerPolicy().resolve_policies(ctx) == {"coco": (0, 2)}
+
+    def test_ledger_verified_image_gets_expanded_policy(self) -> None:
+        ledger = _ledger_with([("coco_1.jpg", "coco", "face", [(0.5, 0.5, 0.1, 0.1)])])
+        ctx = make_ctx(verification_ledger=ledger)
+        policy = TrustedListWithLedgerPolicy()
+        resolved = policy.resolve_policies(ctx)
+        assert resolved["coco"] == (0, 2)  # base untouched
+        ledger_keys = [k for k in resolved if k.startswith("coco/ledger/")]
+        assert len(ledger_keys) == 1
+        assert resolved[ledger_keys[0]] == (0, 1, 2)  # base (person, knife) + face
+
+    def test_policy_key_for_image_routes_ledger_images(self) -> None:
+        ledger = _ledger_with([("coco_1.jpg", "coco", "face", [(0.5, 0.5, 0.1, 0.1)])])
+        ctx = make_ctx(verification_ledger=ledger)
+        policy = TrustedListWithLedgerPolicy()
+        resolved = policy.resolve_policies(ctx)
+        ledger_key = next(k for k in resolved if k.startswith("coco/ledger/"))
+        assert policy.policy_key_for_image(ctx, "coco_1.jpg") == ledger_key
+        assert policy.policy_key_for_image(ctx, "coco_2.jpg") == "coco"
+
+    def test_other_source_ledger_entries_ignored(self) -> None:
+        ledger = _ledger_with([("oi_1.jpg", "openimages", "face", [(0.5, 0.5, 0.1, 0.1)])])
+        ctx = make_ctx(verification_ledger=ledger)
+        resolved = TrustedListWithLedgerPolicy().resolve_policies(ctx)
+        assert resolved == {"coco": (0, 2)}
+
+    def test_verified_absent_also_expands_policy(self) -> None:
+        ledger = _ledger_with([("coco_1.jpg", "coco", "door", [])])
+        ctx = make_ctx(verification_ledger=ledger)
+        resolved = TrustedListWithLedgerPolicy().resolve_policies(ctx)
+        ledger_keys = [k for k in resolved if k.startswith("coco/ledger/")]
+        assert resolved[ledger_keys[0]] == (0, 2, 3)  # base + door
+
+    def test_fully_redundant_verification_stays_on_base_policy(self) -> None:
+        # 'person' is already in the base trusted list — nothing to expand.
+        ledger = _ledger_with([("coco_1.jpg", "coco", "person", [(0.5, 0.5, 0.1, 0.1)])])
+        ctx = make_ctx(verification_ledger=ledger)
+        policy = TrustedListWithLedgerPolicy()
+        resolved = policy.resolve_policies(ctx)
+        assert list(resolved) == ["coco"]  # no extra policy created
+        assert policy.policy_key_for_image(ctx, "coco_1.jpg") == "coco"
+
+    def test_unknown_ledger_class_name_is_error(self) -> None:
+        ledger = _ledger_with([("coco_1.jpg", "coco", "unicorn", [(0.5, 0.5, 0.1, 0.1)])])
+        ctx = make_ctx(verification_ledger=ledger)
+        with pytest.raises(CompletenessError, match="unicorn"):
+            TrustedListWithLedgerPolicy().resolve_policies(ctx)
+
+    def test_two_images_same_effective_set_share_one_key(self) -> None:
+        ledger = _ledger_with(
+            [
+                ("coco_1.jpg", "coco", "face", [(0.5, 0.5, 0.1, 0.1)]),
+                ("coco_2.jpg", "coco", "face", [(0.3, 0.3, 0.1, 0.1)]),
+            ]
+        )
+        ctx = make_ctx(verification_ledger=ledger)
+        policy = TrustedListWithLedgerPolicy()
+        resolved = policy.resolve_policies(ctx)
+        ledger_keys = [k for k in resolved if k.startswith("coco/ledger/")]
+        assert len(ledger_keys) == 1
+        assert policy.policy_key_for_image(ctx, "coco_1.jpg") == policy.policy_key_for_image(
+            ctx, "coco_2.jpg"
+        )
 
 
 @pytest.mark.unit
