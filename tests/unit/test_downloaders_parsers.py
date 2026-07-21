@@ -344,44 +344,6 @@ class TestWiderFaceDownloader:
         assert lines[0].split()[0] == "0"
         assert counts == {"face": 1}
 
-    def test_class_cap_stops_at_face_limit(self, tmp_path: Path) -> None:
-        """M7: class_caps.face bounds full-mode WIDER_train instance count."""
-        gt = (
-            "0--Parade/img1.jpg\n1\n10 10 40 40 0 0 0 0 0 0\n"
-            "1--Fest/img2.jpg\n1\n10 10 40 40 0 0 0 0 0 0\n"
-        )
-        source = SourceConfig(
-            name="wider_face",
-            output_dir=tmp_path / "raw" / "wider_face",
-            noncommercial=True,
-            license="research-only",
-            options={
-                "smoke_images_url": "http://wf/WIDER_val.zip",
-                "annotations_url": "http://wf/wider_face_split.zip",
-                "class_caps": {"face": 1},
-            },
-        )
-        config = SourcesConfig(
-            sources={"wider_face": source},
-            downloads_cache=tmp_path / "downloads_cache",
-            allow_noncommercial=True,
-        )
-        downloader = WiderFaceDownloader(source, config)
-        _prepare_dirs(downloader)
-        with zipfile.ZipFile(downloader.downloads_dir / "wider_face_split.zip", "w") as zf:
-            zf.writestr("wider_face_split/wider_face_val_bbx_gt.txt", gt)
-        jpeg = io.BytesIO()
-        Image.new("RGB", (100, 100), color=(120, 120, 120)).save(jpeg, format="JPEG")
-        with zipfile.ZipFile(downloader.downloads_dir / "WIDER_val.zip", "w") as zf:
-            zf.writestr("WIDER_val/images/0--Parade/img1.jpg", jpeg.getvalue())
-            zf.writestr("WIDER_val/images/1--Fest/img2.jpg", jpeg.getvalue())
-
-        counts = downloader.fetch(limit=None)
-
-        assert counts == {"face": 1}
-        assert (downloader.images_dir / "0--Parade_img1.jpg").exists()
-        assert not (downloader.images_dir / "1--Fest_img2.jpg").exists()
-
 
 # ─── Negatives ────────────────────────────────────────────────────────────────
 

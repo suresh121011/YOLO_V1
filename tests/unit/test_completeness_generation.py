@@ -8,7 +8,6 @@ from typing import Any
 
 import pytest
 
-from src.dataset.annotation.ledger import new_ledger, recompute_stats, record_verdict, save_ledger
 from src.dataset.completeness import (
     COMPLETENESS_SCHEMA_VERSION,
     build_completeness,
@@ -67,7 +66,6 @@ class Env:
         self.images_root = root / "processed" / "images"
         self.split_summary = root / "processed" / "split_report" / "split_summary.json"
         self.capture_manifests = root / "captures" / "manifests"
-        self.ledger_path = root / "annotation" / "verification_ledger.json"
 
     def build(self) -> dict[str, Any]:
         """Run build_completeness against this environment."""
@@ -354,163 +352,3 @@ class TestSummaryAndWarnings:
         assert rows["negatives"]["untrusted_count"] == 0
         assert rows["coco"]["trusted_classes"] == "person knife"
         assert summary["stats"]["images_total"] == 4
-
-
-_LEDGER_SOURCES_YAML = _SOURCES_YAML.replace(
-    "    coco: trusted_list\n",
-    "    coco: trusted_list_with_ledger\n",
-).replace(
-    "completeness:\n",
-    "completeness:\n  ledger_path: LEDGER_PATH_PLACEHOLDER\n",
-)
-
-
-@pytest.mark.unit
-class TestLedgerIntegration:
-    """M3: trusted_list_with_ledger threading through build_completeness()."""
-
-    def _env_with_ledger_policy(self, tmp_path: Path) -> Env:
-        env = make_env(tmp_path, sources_yaml=_LEDGER_SOURCES_YAML)
-        env.sources_yaml.write_text(
-            env.sources_yaml.read_text(encoding="utf-8").replace(
-                "LEDGER_PATH_PLACEHOLDER", env.ledger_path.as_posix()
-            ),
-            encoding="utf-8",
-        )
-        return env
-
-    def test_missing_ledger_path_declaration_is_error(self, tmp_path: Path) -> None:
-        sources_yaml = _SOURCES_YAML.replace(
-            "    coco: trusted_list\n", "    coco: trusted_list_with_ledger\n"
-        )
-        env = make_env(tmp_path, sources_yaml=sources_yaml)
-        with pytest.raises(CompletenessError, match="ledger_path"):
-            env.build()
-
-    def test_empty_ledger_is_byte_identical_to_trusted_list(self, tmp_path: Path) -> None:
-        env = self._env_with_ledger_policy(tmp_path)
-        save_ledger(new_ledger(), env.ledger_path)
-        artifact = env.build()
-        assert artifact["policies"]["coco"] == {
-            "mode": "trusted_list_with_ledger",
-            "trusted_class_ids": [0, 2],
-        }
-        assert artifact["images"]["coco_0001.jpg"]["policy"] == "coco"
-
-    def test_missing_ledger_file_behaves_as_empty(self, tmp_path: Path) -> None:
-        env = self._env_with_ledger_policy(tmp_path)
-        artifact = env.build()  # ledger_path declared but file never written
-        assert artifact["policies"]["coco"]["trusted_class_ids"] == [0, 2]
-
-    def test_verified_image_gets_expanded_policy(self, tmp_path: Path) -> None:
-        env = self._env_with_ledger_policy(tmp_path)
-        ledger = new_ledger()
-        record_verdict(
-            ledger,
-            "coco_0001.jpg",
-            "coco",
-            "face",
-            "present_labeled",
-            [(0.5, 0.5, 0.1, 0.1)],
-            "vb001",
-            "anno_1",
-            "cvat",
-            "",
-        )
-        save_ledger(ledger, env.ledger_path)
-        artifact = env.build()
-
-        ledger_keys = [k for k in artifact["policies"] if k.startswith("coco/ledger/")]
-        assert len(ledger_keys) == 1
-        assert artifact["policies"][ledger_keys[0]]["trusted_class_ids"] == [0, 1, 2]  # +face
-        assert artifact["images"]["coco_0001.jpg"]["policy"] == ledger_keys[0]
-        assert artifact["images"]["coco_0002.jpg"]["policy"] == "coco"  # untouched
-
-    def test_ledger_image_absent_from_provenance_is_error(self, tmp_path: Path) -> None:
-        env = self._env_with_ledger_policy(tmp_path)
-        ledger = new_ledger()
-        record_verdict(
-            ledger,
-            "coco_9999_ghost.jpg",
-            "coco",
-            "face",
-            "verified_absent",
-            [],
-            "vb001",
-            "anno_1",
-            "cvat",
-            "",
-        )
-        save_ledger(ledger, env.ledger_path)
-        with pytest.raises(CompletenessError, match="absent from the merged manifest"):
-            env.build()
-
-    def test_ledger_source_mismatch_is_error(self, tmp_path: Path) -> None:
-        env = self._env_with_ledger_policy(tmp_path)
-        ledger = new_ledger()
-        # coco_0001.jpg is actually provenanced to 'coco', not 'negatives'.
-        record_verdict(
-            ledger,
-            "coco_0001.jpg",
-            "negatives",
-            "face",
-            "verified_absent",
-            [],
-            "vb001",
-            "anno_1",
-            "cvat",
-            "",
-        )
-        save_ledger(ledger, env.ledger_path)
-        with pytest.raises(CompletenessError, match="provenance drift"):
-            env.build()
-
-    def test_taxonomy_fingerprint_drift_is_error(self, tmp_path: Path) -> None:
-        env = self._env_with_ledger_policy(tmp_path)
-        ledger = new_ledger()
-        record_verdict(
-            ledger,
-            "coco_0001.jpg",
-            "coco",
-            "face",
-            "verified_absent",
-            [],
-            "vb001",
-            "anno_1",
-            "cvat",
-            "",
-        )
-        recompute_stats(ledger, "sha256:stale-fingerprint-from-a-different-taxonomy")
-        save_ledger(ledger, env.ledger_path)
-        with pytest.raises(CompletenessError, match="fingerprint drift"):
-            env.build()
-
-    def test_matching_taxonomy_fingerprint_is_not_drift(self, tmp_path: Path) -> None:
-        env = self._env_with_ledger_policy(tmp_path)
-        ledger = new_ledger()
-        record_verdict(
-            ledger,
-            "coco_0001.jpg",
-            "coco",
-            "face",
-            "verified_absent",
-            [],
-            "vb001",
-            "anno_1",
-            "cvat",
-            "",
-        )
-        recompute_stats(ledger, taxonomy_fingerprint(_NC, _NAMES))
-        save_ledger(ledger, env.ledger_path)
-        artifact = env.build()  # must not raise
-        assert artifact["policies"]
-
-    def test_ledger_recorded_in_inputs(self, tmp_path: Path) -> None:
-        env = self._env_with_ledger_policy(tmp_path)
-        save_ledger(new_ledger(), env.ledger_path)
-        artifact = env.build()
-        assert artifact["inputs"]["ledger"]["sha256"]
-
-    def test_no_ledger_source_no_inputs_key(self, tmp_path: Path) -> None:
-        artifact = make_env(tmp_path).build()  # plain trusted_list, no ledger anywhere
-        assert "ledger" not in artifact["inputs"]

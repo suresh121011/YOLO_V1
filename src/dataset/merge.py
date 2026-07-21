@@ -12,54 +12,24 @@ label-completeness map.
 
 Source order matters: dedup keeps the FIRST occurrence, so list
 higher-priority sources (e.g. custom captures) first.
-
-L3 label salvage (ADR-P5-08, D7): a duplicate is never simply discarded.
-Byte-identical (exact-sha256) duplicates transplant the dropped twin's
-trusted-class boxes onto the kept image (``cross_dataset_salvage``);
-near-dup (perceptual-only) duplicates record a link consumed later by the
-``cross_dataset`` auto-annotation backend, surfacing them as ordinary
-human-verified candidates instead.
 """
 
 from __future__ import annotations
 
-import json
 import logging
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from src.dataset.cross_dataset_salvage import (
-    build_cross_dataset_link,
-    render_transplanted_lines,
-    transplant_trusted_boxes,
-)
 from src.dataset.dedup import DedupIndex
 from src.dataset.filters import check_image_filter
 from src.dataset.manifest import MERGED_MANIFEST_FILENAME, MergedManifest
 from src.dataset.sources_config import DedupSettings, IndoorFilterSettings
 from src.utils.annotation_utils import parse_label_file
-from src.utils.dataset_utils import compute_file_hash, get_image_label_pairs
+from src.utils.dataset_utils import get_image_label_pairs
 
 logger = logging.getLogger(__name__)
-
-#: Written alongside merged_manifest.json — near-dup L3 links consumed by
-#: the `cross_dataset` auto-annotation backend (M1 registry).
-CROSS_DATASET_LINKS_FILENAME = "cross_dataset_links.json"
-
-
-@dataclass
-class _KeptImageInfo:
-    """Bookkeeping for one already-accepted (kept) image, keyed by its
-    ORIGINAL source path (the DedupIndex key) — needed because a later
-    duplicate's `check_and_add` return value is that original path, not
-    the renamed merged filename."""
-
-    merged_name: str
-    label_path: Path
-    source_name: str
-    trusted_classes: frozenset[str]
 
 
 @dataclass
@@ -120,10 +90,6 @@ def merge_sources(
 
     manifest = MergedManifest(notes=notes)
     dedup_index = DedupIndex(settings=dedup_settings)
-    kept_info: dict[Path, _KeptImageInfo] = {}
-    cross_dataset_links: dict[str, list[dict[str, Any]]] = {}
-    labels_salvaged = 0
-    cross_dataset_candidates_linked = 0
 
     for source in sources:
         stats: dict[str, Any] = {
@@ -163,51 +129,11 @@ def merge_sources(
                 stats["duplicates"] += 1
                 manifest.duplicates_removed += 1
                 logger.debug(f"[{source.name}] {img_path.name} duplicate of {duplicate_of.name}")
-                kept = kept_info.get(duplicate_of)
-                if kept is not None:
-                    dropped_annotations = parse_label_file(lbl_path)
-                    if compute_file_hash(img_path) == compute_file_hash(duplicate_of):
-                        # Exact-sha256 (D7): safe to transplant directly.
-                        result = transplant_trusted_boxes(
-                            dropped_annotations=dropped_annotations,
-                            dropped_trusted_classes=frozenset(source.trusted_classes),
-                            class_names_by_id=class_names,
-                            kept_annotations=parse_label_file(kept.label_path),
-                        )
-                        if result.transplanted:
-                            with open(kept.label_path, "a", encoding="utf-8") as f:
-                                f.write("\n".join(render_transplanted_lines(result.transplanted)))
-                                f.write("\n")
-                            labels_salvaged += len(result.transplanted)
-                            for ann in result.transplanted:
-                                cname = class_names.get(ann.class_id, f"class_{ann.class_id}")
-                                manifest.class_counts[cname] = (
-                                    manifest.class_counts.get(cname, 0) + 1
-                                )
-                    else:
-                        # Near-dup only: geometry unverified — link for the
-                        # cross_dataset backend to surface as candidates.
-                        link = build_cross_dataset_link(
-                            dropped_annotations=dropped_annotations,
-                            dropped_trusted_classes=frozenset(source.trusted_classes),
-                            class_names_by_id=class_names,
-                            dropped_source=source.name,
-                        )
-                        if link is not None:
-                            cross_dataset_links.setdefault(kept.merged_name, []).append(link)
-                            cross_dataset_candidates_linked += len(link["boxes"])  # type: ignore[arg-type]
                 continue
 
             merged_name = f"{source.name}_{img_path.name}"
-            merged_label_path = labels_out / f"{source.name}_{img_path.stem}.txt"
             shutil.copy2(img_path, images_out / merged_name)
-            shutil.copy2(lbl_path, merged_label_path)
-            kept_info[img_path] = _KeptImageInfo(
-                merged_name=merged_name,
-                label_path=merged_label_path,
-                source_name=source.name,
-                trusted_classes=frozenset(source.trusted_classes),
-            )
+            shutil.copy2(lbl_path, labels_out / f"{source.name}_{img_path.stem}.txt")
 
             manifest.image_provenance[merged_name] = source.name
             for ann in parse_label_file(lbl_path):
@@ -223,15 +149,9 @@ def merge_sources(
             f"{stats['missing_labels']} label issues)"
         )
 
-    manifest.labels_salvaged = labels_salvaged
-    manifest.cross_dataset_candidates_linked = cross_dataset_candidates_linked
     manifest.save(output_dir / MERGED_MANIFEST_FILENAME)
-    (output_dir / CROSS_DATASET_LINKS_FILENAME).write_text(
-        json.dumps(cross_dataset_links, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-    )
     logger.info(
         f"Merge complete: {len(manifest.image_provenance)} images → {output_dir} "
-        f"({manifest.duplicates_removed} duplicates removed, {labels_salvaged} labels "
-        f"salvaged, {cross_dataset_candidates_linked} cross-dataset candidates linked)"
+        f"({manifest.duplicates_removed} duplicates removed)"
     )
     return manifest

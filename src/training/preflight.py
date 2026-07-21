@@ -1,5 +1,5 @@
 """
-src.training.preflight — Pre-Training Gates for Mitigation (G1–G9)
+src.training.preflight — Pre-Training Gates for Mitigation (G1–G8)
 ==================================================================
 
 Fail-early validation that runs before any Ultralytics work whenever
@@ -17,10 +17,6 @@ Gates:
     G6  mitigation config self-valid
     G7  freshness: recorded input hashes match the files on disk
     G8  mixing augmentations (mosaic/mixup/copy_paste) vs the configured policy
-    G9  (M3) verification ledger <-> verified_labels <-> merged-manifest
-        provenance consistency + taxonomy fingerprint (defense in depth on
-        top of completeness.py's own build-time checks — catches post-
-        generation tampering or a partial/interrupted apply run)
 
 Backward-compat contract: when mitigation is disabled the training script
 never calls this module (byte-for-byte stock behavior). The standalone CLI
@@ -34,8 +30,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from src.dataset.annotation.base import AnnotationError
-from src.dataset.annotation.ledger import load_ledger
 from src.dataset.completeness import (
     find_unused_policies,
     load_completeness,
@@ -43,7 +37,6 @@ from src.dataset.completeness import (
     validate_completeness,
 )
 from src.dataset.completeness_policies import CompletenessError
-from src.dataset.manifest import MERGED_MANIFEST_FILENAME, MergedManifest
 from src.training.mitigation_config import MITIGATION_SECTION, MitigationConfig
 from src.utils.config_helpers import get_class_names_from_data_yaml, load_data_config
 from src.utils.dataset_utils import compute_file_hash, find_image_files
@@ -220,96 +213,11 @@ def _gate_mixing_augs(mitigation: MitigationConfig, train_cfg: dict[str, Any]) -
     )
 
 
-def _gate_ledger_consistency(
-    ledger_path: Path,
-    verified_labels_dir: Path,
-    merged_manifest_path: Path,
-    data_yaml_path: Path,
-) -> GateResult:
-    """G9: ledger <-> verified_labels <-> provenance consistency + taxonomy fp."""
-    try:
-        ledger = load_ledger(ledger_path)
-    except AnnotationError as e:
-        return GateResult("G9", "ledger-consistency", GATE_STATUS_FAIL, str(e))
-
-    entries: dict[str, Any] = ledger.get("entries") or {}
-    if not entries:
-        return GateResult(
-            "G9", "ledger-consistency", GATE_STATUS_PASS, "ledger empty — nothing to check"
-        )
-
-    try:
-        live_cfg = load_data_config(data_yaml_path)
-    except (FileNotFoundError, ValueError) as e:
-        return GateResult("G9", "ledger-consistency", GATE_STATUS_FAIL, str(e))
-    live_fp = taxonomy_fingerprint(int(live_cfg["nc"]), get_class_names_from_data_yaml(live_cfg))
-    recorded_fp = str(ledger.get("taxonomy_fingerprint") or "")
-
-    problems: list[str] = []
-    if recorded_fp and recorded_fp != live_fp:
-        problems.append(f"taxonomy fingerprint drift: ledger {recorded_fp} != live {live_fp}")
-
-    if not merged_manifest_path.exists():
-        problems.append(f"merged manifest missing: {merged_manifest_path.as_posix()}")
-        provenance: dict[str, str] = {}
-    else:
-        provenance = MergedManifest.load(merged_manifest_path).image_provenance
-
-    for filename, entry in entries.items():
-        if provenance and filename not in provenance:
-            problems.append(f"'{filename}': absent from merged manifest provenance")
-        elif provenance and entry.get("source") != provenance[filename]:
-            problems.append(
-                f"'{filename}': ledger source '{entry.get('source')}' != provenance "
-                f"'{provenance[filename]}'"
-            )
-
-        expected_boxes = sum(
-            len(v.get("boxes") or []) for v in (entry.get("classes") or {}).values()
-        )
-        delta_path = verified_labels_dir / f"{Path(filename).stem}.txt"
-        if expected_boxes > 0:
-            if not delta_path.exists():
-                problems.append(
-                    f"'{filename}': ledger has {expected_boxes} box(es) but no verified_labels file"
-                )
-            else:
-                actual = sum(
-                    1
-                    for line in delta_path.read_text(encoding="utf-8").splitlines()
-                    if line.strip()
-                )
-                if actual != expected_boxes:
-                    problems.append(
-                        f"'{filename}': ledger box count {expected_boxes} != verified_labels "
-                        f"line count {actual}"
-                    )
-        elif delta_path.exists():
-            problems.append(
-                f"'{filename}': ledger has zero boxes but a verified_labels file exists"
-            )
-
-    if problems:
-        preview = " | ".join(problems[:5])
-        return GateResult(
-            "G9", "ledger-consistency", GATE_STATUS_FAIL, f"{len(problems)} problem(s): {preview}"
-        )
-    return GateResult(
-        "G9",
-        "ledger-consistency",
-        GATE_STATUS_PASS,
-        f"{len(entries)} ledger entries consistent with verified_labels + provenance",
-    )
-
-
 def run_preflight(
     mitigation: MitigationConfig,
     data_yaml_path: Path,
     train_cfg: dict[str, Any],
     processed_root: Path = Path("data/processed"),
-    ledger_path: Path = Path("data/annotation/verification_ledger.json"),
-    verified_labels_dir: Path = Path("data/annotation/verified_labels"),
-    merged_manifest_path: Path = Path("data/merged") / MERGED_MANIFEST_FILENAME,
 ) -> PreflightReport:
     """Run all preflight gates for an enabled mitigation config.
 
@@ -384,11 +292,6 @@ def run_preflight(
 
     results.append(_gate_environment())
     results.append(_gate_mixing_augs(mitigation, train_cfg))
-    results.append(
-        _gate_ledger_consistency(
-            ledger_path, verified_labels_dir, merged_manifest_path, data_yaml_path
-        )
-    )
 
     results.sort(key=lambda r: r.gate_id)
     report = PreflightReport(results=tuple(results))

@@ -23,42 +23,16 @@ Adding a policy for a future dataset type: subclass
 
 from __future__ import annotations
 
-import hashlib
-import json
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import ClassVar, Protocol, runtime_checkable
+from typing import ClassVar
 
 from src.dataset.manifest import CaptureSessionManifest
 
 logger = logging.getLogger(__name__)
-
-
-@runtime_checkable
-class LedgerLike(Protocol):
-    """Structural read surface :class:`TrustedListWithLedgerPolicy` needs.
-
-    Defined here (not imported from ``src.dataset.annotation``) to keep this
-    core policy layer free of any dependency on the annotation subpackage
-    that is layered on top of it (ADR-P5-04 layering note) —
-    ``src.dataset.annotation.ledger.LedgerView`` satisfies this Protocol
-    structurally, with zero import needed on either side.
-    """
-
-    def all_images(self) -> frozenset[str]:
-        """Every filename with at least one verified cell."""
-
-    def verified_class_names(self, filename: str) -> frozenset[str]:
-        """Classes verified (either verdict) for one image."""
-
-    def entry_source(self, filename: str) -> str | None:
-        """The provenance source a ledger entry attributes an image to."""
-
-    def taxonomy_fingerprint(self) -> str:
-        """Fingerprint recorded at last import (``""`` if never imported)."""
 
 
 class CompletenessError(ValueError):
@@ -85,11 +59,6 @@ class PolicyContext:
         nc:                      Number of taxonomy classes.
         capture_manifests_dir:   Directory of per-session capture manifests
                                  (data/raw/custom_captures/manifests), or None.
-        verification_ledger:    M2's human-verification ledger (read view), or
-                                 None. Additive trailing field (both existing
-                                 construction sites use keyword args, so this
-                                 is back-compatible) — only
-                                 :class:`TrustedListWithLedgerPolicy` reads it.
     """
 
     source: str
@@ -98,7 +67,6 @@ class PolicyContext:
     class_ids_by_name: Mapping[str, int]
     nc: int
     capture_manifests_dir: Path | None
-    verification_ledger: LedgerLike | None = None
 
 
 class CompletenessPolicyProvider(ABC):
@@ -251,75 +219,6 @@ class TrustedListPolicy(CompletenessPolicyProvider):
             ctx, ctx.manifest_trusted_classes, "merged-manifest label_completeness"
         )
         return {ctx.source: ids}
-
-
-@register_policy_provider("trusted_list_with_ledger")
-class TrustedListWithLedgerPolicy(TrustedListPolicy):
-    """``trusted_list``, expanded by human-verified ledger cells (ADR-P5-04).
-
-    Composes the base ``trusted_list`` policy for this source with one
-    additional policy per distinct EFFECTIVE trusted-class set among
-    ledger-verified images attributed to this source — masking shrinks
-    exactly as the ledger grows (D3, plan §"Verified completeness
-    expansion"). Ledger images sharing the same effective set (base trusted
-    ∪ their own verified classes) share one policy key,
-    ``"{source}/ledger/{8-hex-hash-of-sorted-ids}"``; images with no ledger
-    entry stay on the plain base-source policy.
-
-    An empty ledger (the M1 git-bootstrapped state) or ``ctx.verification_ledger
-    is None`` resolves to exactly the base policy — byte-identical to plain
-    ``trusted_list`` behavior (the empty-ledger passthrough regression this
-    milestone's acceptance test pins).
-    """
-
-    def __init__(self) -> None:
-        self._image_to_key: dict[str, str] = {}
-
-    def resolve_policies(self, ctx: PolicyContext) -> dict[str, tuple[int, ...]]:
-        base_policies = super().resolve_policies(ctx)
-        base_ids = frozenset(base_policies[ctx.source])
-        self._image_to_key = {}
-
-        ledger = ctx.verification_ledger
-        if ledger is None:
-            return base_policies
-
-        policies = dict(base_policies)
-        for filename in sorted(ledger.all_images()):
-            entry_source = ledger.entry_source(filename)
-            if entry_source != ctx.source:
-                continue  # belongs to a different source; its own resolve_policies call handles it
-            verified_names = ledger.verified_class_names(filename)
-            if not verified_names:
-                continue
-            verified_ids = self._class_ids(
-                ctx, tuple(verified_names), f"ledger verification for '{filename}'"
-            )
-            verified_ids_set = set(verified_ids)
-            redundant = verified_ids_set & base_ids
-            if redundant:
-                redundant_names = sorted(
-                    n for n, i in ctx.class_ids_by_name.items() if i in redundant
-                )
-                logger.warning(
-                    f"Source '{ctx.source}': ledger verifies class(es) {redundant_names} "
-                    f"for '{filename}' already in the base trusted list — no-op."
-                )
-            effective_ids = base_ids | verified_ids_set
-            if effective_ids == base_ids:
-                continue  # nothing beyond the base trust was verified — stays on the base policy
-            effective = tuple(sorted(effective_ids))
-            digest = hashlib.sha256(
-                json.dumps(effective, separators=(",", ":")).encode("utf-8")
-            ).hexdigest()[:8]
-            key = f"{ctx.source}/ledger/{digest}"
-            policies[key] = effective
-            self._image_to_key[filename] = key
-
-        return policies
-
-    def policy_key_for_image(self, ctx: PolicyContext, merged_filename: str) -> str:
-        return self._image_to_key.get(merged_filename, ctx.source)
 
 
 @register_policy_provider("verified_absence_all")

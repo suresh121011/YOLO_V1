@@ -14,14 +14,6 @@ COCO; a flipped twin defeats plain perceptual hashing but is caught here.
 Complexity: near-duplicate search is O(n²) over 64-bit hashes with early
 exact-match bucketing — fine up to a few tens of thousands of images
 (one-time cost at merge). Swap in a BK-tree if the full build outgrows it.
-
-Scale (ADR-P5-12): above ``VECTORIZE_THRESHOLD`` kept images, the linear
-Hamming scan switches to a numpy-vectorized popcount over all kept hashes
-at once — same O(n) work per check, but done in C instead of a Python loop
-calling ``int.bit_count()`` per comparison. This is a constant-factor
-speedup, not a better asymptotic (a BK-tree was rejected for the same
-reason a Phase-5 council review raised — no better worst case at n≈30k);
-a property test pins that the two paths make IDENTICAL keep/drop decisions.
 """
 
 from __future__ import annotations
@@ -30,8 +22,6 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import numpy as np
-
 from src.dataset.sources_config import DedupSettings
 from src.utils.dataset_utils import compute_file_hash
 from src.utils.image_utils import compute_perceptual_hash
@@ -39,10 +29,6 @@ from src.utils.image_utils import compute_perceptual_hash
 logger = logging.getLogger(__name__)
 
 _HASH_SIZE = 8  # 64-bit aHash, matching src/utils/image_utils
-
-#: Kept-image count above which check_and_add switches to the vectorized
-#: Hamming scan (ADR-P5-12; "activated above 2,000 kept images" per plan).
-VECTORIZE_THRESHOLD = 2000
 
 
 @dataclass
@@ -69,11 +55,6 @@ class DedupIndex:
     _exact: dict[int, Path] = field(default_factory=dict)
     # SHA-256 fallback bucket for images PIL cannot hash
     _sha256: dict[str, Path] = field(default_factory=dict)
-    # Parallel to _kept's iteration order — lets the vectorized path map a
-    # matched array index back to its Path without rebuilding a list each call.
-    _kept_paths: list[Path] = field(default_factory=list, init=False, repr=False)
-    # Lazily (re)built numpy view of _kept's aHashes; invalidated on insert.
-    _kept_ahash_arr: np.ndarray | None = field(default=None, init=False, repr=False)
 
     def check_and_add(self, path: Path) -> Path | None:
         """Return the kept duplicate of ``path``, or None and register it.
@@ -104,54 +85,15 @@ class DedupIndex:
             return exact_hit
 
         threshold = self.settings.hamming_threshold
-        if len(self._kept) >= VECTORIZE_THRESHOLD:
-            duplicate = self._check_vectorized(a_int, flip_int, threshold)
-        else:
-            duplicate = self._check_naive(a_int, flip_int, threshold)
-        if duplicate is not None:
-            return duplicate
-
-        self._kept[path] = (a_int, flip_int)
-        self._kept_paths.append(path)
-        self._exact[a_int] = path
-        self._kept_ahash_arr = None  # stale — rebuilt lazily on next vectorized check
-        return None
-
-    def _check_naive(self, a_int: int, flip_int: int | None, threshold: int) -> Path | None:
-        """Linear Python scan — used below :data:`VECTORIZE_THRESHOLD`."""
         for kept_path, (kept_a, _kept_flip) in self._kept.items():
             if _popcount(a_int ^ kept_a) < threshold:
                 return kept_path
             if flip_int is not None and _popcount(flip_int ^ kept_a) < threshold:
                 return kept_path
+
+        self._kept[path] = (a_int, flip_int)
+        self._exact[a_int] = path
         return None
-
-    def _check_vectorized(self, a_int: int, flip_int: int | None, threshold: int) -> Path | None:
-        """Numpy-vectorized scan over all kept aHashes at once.
-
-        Must make the IDENTICAL decision — including WHICH kept path is
-        attributed — as :meth:`_check_naive` for every (a_int, flip_int,
-        threshold, kept set): pinned by
-        ``tests/unit/test_dedup_vectorized.py``. This means both the a_int
-        and flip_int comparisons must be combined into one per-item mask
-        BEFORE picking the first hit; checking "a_int across all items,
-        then flip_int across all items" (two separate first-hit searches)
-        would silently reorder which duplicate wins whenever one
-        earlier-inserted item matches only via flip and a later one matches
-        only via a_int directly — naive always prefers the earlier item.
-        """
-        if self._kept_ahash_arr is None:
-            self._kept_ahash_arr = np.array(
-                [kept_a for kept_a, _ in self._kept.values()], dtype=np.uint64
-            )
-        arr = self._kept_ahash_arr
-
-        mask = _vectorized_popcount(arr ^ np.uint64(a_int)) < threshold
-        if flip_int is not None:
-            mask = mask | (_vectorized_popcount(arr ^ np.uint64(flip_int)) < threshold)
-
-        hits = np.flatnonzero(mask)
-        return self._kept_paths[int(hits[0])] if hits.size else None
 
     @property
     def kept_count(self) -> int:
@@ -205,22 +147,3 @@ def _compute_flipped_hash(path: Path) -> str | None:
 def _popcount(value: int) -> int:
     """Number of set bits (Hamming weight)."""
     return value.bit_count()
-
-
-def _vectorized_popcount(x: np.ndarray) -> np.ndarray:
-    """Elementwise Hamming weight of a uint64 array (SWAR algorithm).
-
-    Works on numpy<2.0 (no dependency on the 2.0+ ``np.bitwise_count``
-    ufunc — this project pins ``numpy<2.0``). Unsigned wraparound is
-    intentional and exact for this bit-trick.
-    """
-    x = x - ((x >> np.uint64(1)) & np.uint64(0x5555555555555555))
-    x = (x & np.uint64(0x3333333333333333)) + ((x >> np.uint64(2)) & np.uint64(0x3333333333333333))
-    x = (x + (x >> np.uint64(4))) & np.uint64(0x0F0F0F0F0F0F0F0F)
-    return ((x * np.uint64(0x0101010101010101)) >> np.uint64(56)).astype(np.int64)
-
-
-def _first_below(distances: np.ndarray, threshold: int) -> int | None:
-    """Index of the first element ``< threshold``, or ``None``."""
-    hits = np.flatnonzero(distances < threshold)
-    return int(hits[0]) if hits.size else None
