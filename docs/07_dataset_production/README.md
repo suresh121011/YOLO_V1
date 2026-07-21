@@ -60,7 +60,7 @@ report with residual-risk quantification (`17_dataset_quality_report.py`).
 | `verification_runbook.md` | (M2) CVAT task creation → pre-annotation upload → export → import → IAA → `dvc commit -f` |
 | `release_runbook.md` | (M5) `18_make_release.py check/make/verify`, gate remediation, tag + push procedure |
 | `phase5_engineering_report.md` | (M11) Final report: what shipped, evidence, limitations, Phase-6 readiness |
-| `adr/` | ADR-P5-01 … ADR-P5-12 (added with the milestones that implement them) |
+| [`adr/`](adr/README.md) | ADR-P5-01 … ADR-P5-12 — the twelve ratified design decisions (council PASS 2026-07-17) |
 
 ## Operational prerequisites
 
