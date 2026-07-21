@@ -160,3 +160,10 @@ temp/
 # CVAT, Label Studio exports — managed externally
 *.cvat.zip
 *.labelstudio.json
+
+# ─── Local scratch / experiments ──────────────────────────────────────────────
+# Ad-hoc local test scripts and sample images kept out of the tree so they
+# don't break RG5's clean-tree release gate. Real tests live under tests/.
+/check_annotations.py
+/test_custom_image.py
+/test_2.jpeg
