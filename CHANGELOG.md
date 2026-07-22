@@ -186,6 +186,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `.env.example` documenting `ROBOFLOW_API_KEY` (graceful-skip semantics)
 
 ### Fixed
+- CVAT task creation failed with `Could not create the task` / `labels:
+  [object Object]` and `POST /api/tasks 400` on CVAT 2.5.14:
+  `build_cvat_labels_spec` (`cvat_package.py`) emitted bare `{"name": ...}`
+  labels, but CVAT's Raw label editor (`validateParsedLabel` in `cvat-ui`
+  `labels-editor/common.ts`) requires each label to carry an `attributes`
+  array (`"Attributes must be an array"`). The spec now emits
+  `{"name": ..., "attributes": []}` per class (taxonomy id order preserved).
+  Documented the schema, the pinned CVAT version, and the
+  images-as-data-vs-`preannotations.zip`-as-annotations distinction (the
+  "1 image instead of 80" symptom) in `verification_runbook.md`.
 - Stale DVC pipeline state (audit H-2): `dvc repro` re-run with Phase-3 code
   refreshed `dvc.lock` (merge/split/QA stages) and locked the new
   `generate_completeness` stage; regenerated QA metric verified sane

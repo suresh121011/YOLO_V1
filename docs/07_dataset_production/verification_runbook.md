@@ -22,7 +22,10 @@ Record the CVAT version actually running (`docker compose exec cvat_server
 python manage.py --version` or the footer of the web UI) here once deployed,
 so a future re-deploy pins the same version:
 
-> **CVAT version pinned for Phase-5:** _(record at first deployment)_
+> **CVAT version pinned for Phase-5:** `2.5.14` (self-hosted, Docker).
+> The `cvat_labels.json` schema below is validated against this version's
+> Raw label editor (`cvat-ui` `labels-editor/common.ts`). If you upgrade CVAT,
+> re-verify that `validateParsedLabel` still accepts the generated spec.
 
 Public-image batches (M2 drill, M7+ scale-up) may use the same self-hosted
 instance — there is no reason to run two CVAT deployments, and doing so
@@ -84,10 +87,25 @@ class on the same image).
    `data/annotation/batches/cvat_labels.json` (already in exact taxonomy
    order — this is the step that kills the manual label-order mistake
    class before it can happen).
-2. Upload the batch's images.
-3. **Upload annotations** → format "YOLO 1.1" → the batch's
-   `preannotations.zip`. Verify the task shows both the trusted (base) boxes
-   and the new candidate boxes for the target classes.
+
+   Each entry is `{"name": <class>, "attributes": []}`. The `attributes: []`
+   array is **mandatory** for CVAT 2.5.14's Raw editor: `validateParsedLabel`
+   rejects any label without it (`"Attributes must be an array"`), and that
+   client-side failure is exactly what surfaces as the opaque
+   `Could not create the task / labels: [object Object]` error with a
+   `POST /api/tasks 400`. Do **not** hand-edit the file down to bare
+   `{"name": ...}` objects — regenerate it with
+   `13_build_verification_batches.py` (§2) instead.
+2. Upload the batch's images **as the task data** (Select files → the 80
+   image files, *not* `preannotations.zip`). `preannotations.zip` is a YOLO
+   *annotation* archive — it contains `obj.names` + `.txt` label files and
+   **zero images**. Uploading it in the data step yields a task with **no
+   images** (or a single decoded frame), which is the "1 image instead of
+   80" symptom. Confirm the data step shows all 80 files before submitting.
+3. After the task is created, open it and **Upload annotations** → format
+   "YOLO 1.1" → the batch's `preannotations.zip`. Verify the task shows both
+   the trusted (base) boxes and the new candidate boxes for the target
+   classes.
 4. Record the CVAT task id/URL — it lands in the batch manifest's
    `cvat_task_ref` at import time (§5), not created automatically here.
 5. Assign reviewers. If `batch_manifest.json`'s `iaa_sample` is non-empty,
@@ -200,6 +218,8 @@ safety net shrinks exactly as verification grows.
 
 | Symptom | Cause | Fix |
 |:---|:---|:---|
+| `Could not create the task` / `labels: [object Object]` + `POST /api/tasks 400` | Pasted labels lack the `attributes` array CVAT 2.5.14's Raw editor requires (`validateParsedLabel`) — e.g. an old `{"name": ...}`-only spec | Paste the current `cvat_labels.json` (each entry `{"name": ..., "attributes": []}`); regenerate with §2 if it looks bare |
+| Task created with **1 image** (or none) instead of 80 | `preannotations.zip` was uploaded in the **task data** step — it holds labels, not images | Recreate the task; in the data step select the 80 **image files**, then attach `preannotations.zip` via **Upload annotations** (§3.2–3.3) |
 | `does not match the taxonomy` | CVAT task's label list was a subset or reordered | Recreate the task from `cvat_labels.json` (§3.1); this batch's export cannot be salvaged |
 | `edited a trusted box` | A non-target-class box was moved/resized in CVAT | Revert the edit in CVAT, re-export |
 | `has no resolved trusted-class set` | Provenance/label_completeness disagree (merge stage is stale) | Re-run `merge_datasets` |
