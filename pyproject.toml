@@ -14,7 +14,9 @@ requires-python = ">=3.10"
 
 # Core runtime dependencies (bounds mirror requirements.txt exactly)
 dependencies = [
-    "ultralytics>=8.3,<9.0",
+    # Pinned to 8.4.103: 8.4.104 changed v8DetectionLoss to return loss_items
+    # as a dict, breaking the masked-loss criterion + tests. See requirements.txt.
+    "ultralytics==8.4.103",
     "opencv-python>=4.9,<5.0",
     "numpy>=1.26,<2.0",
     "pyyaml>=6.0,<7.0",

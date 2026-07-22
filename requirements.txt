@@ -3,7 +3,11 @@
 # Platform: Python 3.10+ on Linux (Raspberry Pi 5) / Android / macOS / Windows
 
 # Object Detection
-ultralytics>=8.3,<9.0
+# Pinned to the last version whose v8DetectionLoss returns loss_items as an
+# indexable tensor. 8.4.104 changed it to a dict, breaking the masked-loss
+# criterion + tests (src/training/masked_loss.py, tests/unit/test_masked_loss.py).
+# Bump only alongside a fix-forward that adapts to the dict-shaped loss_items.
+ultralytics==8.4.103
 opencv-python>=4.9,<5.0
 numpy>=1.26,<2.0
 
