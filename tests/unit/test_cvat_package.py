@@ -22,16 +22,23 @@ class TestBuildCvatLabelsSpec:
     def test_taxonomy_id_order(self) -> None:
         spec = build_cvat_labels_spec(_NAMES_BY_ID)
         assert spec == [
-            {"name": "person"},
-            {"name": "face"},
-            {"name": "charger"},
-            {"name": "wire"},
+            {"name": "person", "attributes": []},
+            {"name": "face", "attributes": []},
+            {"name": "charger", "attributes": []},
+            {"name": "wire", "attributes": []},
         ]
 
     def test_unordered_input_still_sorted_by_id(self) -> None:
         shuffled = {3: "wire", 0: "person", 2: "charger", 1: "face"}
         spec = build_cvat_labels_spec(shuffled)
         assert [s["name"] for s in spec] == ["person", "face", "charger", "wire"]
+
+    def test_every_label_has_attributes_array(self) -> None:
+        # CVAT's Raw label editor (validateParsedLabel) rejects any label whose
+        # `attributes` is not an array — this is the exact check that produced
+        # the "labels: [object Object]" / POST /api/tasks 400 failure.
+        spec = build_cvat_labels_spec(_NAMES_BY_ID)
+        assert all(isinstance(label["attributes"], list) for label in spec)
 
 
 class TestBuildPreannotationLabels:

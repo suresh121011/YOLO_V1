@@ -31,13 +31,23 @@ from src.utils.dataset_utils import compute_file_hash
 _FIXED_ZIP_TIME = (1980, 1, 1, 0, 0, 0)
 
 
-def build_cvat_labels_spec(class_names_by_id: Mapping[int, str]) -> list[dict[str, str]]:
+def build_cvat_labels_spec(class_names_by_id: Mapping[int, str]) -> list[dict[str, Any]]:
     """CVAT label-constructor spec, taxonomy id order (D4).
 
     Paste as CVAT's "raw" label list when creating the verification task so
     label order can never drift from ``configs/data.yaml``.
+
+    Each entry MUST carry an ``attributes`` array: CVAT's Raw label editor
+    (``cvat-ui`` ``labels-editor/common.ts::validateParsedLabel``) rejects any
+    label whose ``attributes`` is not an array with ``"Attributes must be an
+    array"``. That client-side failure is what surfaces as the opaque
+    ``labels: [object Object]`` task-creation error and the ``POST /api/tasks``
+    ``400`` — a bare ``{"name": ...}`` object is NOT a valid Raw-editor label.
+    ``name`` is the only server-required field, but the browser never lets a
+    bare-name list reach the server. ``color``/``type`` stay unset so CVAT
+    assigns its defaults (auto colour, ``type: "any"`` = all draw tools).
     """
-    return [{"name": class_names_by_id[i]} for i in sorted(class_names_by_id)]
+    return [{"name": class_names_by_id[i], "attributes": []} for i in sorted(class_names_by_id)]
 
 
 def build_preannotation_labels(
