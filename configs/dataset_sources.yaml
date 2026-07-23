@@ -74,6 +74,7 @@ completeness:
     wider_face: trusted_list_with_ledger
     negatives: verified_absence_all
     custom_captures: per_session
+    local_captures: trusted_list_with_ledger   # single-class ZIPs; exhaustive annotation
 
 # ─── Sources ──────────────────────────────────────────────────────────────────
 # trusted_classes: classes this source labels EXHAUSTIVELY. Any other taxonomy
@@ -162,3 +163,35 @@ sources:
     output_dir: data/raw/custom_captures
     license: "proprietary (consent-gated; see CaptureSessionManifest)"
     trusted_classes: []       # set per capture session
+
+  local_captures:
+    enabled: true             # Ingested by scripts/dataset/20_ingest_local_zips.py
+                              # from the 22 Drive ZIPs in Dataset/.
+    output_dir: data/raw/local_captures
+    license: "proprietary (locally collected; see 20_ingest_local_zips.py)"
+    remap_table: identity     # IDs are already in taxonomy space after ingestion
+    trusted_classes:
+      # Each sub-directory is single-class, so the listed class is exhaustively
+      # annotated within that source. medicine_strip is TEMPORARY (Roboflow-sourced).
+      - person
+      - face
+      - medicine_strip        # TEMPORARY — replace with own data before release
+      - water_bottle          # bottel.zip — VERIFIED: water/beverage bottles only
+      - knife
+      - stove
+      - gas_cylinder
+      - passport
+      - book
+      - charger
+      - wire
+      - laptop
+      - monitor
+      - cupboard
+      - door
+      - chair
+      - bed
+      - toilet
+      - sink
+      - wet_floor
+      - walking_stick
+      - support_handle

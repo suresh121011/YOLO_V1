@@ -102,6 +102,22 @@ stages:
     outs:
       - data/raw/negatives
 
+  # ─── Local ZIP ingestion (pre-Phase-5, one-shot + idempotent) ──────────────
+  # Extracts the 22 locally-collected Drive ZIP archives, remaps class IDs to
+  # taxonomy, writes source_classes.json sidecars, and generates per-source
+  # manifests under data/raw/local_captures/.
+  #
+  # NOT frozen — safe to re-run (sentinel-guarded, idempotent by design).
+  # Re-run triggers automatically when the ZIP directory or the script changes.
+
+  ingest_local_zips:
+    cmd: python scripts/dataset/20_ingest_local_zips.py --validate
+    deps:
+      - scripts/dataset/20_ingest_local_zips.py
+      - Dataset
+    outs:
+      - data/raw/local_captures
+
   # ─── Custom captures (Phase-3, human-in-the-loop) ───────────────────────────
   # Frozen: dvc repro NEVER runs these (repro deletes stage outs before
   # re-running, which would wipe real ingested photos on any other machine).
@@ -135,6 +151,7 @@ stages:
       - data/raw/roboflow_imports
       - data/raw/wider_face
       - data/raw/negatives
+      - data/raw/local_captures
     params:
       - configs/dataset_sources.yaml:
           - sources
@@ -154,6 +171,7 @@ stages:
       - data/raw/roboflow_imports
       - data/raw/wider_face
       - data/raw/negatives
+      - data/raw/local_captures
       - data/raw/custom_captures
       - data/interim
     params:
