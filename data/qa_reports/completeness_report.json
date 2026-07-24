@@ -1,47 +1,47 @@
 {
-  "generated_at": "2026-07-23T12:05:10Z",
+  "generated_at": "2026-07-24T17:39:24Z",
   "artifact_path": "data/processed/completeness.json",
   "taxonomy_fingerprint": "sha256:a831924bb82e23ffbc6cc1d56647a78cc72ff5e329920569b05bd5ae99c2f125",
   "stats": {
-    "images_total": 14005,
+    "images_total": 17422,
     "by_split": {
-      "test": 1394,
-      "train": 11217,
-      "val": 1394
+      "test": 1735,
+      "train": 13952,
+      "val": 1735
     },
     "by_policy": {
       "coco": 53,
-      "local_captures": 13820,
-      "negatives": 15,
+      "local_captures": 17232,
+      "negatives": 20,
       "openimages": 57,
       "wider_face": 60
     },
     "class_trusted_image_counts": {
-      "bed": 13888,
-      "book": 13888,
-      "chair": 13888,
-      "charger": 13835,
-      "cupboard": 13892,
-      "door": 13892,
-      "face": 13895,
-      "gas_cylinder": 13835,
-      "knife": 13888,
-      "laptop": 13888,
-      "medicine_bottle": 15,
-      "medicine_strip": 13835,
-      "monitor": 13888,
-      "passport": 13835,
-      "person": 13888,
-      "sink": 13888,
-      "stove": 13892,
-      "support_handle": 13835,
-      "toilet": 13888,
-      "walking_stick": 13835,
-      "water_bottle": 13888,
-      "wet_floor": 13835,
-      "wire": 13835
+      "bed": 17305,
+      "book": 17305,
+      "chair": 17305,
+      "charger": 17252,
+      "cupboard": 17309,
+      "door": 17309,
+      "face": 17312,
+      "gas_cylinder": 17252,
+      "knife": 17305,
+      "laptop": 17305,
+      "medicine_bottle": 20,
+      "medicine_strip": 17252,
+      "monitor": 17305,
+      "passport": 17252,
+      "person": 17305,
+      "sink": 17305,
+      "stove": 17309,
+      "support_handle": 17252,
+      "toilet": 17305,
+      "walking_stick": 17252,
+      "water_bottle": 17305,
+      "wet_floor": 17252,
+      "wire": 17252
     },
-    "mean_trusted_classes_per_image": 21.788
+    "mean_trusted_classes_per_image": 21.83
   },
   "policies": [
     {
@@ -55,7 +55,7 @@
     {
       "policy": "local_captures",
       "mode": "trusted_list_with_ledger",
-      "images": 13820,
+      "images": 17232,
       "trusted_count": 22,
       "untrusted_count": 1,
       "trusted_classes": "person face medicine_strip water_bottle knife stove gas_cylinder passport book charger wire laptop monitor cupboard door chair bed toilet sink wet_floor walking_stick support_handle"
@@ -63,7 +63,7 @@
     {
       "policy": "negatives",
       "mode": "verified_absence_all",
-      "images": 15,
+      "images": 20,
       "trusted_count": 23,
       "untrusted_count": 0,
       "trusted_classes": "person face medicine_strip medicine_bottle water_bottle knife stove gas_cylinder passport book charger wire laptop monitor cupboard door chair bed toilet sink wet_floor walking_stick support_handle"

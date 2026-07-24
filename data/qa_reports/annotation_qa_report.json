@@ -1,15 +1,15 @@
 {
-  "timestamp": "2026-07-23T12:07:09Z",
+  "timestamp": "2026-07-24T17:40:48Z",
   "data_dir": "data/processed",
   "num_classes": 23,
   "summary": {
-    "total_images": 14005,
-    "total_labels": 14005,
-    "total_boxes": 63760,
+    "total_images": 17422,
+    "total_labels": 17422,
+    "total_boxes": 88312,
     "critical_issues": 0,
-    "warning_issues": 22,
+    "warning_issues": 28,
     "info_issues": 0,
-    "total_issues": 22
+    "total_issues": 28
   },
   "checks": {
     "invalid_yolo_format": {
@@ -30,7 +30,7 @@
     },
     "duplicate_annotations": {
       "status": "WARNING",
-      "count": 7
+      "count": 8
     },
     "unknown_class_names": {
       "status": "PASS",
@@ -46,7 +46,7 @@
     },
     "empty_label_files": {
       "status": "WARNING",
-      "count": 15
+      "count": 20
     },
     "inconsistent_pairs": {
       "status": "PASS",
@@ -70,6 +70,14 @@
     }
   },
   "issues": [
+    {
+      "check": "duplicate_annotations",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data/processed/labels/train/local_captures_gas_cylinder__VID_20260217_111902_frame_012_jpg.rf.J1XhY5NYDkJAVZNeWPIC.txt",
+      "line": 15,
+      "message": "Line 15 is a duplicate of line 8: '7 0.595170 0.817708 0.235795 0.295139'"
+    },
     {
       "check": "duplicate_annotations",
       "severity": "WARNING",
@@ -106,6 +114,14 @@
       "check": "duplicate_annotations",
       "severity": "WARNING",
       "split": "train",
+      "file": "data/processed/labels/train/local_captures_gas_cylinder__VID_20260318_173920_frame_007_jpg.rf.7eNt0me1bZjCvablWqNM.txt",
+      "line": 11,
+      "message": "Line 11 is a duplicate of line 10: '7 0.240057 0.812500 0.025568 0.104167'"
+    },
+    {
+      "check": "duplicate_annotations",
+      "severity": "WARNING",
+      "split": "train",
       "file": "data/processed/labels/train/local_captures_gas_cylinder__VID_20260318_174350_frame_011_jpg.rf.etqHqHSEdq73pnGHFWvX.txt",
       "line": 29,
       "message": "Line 29 is a duplicate of line 5: '7 0.248177 0.841204 0.110937 0.189815'"
@@ -117,14 +133,6 @@
       "file": "data/processed/labels/train/local_captures_gas_cylinder__VID_20260318_174350_frame_011_jpg.rf.etqHqHSEdq73pnGHFWvX.txt",
       "line": 45,
       "message": "Line 45 is a duplicate of line 31: '7 0.633854 0.715741 0.103125 0.175926'"
-    },
-    {
-      "check": "duplicate_annotations",
-      "severity": "WARNING",
-      "split": "test",
-      "file": "data/processed/labels/test/local_captures_gas_cylinder__VID_20260217_111902_frame_012_jpg.rf.J1XhY5NYDkJAVZNeWPIC.txt",
-      "line": 15,
-      "message": "Line 15 is a duplicate of line 8: '7 0.595170 0.817708 0.235795 0.295139'"
     },
     {
       "check": "empty_label_files",
@@ -141,6 +149,14 @@
       "file": "data/processed/labels/train/negatives_000000015272.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000015272.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data/processed/labels/train/negatives_000000047010.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000047010.txt"
     },
     {
       "check": "empty_label_files",
@@ -186,6 +202,14 @@
       "check": "empty_label_files",
       "severity": "WARNING",
       "split": "train",
+      "file": "data/processed/labels/train/negatives_000000348488.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000348488.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
       "file": "data/processed/labels/train/negatives_000000354753.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000354753.txt"
@@ -202,9 +226,25 @@
       "check": "empty_label_files",
       "severity": "WARNING",
       "split": "train",
+      "file": "data/processed/labels/train/negatives_000000372317.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000372317.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
       "file": "data/processed/labels/train/negatives_000000420472.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000420472.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data/processed/labels/train/negatives_000000444879.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000444879.txt"
     },
     {
       "check": "empty_label_files",
@@ -229,6 +269,14 @@
       "file": "data/processed/labels/train/negatives_000000509656.txt",
       "line": 0,
       "message": "Label file is empty: negatives_000000509656.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data/processed/labels/train/negatives_000000511321.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000511321.txt"
     },
     {
       "check": "empty_label_files",
@@ -358,100 +406,101 @@
       {
         "source": "local_captures",
         "total": 25838,
-        "accepted": 13820,
-        "duplicates": 6368,
+        "accepted": 17232,
+        "duplicates": 2956,
         "filtered_out": 0,
         "missing_labels": 5650
       },
       {
         "source": "negatives",
         "total": 20,
-        "accepted": 15,
-        "duplicates": 5,
+        "accepted": 20,
+        "duplicates": 0,
         "filtered_out": 0,
         "missing_labels": 0
       }
     ],
-    "duplicates_removed": 6373,
+    "duplicates_removed": 2956,
     "filtered_out": 10
   },
   "image_quality": {
     "available": true,
-    "scanned": 13925,
+    "scanned": 17333,
     "blur_variance_threshold": 100.0,
     "low_light_brightness_threshold": 40.0,
-    "blurry_count": 1905,
+    "blurry_count": 2553,
     "blurry_samples": [
-      "local_captures_book__11a74730c006a807_jpg.rf.O7uqqKdPuCkW2d3pqa7D.jpg",
-      "local_captures_book__1ba5b3a0ffa4d255_jpg.rf.7dB1Ll1INHPkfjNKbYtH.jpg",
-      "local_captures_book__396a525890209734_jpg.rf.kjnXWLHnc2TutwcMOmPF.jpg",
-      "local_captures_book__402ff17f5b743f73_jpg.rf.nTocqOyhhGXZe6GQ30P1.jpg",
-      "local_captures_book__4d738f7743ea6291_jpg.rf.pYEjvMNY472gN6WcrJTY.jpg",
-      "local_captures_book__5aa995217eb32b04_jpg.rf.7F1afCzV5mpq0ymVyVo1.jpg",
-      "local_captures_book__7c59fa714c0537c3_jpg.rf.wftPE8hkEPkcBK6cd2Tf.jpg",
-      "local_captures_book__8d92248bbb35a456_jpg.rf.Vm1c8AHgSVHVoy4mqkq5.jpg",
-      "local_captures_book__a9357b02e36f6c25_jpg.rf.tDe8tY06xOY5qMgTS18h.jpg",
-      "local_captures_book__da5ce66a82fb054d_jpg.rf.IosoXltJhj502OKlMiQR.jpg",
-      "local_captures_book__db5663e9e65c1958_jpg.rf.Z9F43sRAGXz8Kdkl2jXU.jpg",
-      "local_captures_book__dcf54c21ea884426_jpg.rf.EhYw63iKjvVOqBLqlk3X.jpg",
-      "local_captures_book__e2704ba154d7e2b3_jpg.rf.kGcykYPVwdR58IEFk6G6.jpg",
-      "local_captures_bottel__IMG_20240216_205417_jpg.rf.e8Xt1Jzo1cnDQmqYWl2w.jpg",
-      "local_captures_bottel__IMG_20240216_205450_jpg.rf.oCkbtF97qEWYFjrOjyYJ.jpg",
-      "local_captures_bottel__IMG_20240216_213936_jpg.rf.KfvILcgB5p452KHakcNi.jpg",
-      "local_captures_bottel__IMG_20240216_215549_jpg.rf.MTEqWS7LwOPN6g9m1Rry.jpg",
-      "local_captures_bottel__IMG_20240216_215657_jpg.rf.yAU7PuMj3x2cP317irze.jpg",
-      "local_captures_bottel__IMG_20240217_101305_jpg.rf.leX1UzuaLNORapCaAVgb.jpg",
-      "local_captures_chair__000001_jpg.rf.bu8h6xIF1m9C4OBydBHd.jpg",
-      "local_captures_chair__100024_jpg.rf.c0n1CRwrKmZlbozx6egt.jpg",
-      "local_captures_chair__400283_jpg.rf.euK274OOzlLP8QRpq8ob.jpg",
-      "local_captures_chair__IMG20250304093304_jpg.rf.I3wKJAmNlA18050JR72N.jpg",
-      "local_captures_chair__IMG20250304093501_BURST047_41061880_jpg.rf.7kuJv5rPiKQraIMflqm5.jpg",
-      "local_captures_chair__IMG_2173_JPG.rf.gRcmdpuDuhaNYdna0L2z.JPG",
-      "local_captures_chair__IMG_2174_JPG.rf.2fmCVrwGRzpbbOwviTnZ.JPG",
-      "local_captures_chair__IMG_2709_JPG.rf.2Fqa3fuPvqnugAOxuU2J.JPG",
-      "local_captures_chair__IMG_2710_JPG.rf.d5uGN0pBw6al2LWxWsfJ.JPG",
-      "local_captures_chair__IMG_6410_JPG.rf.dznbu7UNG2XpMlVCBs7N.JPG",
-      "local_captures_chair__IMG_6462_JPG.rf.X1y1sY6LBzMAshY7UxYC.JPG"
+      "local_captures_book__0787f5c493031226_jpg.rf.SDsGFG0IyOPjx6N239dU.jpg",
+      "local_captures_book__08c13662aa634579_jpg.rf.HZ5Hr8M5lJTyLwVR6aKq.jpg",
+      "local_captures_book__1426ed66aa3ca7da_jpg.rf.SmJnb1UuxEFC7lNWPCjH.jpg",
+      "local_captures_book__2f7d35f9b3b59060_jpg.rf.KheEjm5kJHtBuLYun5vU.jpg",
+      "local_captures_book__4a85ef562effebd7_jpg.rf.UzmPZMXUkm5W8uRmNW50.jpg",
+      "local_captures_book__54b309df74190a9b_jpg.rf.eMRuiqpvewRgO8ssYNkc.jpg",
+      "local_captures_book__5ae5bad7ba5d1777_jpg.rf.Yyd5LlzkzagZyqTxltzS.jpg",
+      "local_captures_book__68d455c4140478f9_jpg.rf.EVbodvYCXPgCsXUXvRZ2.jpg",
+      "local_captures_book__9bb456c9f8db1f04_jpg.rf.2fyUETFlGgG9KFovNnNv.jpg",
+      "local_captures_book__a13ad60d2ae08729_jpg.rf.fbtFU8AdhAnrH6Lkvmba.jpg",
+      "local_captures_book__a83700700b6d1f0a_jpg.rf.8HWpPU2gtA0YOwP2injK.jpg",
+      "local_captures_book__afbbd1738e4ac013_jpg.rf.mWre0TPEKT9Fu8Y1A3tO.jpg",
+      "local_captures_book__b683a113e6e3d4aa_jpg.rf.gmF5wZxeaCQzlp58ergv.jpg",
+      "local_captures_book__be78f84a6f5add74_jpg.rf.vRl7A7MnAtcrEuJzdTL6.jpg",
+      "local_captures_book__de0b28ea7daa0b28_jpg.rf.onVTWyLWliie0AqWRpEq.jpg",
+      "local_captures_book__df06bb439195c017_jpg.rf.dI7DjYH68VjjaLWWwgWd.jpg",
+      "local_captures_bottel__IMG_20240216_205514_jpg.rf.oIeJGtZpU9VPhNLTAAiG.jpg",
+      "local_captures_bottel__IMG_20240216_205630_jpg.rf.akhXFtI9zoQGNlUujJpE.jpg",
+      "local_captures_bottel__IMG_20240216_213639_jpg.rf.XhIk0CusXwzQH8h5Qtjw.jpg",
+      "local_captures_bottel__IMG_20240216_214105_jpg.rf.3BfN69zP77CfIvNleKu3.jpg",
+      "local_captures_chair__400050_jpg.rf.kta0NnITHQQUtfT9IaBx.jpg",
+      "local_captures_chair__IMG20250304093005_jpg.rf.R7HnBQKIl9kNKFPHF49P.jpg",
+      "local_captures_chair__IMG20250304093012_jpg.rf.Y5xYVUhhYUWOyAyM84cM.jpg",
+      "local_captures_chair__IMG20250304093033_jpg.rf.OZH4uT9mmT4zUuvBOmSW.jpg",
+      "local_captures_chair__IMG20250304093102_jpg.rf.37Bhrafkko5jZroJAKVR.jpg",
+      "local_captures_chair__IMG20250304093157_jpg.rf.nzQ0Nkp6vs78y6Qhdnsi.jpg",
+      "local_captures_chair__IMG20250304093501_BURST016_41061873_jpg.rf.YFNWyMNwktMz7DKM8rOz.jpg",
+      "local_captures_chair__IMG20250304093501_BURST030_41061877_jpg.rf.Bhu8UJpomfSj9TvlyLUU.jpg",
+      "local_captures_chair__IMG_2113_JPG.rf.qItzOwqF66J6dCroOJiK.JPG",
+      "local_captures_chair__IMG_2114_JPG.rf.D44i8Bgy8oFZOlnKe2rW.JPG"
     ],
-    "low_light_count": 145,
+    "low_light_count": 173,
     "low_light_samples": [
-      "local_captures_book__11a74730c006a807_jpg.rf.O7uqqKdPuCkW2d3pqa7D.jpg",
-      "local_captures_gas_cylinder__bharat_365_jpeg.rf.09m6pMKwWljvqRjBDgJW.jpeg",
+      "local_captures_book__68d455c4140478f9_jpg.rf.EVbodvYCXPgCsXUXvRZ2.jpg",
       "local_captures_gas_cylinder__VID_20260226152500_frame_002_jpg.rf.YAfS3nJud9wUXMfx0j3O.jpg",
-      "local_captures_knife__27_jpg.rf.HrBPZUC81qI9Zooe3AA9.jpg",
-      "local_captures_knife__cutlery-3287331_1280_jpg.rf.ChIjowHE7dwbQBGk1C2l.jpg",
-      "local_captures_knife__knife-2228114_1280_jpg.rf.JhJjpAakquCSwTfe2R3E.jpg",
-      "local_captures_knife__knife-2930492_1280_webp.rf.F26A4QQCCEnaEuS1CScd.webp",
-      "local_captures_knife__knife_418_jpg.rf.OPwmBAwKwabHADX3sh37.jpg",
-      "local_captures_monitor__id-uhd-u32j590u-lu32j590uqexxd-rperspectiveblack-124682343_jpg.rf.LuxDZ85YLO88DTNDUSAp.jpg",
-      "local_captures_person__coarse_tilt_aligned_face_2074_11854903603_6c91739262_o_jpg.rf.XXuklWhC1nVEuUmhKhav.jpg",
-      "local_captures_walking_stick__0000003002_jpg.rf.WWEpZe8mrUTUWtVTfrZU.jpg",
-      "local_captures_wet_floor__image1105_jpeg_jpg.rf.83KkjbNnNz9PG1ZbLc9v.jpg",
+      "local_captures_knife__2EUC9MCBDZVE_jpg.rf.va5FAI4pAHe9B6kgrxa5.jpg",
+      "local_captures_knife__images - 2025-06-15T191730_572_jpg.rf.VwOJ5GCrhkXIEdZHdKY1.jpg",
+      "local_captures_knife__knife-701-_jpg.rf.r6pGylNuHgHE6q2oR6hD.jpg",
+      "local_captures_monitor__id-curved-c27rg50-lc27rg50fqexxd-dynamicblack-178490720_jpg.rf.JCIUAoS9xcgqe7OAh21y.jpg",
+      "local_captures_monitor__id-curved-c27rg50-lc27rg50fqexxd-rperspectiveblack-178490718_jpg.rf.FRXi7h7y1G6zn1NwzxIL.jpg",
+      "local_captures_monitor__id-curved-cf390-lc24f390fhexxd-015-side-black_jpg.rf.SjcSKSP7fZZCduaDlsf1.jpg",
+      "local_captures_monitor__id-odyssey-g5-g55t-374151-lc32g55tqwexxd-383339906_jpg.rf.pQWtDnREqzdMAPhzklUN.jpg",
+      "local_captures_monitor__id-s31a-ls24a310nhexxd-493849648_jpg.rf.kuUrB3ug4mpRHS85X5ih.jpg",
+      "local_captures_monitor__id-s31a-ls24a310nhexxd-493849654_jpg.rf.cZvE9X7UXhz0infaRe6n.jpg",
+      "local_captures_monitor__id-smart-m7-32m70a-ls32am700uexxd-362739848_jpg.rf.XEtUSUKfbyyOmB03xeRX.jpg",
+      "local_captures_monitor__id-sr35-ls24r350fhexxd-backblack-271565222_jpg.rf.y1LjXlitkX7zQyImA1Zx.jpg",
+      "local_captures_person__coarse_tilt_aligned_face_2237_10969771833_9692fd2233_o_jpg.rf.foSJs4Wc6JauRyq6gzP8.jpg",
+      "local_captures_walking_stick__0000000972_jpg.rf.E9xN9iETNPyUWGBxsntO.jpg",
+      "local_captures_walking_stick__Stick_70_jpg.rf.qj58IrLxK0snNqeZPQf0.jpg",
       "local_captures_book__042dab1e18cf8795_jpg.rf.muSz5ck3CJQ3fe4AdXmt.jpg",
       "local_captures_book__07048ea0ca4d5e4f_jpg.rf.ROMfm6yIRiHeqczMRJ2C.jpg",
       "local_captures_book__0fa33a83f6cec6fa_jpg.rf.XDuFYIsP6FRyrdy7ftzw.jpg",
+      "local_captures_book__11a74730c006a807_jpg.rf.O7uqqKdPuCkW2d3pqa7D.jpg",
       "local_captures_book__1751bdd0f71b230a_jpg.rf.eNwmzcKReSqQ2EkbsrDD.jpg",
       "local_captures_book__1f63189d10dd75a5_jpg.rf.cW6sDicMyIHs68tspKoS.jpg",
       "local_captures_book__3503b57cb8b59a9c_jpg.rf.ilYua1VUv0WUZaLyephv.jpg",
       "local_captures_book__38b439c02599ad26_jpg.rf.Y4y9Jb5UwCSTEoI60PfU.jpg",
       "local_captures_book__604ffb8ccd69c702_jpg.rf.Qoo5x6FZdITatbNDZ8hI.jpg",
       "local_captures_book__61a5eb30c602a678_jpg.rf.YbzCgJPp7PLHkHK0gd3E.jpg",
-      "local_captures_book__68d455c4140478f9_jpg.rf.EVbodvYCXPgCsXUXvRZ2.jpg",
       "local_captures_book__6b383c2e9af1e17e_jpg.rf.iwf2CJHBZ4bmwY0S8eWR.jpg",
+      "local_captures_book__7e6489d5d9fd5bb9_jpg.rf.tw45XBvQ0Ywh1ClGNgJU.jpg",
       "local_captures_book__b54216c86a5fcb3e_jpg.rf.8rR6oMfAnSZQ9axymTJ1.jpg",
-      "local_captures_book__b68f6faf0bbb937e_jpg.rf.5F6SdPZmQmzDpwP6jUPQ.jpg",
-      "local_captures_charger__47_jpg.rf.XjPBYowpCAaBTX01P5PH.jpg",
-      "local_captures_cupboard__04d5b41909557edb_jpg.rf.HBOSOwRyueYvZHErJUeW.jpg",
-      "local_captures_cupboard__7f4c604e89948d40_jpg.rf.mxJfn8IpRTy827qq8k4p.jpg",
-      "local_captures_cupboard__b2bf8592f41dafec_jpg.rf.INm6L7ovs50h4rnINIVf.jpg",
-      "local_captures_cupboard__b51a93fa795b4bad_jpg.rf.M4jMZSwYT5E0nvrbWl35.jpg"
-    ]
+      "local_captures_book__b68f6faf0bbb937e_jpg.rf.5F6SdPZmQmzDpwP6jUPQ.jpg"
+    ],
+    "quarantine_path": "data/qa_reports/image_quality_quarantine.json"
   },
   "eval_set": {
     "overlap": {
       "available": true,
       "eval_image_count": 0,
-      "train_facing_image_count": 28010,
+      "train_facing_image_count": 34844,
       "exact_overlap_count": 0,
       "exact_overlaps": [],
       "near_overlap_count": 0,
@@ -476,16 +525,20 @@
     "available": true,
     "coverage_report_present": true,
     "quality_report_present": true,
-    "problems_count": 0,
-    "problems": []
+    "live_images_total": 17422,
+    "problems_count": 2,
+    "problems": [
+      "coverage_report: image count 188 != live dataset 17422 (completeness.json) — stale, re-run `dvc repro coverage_report`",
+      "dataset_quality_report: images_total 188 != live dataset 17422 (completeness.json) — stale, re-run `dvc repro dataset_quality_report`"
+    ]
   },
   "orchestrator": {
     "check_annotations_exit": 2,
     "dataset_stats_exit": 0,
     "license_critical": false,
-    "image_quality_warnings": 2050,
+    "image_quality_warnings": 2726,
     "eval_overlap_critical": false,
     "annotation_sweep_warnings": 0,
-    "l4_l5_report_warnings": 0
+    "l4_l5_report_warnings": 2
   }
 }
