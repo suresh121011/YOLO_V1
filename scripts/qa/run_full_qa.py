@@ -126,17 +126,29 @@ def load_label_completeness(merged_dir: Path) -> dict[str, Any]:
     }
 
 
-def check_image_quality(data_dir: Path) -> tuple[dict[str, Any], int]:
+def check_image_quality(
+    data_dir: Path,
+    blur_threshold: float = BLUR_VARIANCE_THRESHOLD,
+    low_light_threshold: float = LOW_LIGHT_BRIGHTNESS_THRESHOLD,
+) -> tuple[dict[str, Any], int, dict[str, list[str]]]:
     """Blur + low-light WARNING checks over all processed images.
 
+    Args:
+        data_dir:            Dataset root with an ``images/`` subtree.
+        blur_threshold:      Laplacian variance below this → blurry.
+        low_light_threshold: Mean grayscale below this → too dark.
+
     Returns:
-        (report dict, warning_count). Skips gracefully without OpenCV.
+        ``(report dict, warning_count, quarantine)`` where ``quarantine`` holds
+        the *full* flagged-image lists (``blurry`` / ``low_light``) for a
+        review bucket — the report dict keeps only capped samples so the DVC
+        metric file stays small. Skips gracefully without OpenCV.
     """
     try:
         import cv2
     except ImportError:
         logger.warning("OpenCV not available — blur/low-light checks skipped")
-        return {"available": False}, 0
+        return {"available": False}, 0, {"blurry": [], "low_light": []}
 
     blurry: list[str] = []
     dark: list[str] = []
@@ -147,23 +159,25 @@ def check_image_quality(data_dir: Path) -> tuple[dict[str, Any], int]:
         if gray is None:
             continue
         scanned += 1
-        if float(cv2.Laplacian(gray, cv2.CV_64F).var()) < BLUR_VARIANCE_THRESHOLD:
+        if float(cv2.Laplacian(gray, cv2.CV_64F).var()) < blur_threshold:
             blurry.append(image_path.name)
-        if float(gray.mean()) < LOW_LIGHT_BRIGHTNESS_THRESHOLD:
+        if float(gray.mean()) < low_light_threshold:
             dark.append(image_path.name)
 
     warnings = len(blurry) + len(dark)
     logger.info(f"Image quality: {scanned} scanned, {len(blurry)} blurry, {len(dark)} low-light")
-    return {
+    report = {
         "available": True,
         "scanned": scanned,
-        "blur_variance_threshold": BLUR_VARIANCE_THRESHOLD,
-        "low_light_brightness_threshold": LOW_LIGHT_BRIGHTNESS_THRESHOLD,
+        "blur_variance_threshold": blur_threshold,
+        "low_light_brightness_threshold": low_light_threshold,
         "blurry_count": len(blurry),
         "blurry_samples": blurry[:MAX_LISTED_FILES],
         "low_light_count": len(dark),
         "low_light_samples": dark[:MAX_LISTED_FILES],
-    }, warnings
+        "quarantine_path": "data/qa_reports/image_quality_quarantine.json",
+    }
+    return report, warnings, {"blurry": blurry, "low_light": dark}
 
 
 def check_eval_overlap(
@@ -400,16 +414,25 @@ def sweep_l4_l5_reports(
     coverage_report_path: Path,
     quality_report_path: Path,
     data_yaml_path: Path,
+    completeness_path: Path | None = None,
 ) -> dict[str, Any]:
     """M4 QA sweep over the L4 coverage / L5 dataset quality reports.
 
-    Schema-validates whichever report(s) exist and flags a stale taxonomy
-    fingerprint (the report's embedded fingerprint no longer matching the
-    live ``configs/data.yaml`` — a sign ``dvc repro`` needs to be re-run
-    after a taxonomy edit). WARNING level, like :func:`sweep_annotation_artifacts`
-    — schema/staleness hygiene for a human to investigate, not training-
-    blocking. Returns ``{"available": False}`` before either report exists
-    (pre-M4 checkouts stay green).
+    Schema-validates whichever report(s) exist and flags staleness two ways:
+
+    * **Taxonomy fingerprint** — the report's embedded fingerprint no longer
+      matching the live ``configs/data.yaml`` (a taxonomy edit).
+    * **Image-count drift** — the image count baked into the report no longer
+      matching the live ``data/processed/completeness.json`` image total. Both
+      reports are *derived* from completeness, so a mismatch means the L4/L5
+      stage was never re-run after the dataset grew/shrank. This catches the
+      failure mode where a 188-image report survives a 14k-image rebuild
+      because the taxonomy fingerprint happens to still match.
+
+    WARNING level, like :func:`sweep_annotation_artifacts` — schema/staleness
+    hygiene for a human to investigate, not training-blocking. Returns
+    ``{"available": False}`` before either report exists (pre-M4 checkouts
+    stay green).
     """
     if not coverage_report_path.exists() and not quality_report_path.exists():
         return {"available": False}
@@ -423,6 +446,16 @@ def sweep_l4_l5_reports(
     names = get_class_names_from_data_yaml(data_cfg)
     live_fp = taxonomy_fingerprint(int(data_cfg["nc"]), names)
 
+    # Live image total from the completeness artifact both reports derive from.
+    live_images: int | None = None
+    if completeness_path is not None and completeness_path.exists():
+        try:
+            comp = json.loads(completeness_path.read_text(encoding="utf-8"))
+            val = comp.get("stats", {}).get("images_total")
+            live_images = int(val) if isinstance(val, int) else None
+        except (json.JSONDecodeError, OSError, ValueError):
+            live_images = None
+
     problems: list[str] = []
     coverage_present = coverage_report_path.exists()
     quality_present = quality_report_path.exists()
@@ -435,6 +468,14 @@ def sweep_l4_l5_reports(
                 "coverage_report: taxonomy fingerprint stale vs live configs/data.yaml — "
                 "re-run `dvc repro coverage_report`"
             )
+        if live_images is not None:
+            cov_images = len(coverage.get("per_image", {}))
+            if cov_images != live_images:
+                problems.append(
+                    f"coverage_report: image count {cov_images} != live dataset "
+                    f"{live_images} (completeness.json) — stale, re-run "
+                    "`dvc repro coverage_report`"
+                )
 
     if quality_present:
         quality = json.loads(quality_report_path.read_text(encoding="utf-8"))
@@ -444,11 +485,20 @@ def sweep_l4_l5_reports(
                 "dataset_quality_report: taxonomy fingerprint stale vs live "
                 "configs/data.yaml — re-run `dvc repro dataset_quality_report`"
             )
+        if live_images is not None:
+            q_images = quality.get("dataset_scale", {}).get("images_total")
+            if isinstance(q_images, int) and q_images != live_images:
+                problems.append(
+                    f"dataset_quality_report: images_total {q_images} != live dataset "
+                    f"{live_images} (completeness.json) — stale, re-run "
+                    "`dvc repro dataset_quality_report`"
+                )
 
     return {
         "available": True,
         "coverage_report_present": coverage_present,
         "quality_report_present": quality_present,
+        "live_images_total": live_images,
         "problems_count": len(problems),
         "problems": problems[:MAX_LISTED_FILES],
     }
@@ -493,12 +543,31 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=Path("data/qa_reports/dataset_quality_report.json"),
     )
+    parser.add_argument(
+        "--completeness",
+        type=Path,
+        default=Path("data/processed/completeness.json"),
+        help="Live completeness artifact — its images_total is the reference "
+        "for the L4/L5 image-count staleness guard.",
+    )
     parser.add_argument("--output", type=Path, default=Path("data/qa_reports"))
     parser.add_argument("--strict", action="store_true", help="Treat warnings as critical.")
     parser.add_argument(
         "--skip-image-checks",
         action="store_true",
         help="Skip blur/low-light scanning (faster).",
+    )
+    parser.add_argument(
+        "--blur-threshold",
+        type=float,
+        default=BLUR_VARIANCE_THRESHOLD,
+        help="Laplacian variance below this flags an image as blurry.",
+    )
+    parser.add_argument(
+        "--low-light-threshold",
+        type=float,
+        default=LOW_LIGHT_BRIGHTNESS_THRESHOLD,
+        help="Mean grayscale brightness below this flags an image as low-light.",
     )
     parser.add_argument(
         "--exit-zero-on-warnings",
@@ -557,8 +626,31 @@ def main() -> int:
     if args.skip_image_checks:
         quality_report: dict[str, Any] = {"available": False}
         quality_warnings = 0
+        quality_quarantine: dict[str, list[str]] = {"blurry": [], "low_light": []}
     else:
-        quality_report, quality_warnings = check_image_quality(args.data_dir)
+        quality_report, quality_warnings, quality_quarantine = check_image_quality(
+            args.data_dir, args.blur_threshold, args.low_light_threshold
+        )
+        # Route the full flagged lists to a review bucket (not silent pass-through).
+        quarantine_path = args.output / "image_quality_quarantine.json"
+        quarantine_path.parent.mkdir(parents=True, exist_ok=True)
+        quarantine_path.write_text(
+            json.dumps(
+                {
+                    "generated_by": "scripts.qa.run_full_qa.check_image_quality",
+                    "blur_variance_threshold": args.blur_threshold,
+                    "low_light_brightness_threshold": args.low_light_threshold,
+                    "blurry_count": len(quality_quarantine["blurry"]),
+                    "low_light_count": len(quality_quarantine["low_light"]),
+                    "blurry": quality_quarantine["blurry"],
+                    "low_light": quality_quarantine["low_light"],
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
 
     # 6–7. Phase-3 eval-set guards (opportunistic — {"available": False} pre-Phase-3)
     sources_cfg = load_sources_config(args.sources_config)
@@ -584,8 +676,10 @@ def main() -> int:
         else 0
     )
 
-    # M4: L4/L5 report schema + staleness sweep
-    l4_l5_reports = sweep_l4_l5_reports(args.coverage_report, args.quality_report, args.config)
+    # M4: L4/L5 report schema + staleness sweep (taxonomy + image-count drift)
+    l4_l5_reports = sweep_l4_l5_reports(
+        args.coverage_report, args.quality_report, args.config, args.completeness
+    )
     l4_l5_warnings = l4_l5_reports.get("problems_count", 0) if l4_l5_reports.get("available") else 0
 
     # Merge everything into the DVC metric file

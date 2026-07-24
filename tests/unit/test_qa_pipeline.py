@@ -614,3 +614,81 @@ class TestSweepL4L5Reports:
         assert report["available"] is True
         assert report["problems_count"] >= 1
         assert any("missing required dimension" in p for p in report["problems"])
+
+    def _write_fresh_pair(
+        self, tmp_path: Path, cov_images: int, q_images: int
+    ) -> tuple[Path, Path]:
+        fp = _live_fp()
+        coverage_path = tmp_path / "coverage_report.json"
+        coverage_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "taxonomy_fingerprint": fp,
+                    "per_class": {},
+                    "per_image": {f"img_{i}.jpg": {"completeness": 1.0} for i in range(cov_images)},
+                    "per_image_summary": {},
+                    "dataset": {"residual_missing_total": 0.0, "unknown_objects_total": 0},
+                }
+            ),
+            encoding="utf-8",
+        )
+        quality_path = tmp_path / "dataset_quality_report.json"
+        quality_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "taxonomy_fingerprint": fp,
+                    "dataset_scale": {"images_total": q_images},
+                    "completeness_summary": {"masked_cell_fraction": 0.5},
+                    "coverage_summary": {},
+                    "per_class_risk": {},
+                    "verification_progress": {},
+                }
+            ),
+            encoding="utf-8",
+        )
+        return coverage_path, quality_path
+
+    def _write_completeness(self, tmp_path: Path, images_total: int) -> Path:
+        path = tmp_path / "completeness.json"
+        path.write_text(json.dumps({"stats": {"images_total": images_total}}), encoding="utf-8")
+        return path
+
+    def test_image_count_drift_flagged(self, tmp_path: Path) -> None:
+        """A 188-image report over a 14k-image dataset must be flagged stale."""
+        data_yaml = _write_data_yaml(tmp_path / "data.yaml")
+        coverage_path, quality_path = self._write_fresh_pair(tmp_path, cov_images=188, q_images=188)
+        completeness_path = self._write_completeness(tmp_path, images_total=14005)
+
+        report = sweep_l4_l5_reports(coverage_path, quality_path, data_yaml, completeness_path)
+        assert report["available"] is True
+        assert report["live_images_total"] == 14005
+        assert report["problems_count"] == 2
+        assert any(
+            "coverage_report: image count 188 != live dataset 14005" in p
+            for p in report["problems"]
+        )
+        assert any(
+            "dataset_quality_report: images_total 188 != live dataset 14005" in p
+            for p in report["problems"]
+        )
+
+    def test_image_count_match_no_drift(self, tmp_path: Path) -> None:
+        data_yaml = _write_data_yaml(tmp_path / "data.yaml")
+        coverage_path, quality_path = self._write_fresh_pair(
+            tmp_path, cov_images=14005, q_images=14005
+        )
+        completeness_path = self._write_completeness(tmp_path, images_total=14005)
+
+        report = sweep_l4_l5_reports(coverage_path, quality_path, data_yaml, completeness_path)
+        assert report["problems_count"] == 0
+
+    def test_image_count_guard_skipped_without_completeness(self, tmp_path: Path) -> None:
+        """No completeness artifact → drift guard is a no-op (backward compatible)."""
+        data_yaml = _write_data_yaml(tmp_path / "data.yaml")
+        coverage_path, quality_path = self._write_fresh_pair(tmp_path, cov_images=188, q_images=188)
+
+        report = sweep_l4_l5_reports(coverage_path, quality_path, data_yaml)
+        assert report["problems_count"] == 0
+        assert report["live_images_total"] is None
