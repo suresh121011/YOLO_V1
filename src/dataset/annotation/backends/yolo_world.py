@@ -135,8 +135,7 @@ class YoloWorldBackend(AutoAnnotator):
         self._device = device
         self._prompt_class_ids = prompt_class_ids
         logger.info(
-            f"yolo_world loaded: {weights.name} ({len(prompt_strings)} prompts, "
-            f"device={device})"
+            f"yolo_world loaded: {weights.name} ({len(prompt_strings)} prompts, device={device})"
         )
 
     def annotate(self, image_path: Path, target_class_ids: tuple[int, ...]) -> list[Detection]:
@@ -156,6 +155,8 @@ class YoloWorldBackend(AutoAnnotator):
             source=str(image_path),
             imgsz=self._config.imgsz,
             conf=self._config.conf_floor,
+            iou=self._config.iou,
+            agnostic_nms=self._config.agnostic_nms,
             max_det=self._config.max_det,
             device=self._device,
             verbose=False,
@@ -205,5 +206,9 @@ class YoloWorldBackend(AutoAnnotator):
                 "torch": torch.__version__,
             },
             device=self._device,
-            prompt_fingerprint=prompt_fingerprint(self._config.prompts, self._config.thresholds),
+            prompt_fingerprint=prompt_fingerprint(
+                self._config.prompts,
+                self._config.thresholds,
+                {"iou": self._config.iou, "agnostic_nms": self._config.agnostic_nms},
+            ),
         )

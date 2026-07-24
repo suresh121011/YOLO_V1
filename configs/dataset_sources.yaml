@@ -28,6 +28,10 @@ dedup:
   hamming_threshold: 5      # Hamming distance < threshold → duplicate
   check_flips: true         # also hash horizontally mirrored image
                             # (catches pre-augmented copies, e.g. Roboflow)
+  hash_size: 8              # aHash grid; hash is hash_size**2 bits. 8 → 64-bit
+                            # (coarse). 16 → 256-bit separates distinct capture
+                            # frames an 8×8 hash over-merges (P2 audit). Retune
+                            # hamming_threshold with it (absolute bit count).
 
 # Indoor / quality filtering heuristics (docs/03 dataset_templates.md)
 indoor_filter:

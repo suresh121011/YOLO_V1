@@ -160,6 +160,33 @@ class TestAnnotate:
         assert model.predict_kwargs["conf"] == 0.05
         assert model.predict_kwargs["max_det"] == 100
         assert model.predict_kwargs["verbose"] is False
+        # NMS knobs default to Ultralytics behaviour when unset in config.
+        assert model.predict_kwargs["iou"] == 0.7
+        assert model.predict_kwargs["agnostic_nms"] is False
+
+    def test_predict_receives_configured_nms(self, tmp_path: Path) -> None:
+        path, sha = _weights(tmp_path)
+        cfg = BackendConfig.from_annotation_config(
+            "yolo_world",
+            {
+                "enabled": True,
+                "weights": str(path),
+                "weights_sha256": sha,
+                "imgsz": 640,
+                "conf_floor": 0.05,
+                "max_det": 100,
+                "iou": 0.45,
+                "agnostic_nms": True,
+                "prompts": {"charger": ["phone charger", "power adapter"], "wire": ["cable"]},
+                "thresholds": {"default": 0.25},
+            },
+        )
+        backend = YoloWorldBackend()
+        backend.load(cfg, "cpu", _IDS)
+        backend.annotate(tmp_path / "img.jpg", (10,))
+        model = _FakeYolo.instances[-1]
+        assert model.predict_kwargs["iou"] == 0.45
+        assert model.predict_kwargs["agnostic_nms"] is True
 
     def test_out_of_range_prompt_index_raises(self, tmp_path: Path) -> None:
         backend, model = self._loaded(tmp_path)
@@ -192,3 +219,31 @@ class TestFingerprint:
         assert fp.device == "cuda:0"
         assert fp.library_versions["ultralytics"] == ultralytics.__version__
         assert fp.library_versions["torch"] == torch.__version__
+
+    def test_nms_change_alters_fingerprint(self, tmp_path: Path) -> None:
+        """Tuning iou / agnostic_nms must invalidate a stale candidates run."""
+        path, sha = _weights(tmp_path)
+
+        def _fp(iou: float, agnostic: bool) -> str:
+            cfg = BackendConfig.from_annotation_config(
+                "yolo_world",
+                {
+                    "enabled": True,
+                    "weights": str(path),
+                    "weights_sha256": sha,
+                    "imgsz": 640,
+                    "conf_floor": 0.05,
+                    "max_det": 100,
+                    "iou": iou,
+                    "agnostic_nms": agnostic,
+                    "prompts": {"charger": ["phone charger"]},
+                    "thresholds": {"default": 0.25},
+                },
+            )
+            backend = YoloWorldBackend()
+            backend.load(cfg, "cpu", _IDS)
+            return backend.fingerprint().prompt_fingerprint
+
+        base = _fp(0.7, False)
+        assert _fp(0.45, False) != base
+        assert _fp(0.7, True) != base

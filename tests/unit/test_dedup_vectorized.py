@@ -17,8 +17,10 @@ from src.dataset.sources_config import DedupSettings
 pytestmark = pytest.mark.unit
 
 
-def _make_index(kept: dict[Path, tuple[int, int | None]]) -> DedupIndex:
-    index = DedupIndex(settings=DedupSettings(hamming_threshold=5, check_flips=True))
+def _make_index(kept: dict[Path, tuple[int, int | None]], hash_size: int = 8) -> DedupIndex:
+    index = DedupIndex(
+        settings=DedupSettings(hamming_threshold=5, check_flips=True, hash_size=hash_size)
+    )
     for path, (a_int, flip_int) in kept.items():
         index._kept[path] = (a_int, flip_int)
         index._kept_paths.append(path)
@@ -115,3 +117,42 @@ class TestVectorizedMatchesNaive:
         assert index._check_naive(a_int, None, threshold=3) == index._check_vectorized(
             a_int, None, threshold=3
         )
+
+
+class TestVectorizedWideHash:
+    """P7: hash_size=16 → 256-bit hashes (4 uint64 lanes). The naive
+    int.bit_count scan and the lane-summed vectorized scan must still make
+    byte-identical keep/drop decisions."""
+
+    def test_500_random_256bit_hash_sets_agree(self) -> None:
+        rng = random.Random(1234)  # noqa: S311 — deterministic property test, not crypto
+        for trial in range(500):
+            n_kept = rng.randint(0, 40)
+            kept = {
+                Path(f"kept_{trial}_{i}.jpg"): (
+                    rng.getrandbits(256),
+                    rng.getrandbits(256) if rng.random() < 0.5 else None,
+                )
+                for i in range(n_kept)
+            }
+            index = _make_index(kept, hash_size=16)
+            threshold = rng.choice([1, 5, 12, 20, 40])
+            a_int = rng.getrandbits(256)
+            flip_int = rng.getrandbits(256) if rng.random() < 0.5 else None
+
+            naive = index._check_naive(a_int, flip_int, threshold)
+            vectorized = index._check_vectorized(a_int, flip_int, threshold)
+            assert naive == vectorized, (
+                f"trial {trial} (n_kept={n_kept}, threshold={threshold}): "
+                f"naive={naive} vectorized={vectorized}"
+            )
+
+    def test_wide_hash_flip_and_first_match(self) -> None:
+        base = (0x0F0F0F0F0F0F0F0F << 192) | 0xABCD
+        index = _make_index({Path("a.jpg"): (base, None)}, hash_size=16)
+        near = base ^ 0b101  # Hamming distance 2 in the low lane
+        assert index._check_naive(near, None, threshold=5) == Path("a.jpg")
+        assert index._check_vectorized(near, None, threshold=5) == Path("a.jpg")
+        far = base ^ ((1 << 200) - 1)  # many bits differ across lanes → no match
+        assert index._check_naive(far, None, threshold=5) is None
+        assert index._check_vectorized(far, None, threshold=5) is None

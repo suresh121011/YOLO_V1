@@ -82,7 +82,9 @@ class DedupIndex:
         aHashes, or between this image's flipped aHash and any kept aHash
         (when ``check_flips`` is on).
         """
-        hashes = compute_image_hashes(path, check_flip=self.settings.check_flips)
+        hashes = compute_image_hashes(
+            path, check_flip=self.settings.check_flips, hash_size=self.settings.hash_size
+        )
 
         if hashes.ahash is None:
             # PIL unavailable/undecodable — fall back to byte-exact dedup.
@@ -140,15 +142,20 @@ class DedupIndex:
         earlier-inserted item matches only via flip and a later one matches
         only via a_int directly — naive always prefers the earlier item.
         """
+        n_lanes = (self.settings.hash_size * self.settings.hash_size + 63) // 64
         if self._kept_ahash_arr is None:
             self._kept_ahash_arr = np.array(
-                [kept_a for kept_a, _ in self._kept.values()], dtype=np.uint64
-            )
-        arr = self._kept_ahash_arr
+                [_int_to_lanes(kept_a, n_lanes) for kept_a, _ in self._kept.values()],
+                dtype=np.uint64,
+            ).reshape(-1, n_lanes)
+        arr = self._kept_ahash_arr  # shape (n_kept, n_lanes)
 
-        mask = _vectorized_popcount(arr ^ np.uint64(a_int)) < threshold
+        # Hamming distance = per-lane popcount of the XOR, summed across lanes.
+        query = _int_to_lanes(a_int, n_lanes)
+        mask = _vectorized_popcount(arr ^ query).sum(axis=1) < threshold
         if flip_int is not None:
-            mask = mask | (_vectorized_popcount(arr ^ np.uint64(flip_int)) < threshold)
+            flip_query = _int_to_lanes(flip_int, n_lanes)
+            mask = mask | (_vectorized_popcount(arr ^ flip_query).sum(axis=1) < threshold)
 
         hits = np.flatnonzero(mask)
         return self._kept_paths[int(hits[0])] if hits.size else None
@@ -159,25 +166,29 @@ class DedupIndex:
         return len(self._kept) + len(self._sha256)
 
 
-def compute_image_hashes(path: Path, check_flip: bool = True) -> ImageHashes:
+def compute_image_hashes(
+    path: Path, check_flip: bool = True, hash_size: int = _HASH_SIZE
+) -> ImageHashes:
     """Compute aHash and (optionally) mirrored aHash for an image.
 
     Args:
         path:       Image file path.
         check_flip: Also hash the horizontally mirrored image.
+        hash_size:  aHash grid size; the hash is ``hash_size**2`` bits. Larger
+                    grids discriminate finer (P2 dedup tuning).
 
     Returns:
         :class:`ImageHashes`; fields are None when PIL is unavailable or
         the image cannot be decoded.
     """
-    ahash = compute_perceptual_hash(path, hash_size=_HASH_SIZE)
+    ahash = compute_perceptual_hash(path, hash_size=hash_size)
     if ahash is None or not check_flip:
         return ImageHashes(ahash=ahash, flip_ahash=None)
 
-    return ImageHashes(ahash=ahash, flip_ahash=_compute_flipped_hash(path))
+    return ImageHashes(ahash=ahash, flip_ahash=_compute_flipped_hash(path, hash_size))
 
 
-def _compute_flipped_hash(path: Path) -> str | None:
+def _compute_flipped_hash(path: Path, hash_size: int = _HASH_SIZE) -> str | None:
     """aHash of the horizontally mirrored image (same algorithm as aHash)."""
     try:
         from PIL import Image
@@ -189,7 +200,7 @@ def _compute_flipped_hash(path: Path) -> str | None:
             small = (
                 img.convert("L")
                 .transpose(Image.Transpose.FLIP_LEFT_RIGHT)
-                .resize((_HASH_SIZE, _HASH_SIZE), Image.Resampling.LANCZOS)
+                .resize((hash_size, hash_size), Image.Resampling.LANCZOS)
             )
             pixels = list(small.tobytes())  # mode "L" → one byte per pixel
 
@@ -224,3 +235,17 @@ def _first_below(distances: np.ndarray, threshold: int) -> int | None:
     """Index of the first element ``< threshold``, or ``None``."""
     hits = np.flatnonzero(distances < threshold)
     return int(hits[0]) if hits.size else None
+
+
+_UINT64_MASK = (1 << 64) - 1
+
+
+def _int_to_lanes(value: int, n_lanes: int) -> np.ndarray:
+    """Split an arbitrary-width hash int into ``n_lanes`` little-endian uint64s.
+
+    Lets the vectorized popcount handle hashes wider than 64 bits (hash_size
+    > 8) by working one 64-bit lane at a time. For a 64-bit hash (n_lanes=1)
+    this is a single-element array, so the vectorized path stays byte-for-byte
+    equivalent to the naive :func:`int.bit_count` scan.
+    """
+    return np.array([(value >> (64 * i)) & _UINT64_MASK for i in range(n_lanes)], dtype=np.uint64)
