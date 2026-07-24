@@ -13,9 +13,9 @@ import hashlib
 import logging
 import time
 from pathlib import Path
+from typing import Any
 
 import numpy as np
-from typing import Any
 
 from . import BoundingBox, Detection
 

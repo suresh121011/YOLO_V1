@@ -61,13 +61,12 @@ import hashlib
 import io
 import json
 import logging
-import shutil
 import sys
 import tempfile
 import zipfile
+from collections.abc import Iterator
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
-from typing import Iterator
 
 try:
     import yaml
@@ -92,12 +91,29 @@ DEFAULT_ZIP_DIR = REPO_ROOT / "Dataset"
 DEFAULT_OUT_ROOT = REPO_ROOT / "data" / "raw" / "local_captures"
 
 TAXONOMY: dict[int, str] = {
-    0: "person",    1: "face",       2: "medicine_strip", 3: "medicine_bottle",
-    4: "water_bottle", 5: "knife",   6: "stove",          7: "gas_cylinder",
-    8: "passport",  9: "book",       10: "charger",        11: "wire",
-    12: "laptop",   13: "monitor",   14: "cupboard",       15: "door",
-    16: "chair",    17: "bed",       18: "toilet",         19: "sink",
-    20: "wet_floor", 21: "walking_stick", 22: "support_handle",
+    0: "person",
+    1: "face",
+    2: "medicine_strip",
+    3: "medicine_bottle",
+    4: "water_bottle",
+    5: "knife",
+    6: "stove",
+    7: "gas_cylinder",
+    8: "passport",
+    9: "book",
+    10: "charger",
+    11: "wire",
+    12: "laptop",
+    13: "monitor",
+    14: "cupboard",
+    15: "door",
+    16: "chair",
+    17: "bed",
+    18: "toilet",
+    19: "sink",
+    20: "wet_floor",
+    21: "walking_stick",
+    22: "support_handle",
 }
 
 # ---------------------------------------------------------------------------
@@ -115,10 +131,10 @@ TAXONOMY: dict[int, str] = {
 # ---------------------------------------------------------------------------
 _ARCHIVE_CLASS_REMAPS: dict[str, dict[str, int]] = {
     "bed": {
-        "bed":    17,
+        "bed": 17,
         "person": 0,
-        "sink":   19,
-        "chair":  16,
+        "sink": 19,
+        "chair": 16,
         # dropped: backpack, bottle, bowl, cell phone, cup, diningtable,
         #          handbag, refrigerator, sofa, suitcase, tie, toothbrush, "15", "0"
     },
@@ -127,25 +143,25 @@ _ARCHIVE_CLASS_REMAPS: dict[str, dict[str, int]] = {
         "book": 9,
     },
     "bottel": {
-        "cap": 4,   # bottle cap label => water_bottle (visually verified 2026-07-22)
+        "cap": 4,  # bottle cap label => water_bottle (visually verified 2026-07-22)
     },
     "chair": {
-        "Chair":      16,
-        "chair":      16,
-        "occupied":   16,   # occupied chair
-        "unoccupied": 16,   # empty chair -- still a chair
+        "Chair": 16,
+        "chair": 16,
+        "occupied": 16,  # occupied chair
+        "unoccupied": 16,  # empty chair -- still a chair
     },
     "charger": {
         "Charger-cUjN": 10,
     },
     "cupboard": {
         "Cupboard": 14,
-        "Door":     15,
-        "Person":   0,
+        "Door": 15,
+        "Person": 0,
         # dropped: Car, Chair, Sofa, Table, Window, Door handle
     },
     "door": {
-        "door":  15,
+        "door": 15,
         "doors": 15,
         # dropped: handle, open
     },
@@ -153,11 +169,11 @@ _ARCHIVE_CLASS_REMAPS: dict[str, dict[str, int]] = {
         "a face": 1,
     },
     "gas cylinder": {
-        "Gas cylinder":                   7,
-        "gas cylinder":                   7,
-        "gas cylinder head":              7,
-        "Recognising-Indian-Indian-gas":  7,
-        "lpg-cylinder":                   7,
+        "Gas cylinder": 7,
+        "gas cylinder": 7,
+        "gas cylinder head": 7,
+        "Recognising-Indian-Indian-gas": 7,
+        "lpg-cylinder": 7,
     },
     "knife": {
         "Knife": 5,
@@ -170,8 +186,8 @@ _ARCHIVE_CLASS_REMAPS: dict[str, dict[str, int]] = {
         # Per-inner-ZIP inspection: Strip1 and Strip2 use 'tablet',
         # Strip3 may use 'strip' or 'circle'. Map all three => medicine_strip.
         "tablet": 2,
-        "strip":  2,
-        "circle": 2,   # circular tablet shape -- still a medicine strip
+        "strip": 2,
+        "circle": 2,  # circular tablet shape -- still a medicine strip
     },
     "monitor": {
         "Monitor-Led": 13,
@@ -181,13 +197,13 @@ _ARCHIVE_CLASS_REMAPS: dict[str, dict[str, int]] = {
         "passport": 8,
     },
     "person": {
-        "Person":  0,
-        "MEN":     0,
-        "WOMEN":   0,
+        "Person": 0,
+        "MEN": 0,
+        "WOMEN": 0,
         "Persona": 0,
-        "hombre":  0,
-        "insan":   0,
-        "mujer":   0,
+        "hombre": 0,
+        "insan": 0,
+        "mujer": 0,
     },
     "sink": {
         "sink": 19,
@@ -196,13 +212,13 @@ _ARCHIVE_CLASS_REMAPS: dict[str, dict[str, int]] = {
         #          baking oven, table lamp, tap, wall clock, BBQ, "0"
     },
     "stove": {
-        "stove":       6,
-        "stove-fire":  6,   # burning stove => still a stove
+        "stove": 6,
+        "stove-fire": 6,  # burning stove => still a stove
         # dropped: "0" (junk class name in one inner ZIP)
     },
     "support handle": {
         "crutch": 22,
-        "stick":  22,
+        "stick": 22,
         # dropped: "0"
     },
     "toilet": {
@@ -210,19 +226,19 @@ _ARCHIVE_CLASS_REMAPS: dict[str, dict[str, int]] = {
         # dropped: towel
     },
     "walking stick": {
-        "stick":  21,
+        "stick": 21,
         "crutch": 21,
         # dropped: bottle, fire, gun, knife, person (noisy multi-class dataset)
     },
     "wet floor": {
-        "Wet-floor":                                              20,
+        "Wet-floor": 20,
         "Stagnant Water and Wet Surface - v1 2025-03-21 5:52pm": 20,
-        "Wet floor - v3 2026-06-05 10:55am":                     20,
+        "Wet floor - v3 2026-06-05 10:55am": 20,
         # dropped: separator "======..." string
     },
     "wire": {
-        "OK":         11,   # wire correctly wired/present
-        "breadboard": 11,   # PCB/breadboard with visible wires
+        "OK": 11,  # wire correctly wired/present
+        "breadboard": 11,  # PCB/breadboard with visible wires
         # dropped: "NO" (no wire / absent = background class)
     },
 }
@@ -230,28 +246,28 @@ _ARCHIVE_CLASS_REMAPS: dict[str, dict[str, int]] = {
 # Outer ZIP stem => (slug, primary_class_name, is_temporary)
 # Slug is the output directory name under data/raw/local_captures/
 _ZIP_META: dict[str, tuple[str, str, bool]] = {
-    "bed":            ("bed",            "bed",            False),
-    "book":           ("book",           "book",           False),
-    "bottel":         ("bottel",         "water_bottle",   False),
-    "chair":          ("chair",          "chair",          False),
-    "charger":        ("charger",        "charger",        False),
-    "cupboard":       ("cupboard",       "cupboard",       False),
-    "door":           ("door",           "door",           False),
-    "face":           ("face",           "face",           False),
-    "gas cylinder":   ("gas_cylinder",   "gas_cylinder",   False),
-    "knife":          ("knife",          "knife",          False),
-    "laptop":         ("laptop",         "laptop",         False),
-    "medicine strip": ("medicine_strip", "medicine_strip", True),   # TEMPORARY
-    "monitor":        ("monitor",        "monitor",        False),
-    "passport":       ("passport",       "passport",       False),
-    "person":         ("person",         "person",         False),
-    "sink":           ("sink",           "sink",           False),
-    "stove":          ("stove",          "stove",          False),
+    "bed": ("bed", "bed", False),
+    "book": ("book", "book", False),
+    "bottel": ("bottel", "water_bottle", False),
+    "chair": ("chair", "chair", False),
+    "charger": ("charger", "charger", False),
+    "cupboard": ("cupboard", "cupboard", False),
+    "door": ("door", "door", False),
+    "face": ("face", "face", False),
+    "gas cylinder": ("gas_cylinder", "gas_cylinder", False),
+    "knife": ("knife", "knife", False),
+    "laptop": ("laptop", "laptop", False),
+    "medicine strip": ("medicine_strip", "medicine_strip", True),  # TEMPORARY
+    "monitor": ("monitor", "monitor", False),
+    "passport": ("passport", "passport", False),
+    "person": ("person", "person", False),
+    "sink": ("sink", "sink", False),
+    "stove": ("stove", "stove", False),
     "support handle": ("support_handle", "support_handle", False),
-    "toilet":         ("toilet",         "toilet",         False),
-    "walking stick":  ("walking_stick",  "walking_stick",  False),
-    "wet floor":      ("wet_floor",      "wet_floor",      False),
-    "wire":           ("wire",           "wire",           False),
+    "toilet": ("toilet", "toilet", False),
+    "walking stick": ("walking_stick", "walking_stick", False),
+    "wet floor": ("wet_floor", "wet_floor", False),
+    "wire": ("wire", "wire", False),
 }
 
 LICENSE_NOTE = (
@@ -273,6 +289,7 @@ INGEST_INDEX_FILENAME = "ingest_index.json"
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _stem_key(zip_path: Path) -> str:
     """Normalise outer ZIP stem => archive key for _ZIP_META lookup."""
     stem = zip_path.stem
@@ -281,6 +298,7 @@ def _stem_key(zip_path: Path) -> str:
     if "-" in stem:
         # Split on first hyphen-digit boundary (timestamp start)
         import re
+
         stem = re.split(r"-\d{8}T", stem)[0]
     return stem.strip().lower()
 
@@ -350,7 +368,7 @@ def _parse_data_yaml(data: bytes) -> list[str]:
             in_names = True
             bracket = line.find("[")
             if bracket != -1:
-                inner = line[bracket + 1:line.rfind("]")] if "]" in line else line[bracket + 1:]
+                inner = line[bracket + 1 : line.rfind("]")] if "]" in line else line[bracket + 1 :]
                 return [x.strip().strip("'\"") for x in inner.split(",") if x.strip()]
             continue
         if in_names:
@@ -360,6 +378,7 @@ def _parse_data_yaml(data: bytes) -> list[str]:
             elif stripped and not stripped.startswith("#"):
                 # dict style: "  0: knife" or "  '0': knife"
                 import re
+
                 m = re.match(r'^[\'"]?(\d+)[\'"]?:\s*(.*)', stripped)
                 if m:
                     names.append(m.group(2).strip().strip("'\""))
@@ -455,6 +474,7 @@ def _remap_label_content(
 # Inner ZIP processing
 # ---------------------------------------------------------------------------
 
+
 def _process_inner_zip(
     inner_zip: zipfile.ZipFile,
     inner_name: str,
@@ -489,14 +509,15 @@ def _process_inner_zip(
     # for suffix check -- ZIP namelist always uses forward slashes on all OSes).
     all_entries = inner_zip.namelist()
     img_entries = [
-        n for n in all_entries
+        n
+        for n in all_entries
         if not n.endswith("/") and PurePosixPath(n).suffix.lower() in IMAGE_EXTS
     ]
 
     for img_entry in img_entries:
         orig_img_name = PurePosixPath(img_entry).name
         # Flat-layout: slug prefix guarantees cross-source uniqueness.
-        img_name = slug_prefix + _safe_filename(orig_img_name)   # guard Windows MAX_PATH
+        img_name = slug_prefix + _safe_filename(orig_img_name)  # guard Windows MAX_PATH
         dest_img = images_out / img_name
 
         if dest_img.exists():
@@ -531,6 +552,7 @@ def _process_inner_zip(
 # Pre-flight
 # ---------------------------------------------------------------------------
 
+
 def preflight_summary(zip_dir: Path) -> list[dict]:
     zips = sorted(zip_dir.glob("*.zip"))
     if not zips:
@@ -555,14 +577,22 @@ def preflight_summary(zip_dir: Path) -> list[dict]:
         note = "[TEMPORARY]" if is_temp else ""
         sz_mb = z.stat().st_size / 1_048_576
         inner_count = _count_inner_zips(z)
-        print(f"  {z.name:<47} {slug:<20} {primary_cls:<18} {note} "
-              f"[{inner_count} inner, {sz_mb:.0f} MB]")
-        records.append({
-            "zip": z, "key": key, "mapped": True,
-            "slug": slug, "primary_class": primary_cls,
-            "temporary": is_temp, "size_mb": sz_mb,
-            "inner_count": inner_count,
-        })
+        print(
+            f"  {z.name:<47} {slug:<20} {primary_cls:<18} {note} "
+            f"[{inner_count} inner, {sz_mb:.0f} MB]"
+        )
+        records.append(
+            {
+                "zip": z,
+                "key": key,
+                "mapped": True,
+                "slug": slug,
+                "primary_class": primary_cls,
+                "temporary": is_temp,
+                "size_mb": sz_mb,
+                "inner_count": inner_count,
+            }
+        )
 
     print("=" * 84)
     total_gb = sum(r.get("size_mb", 0) for r in records) / 1024
@@ -581,6 +611,7 @@ def _count_inner_zips(outer: Path) -> int:
 # ---------------------------------------------------------------------------
 # Core ingestion
 # ---------------------------------------------------------------------------
+
 
 def ingest_one(
     rec: dict,
@@ -631,15 +662,12 @@ def ingest_one(
     image_hashes: dict[str, str] = {}
     stats: dict[str, int] = {}
 
-    with tempfile.TemporaryDirectory(prefix="yolo_ingest_") as tmp:
-        tmp_path = Path(tmp)
+    with tempfile.TemporaryDirectory(prefix="yolo_ingest_"):
         logger.info("  Extracting outer ZIP %s ...", z.name)
         try:
             with zipfile.ZipFile(z, "r") as outer_zf:
                 # Find inner .zip files
-                inner_zip_entries = [
-                    n for n in outer_zf.namelist() if n.endswith(".zip")
-                ]
+                inner_zip_entries = [n for n in outer_zf.namelist() if n.endswith(".zip")]
                 if not inner_zip_entries:
                     logger.warning("  No inner ZIPs found in %s -- skipping", z.name)
                     return None
@@ -652,8 +680,13 @@ def ingest_one(
                     try:
                         with zipfile.ZipFile(inner_bytes) as inner_zf:
                             _process_inner_zip(
-                                inner_zf, inner_entry, remap_table,
-                                images_out, labels_out, image_hashes, stats,
+                                inner_zf,
+                                inner_entry,
+                                remap_table,
+                                images_out,
+                                labels_out,
+                                image_hashes,
+                                stats,
                                 slug_prefix=slug_prefix,
                             )
                     except zipfile.BadZipFile as e:
@@ -673,8 +706,10 @@ def ingest_one(
     logger.info(
         "  Done: %d images, %d annotations kept, %d dropped (unmapped), "
         "%d dropped (malformed), %d dups skipped",
-        image_count, annotation_count,
-        stats.get("dropped_unmapped", 0), stats.get("dropped_malformed", 0),
+        image_count,
+        annotation_count,
+        stats.get("dropped_unmapped", 0),
+        stats.get("dropped_malformed", 0),
         stats.get("dups", 0),
     )
 
@@ -694,7 +729,9 @@ def ingest_one(
     # source_classes.json -- maps "0" => primary_class (identity remap after ingestion)
     # We write one entry per taxonomy class that appears, since after ingestion
     # all labels are already in taxonomy ID space.
-    sc_dict = {str(tid): TAXONOMY[tid] for tid in TAXONOMY if TAXONOMY[tid] in taxonomy_classes_used}
+    sc_dict = {
+        str(tid): TAXONOMY[tid] for tid in TAXONOMY if TAXONOMY[tid] in taxonomy_classes_used
+    }
     if not sc_dict:
         sc_dict = {"0": primary_cls}  # fallback
     (dest / "source_classes.json").write_text(
@@ -746,15 +783,14 @@ def ingest_one(
         "duplicates_skipped": stats.get("dups", 0),
         "ingested_at": _utc_now(),
     }
-    sentinel.write_text(
-        json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-    )
+    sentinel.write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return summary
 
 
 # ---------------------------------------------------------------------------
 # Ingest index
 # ---------------------------------------------------------------------------
+
 
 def write_ingest_index(out_root: Path, results: list[dict]) -> None:
     index_path = out_root / INGEST_INDEX_FILENAME
@@ -774,9 +810,7 @@ def write_ingest_index(out_root: Path, results: list[dict]) -> None:
             if "slug" in r
         },
     }
-    index_path.write_text(
-        json.dumps(index, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-    )
+    index_path.write_text(json.dumps(index, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     logger.info("Ingest index => %s", index_path.relative_to(REPO_ROOT))
 
 
@@ -784,20 +818,28 @@ def write_ingest_index(out_root: Path, results: list[dict]) -> None:
 # CLI
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Ingest local Drive ZIP archives into data/raw/local_captures/",
     )
     parser.add_argument("--zip-dir", type=Path, default=DEFAULT_ZIP_DIR)
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_ROOT)
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Print summary only; do not write any files.")
-    parser.add_argument("--force", action="store_true",
-                        help="Re-ingest even if sentinel exists.")
-    parser.add_argument("--only", nargs="+", metavar="SLUG",
-                        help="Ingest only these slugs (e.g. --only bottel knife).")
-    parser.add_argument("--validate", action="store_true",
-                        help="After ingestion validate images/labels/sidecar exist.")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print summary only; do not write any files."
+    )
+    parser.add_argument("--force", action="store_true", help="Re-ingest even if sentinel exists.")
+    parser.add_argument(
+        "--only",
+        nargs="+",
+        metavar="SLUG",
+        help="Ingest only these slugs (e.g. --only bottel knife).",
+    )
+    parser.add_argument(
+        "--validate",
+        action="store_true",
+        help="After ingestion validate images/labels/sidecar exist.",
+    )
     args = parser.parse_args()
 
     zip_dir: Path = args.zip_dir.resolve()
@@ -827,8 +869,10 @@ def main() -> None:
         for r in mapped:
             inner = r.get("inner_count", "?")
             tbl = _ARCHIVE_CLASS_REMAPS.get(r["key"], {})
-            print(f"  {r['zip'].name} => {r['slug']}  "
-                  f"({inner} inner ZIPs, {len(tbl)} class mappings)")
+            print(
+                f"  {r['zip'].name} => {r['slug']}  "
+                f"({inner} inner ZIPs, {len(tbl)} class mappings)"
+            )
         sys.exit(0)
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -849,7 +893,7 @@ def main() -> None:
     print("  INGESTION COMPLETE")
     print("=" * 84)
     total_imgs = sum(r.get("image_count", 0) for r in successes)
-    total_ann  = sum(r.get("annotation_count", 0) for r in successes)
+    total_ann = sum(r.get("annotation_count", 0) for r in successes)
     print(f"  Sources ingested : {len(successes)}")
     print(f"  Total images     : {total_imgs:,}")
     print(f"  Total annotations: {total_ann:,}")
@@ -876,8 +920,7 @@ def main() -> None:
             else:
                 ann = r.get("annotation_count", 0)
                 classes = ", ".join(r.get("taxonomy_classes", []))
-                print(f"  OK    {slug}: {len(imgs):>5} imgs, "
-                      f"{ann:>6} ann  [{classes}]")
+                print(f"  OK    {slug}: {len(imgs):>5} imgs, " f"{ann:>6} ann  [{classes}]")
         if ok:
             print("All sources validated successfully.")
         else:
