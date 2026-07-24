@@ -143,6 +143,19 @@ auto_annotation:
     # filename, so switching to SAM2/SAM2.1 for tighter masks is a weights swap
     # only — download e.g. sam2.1_b.pt into models/annotators/, point `weights`
     # here, and record its sha256. No code change (refine.py loads from config).
+  # Sliced (SAHI-style) inference for tiny objects (P6). Runs the backend over
+  # overlapping tiles and merges to full-frame boxes (src/dataset/annotation/
+  # sliced.py). SLOW — gate it to the small/priority classes only. Disabled by
+  # default; 12_auto_annotate wires SliceConfig → annotate_sliced for the
+  # priority classes when enabled.
+  slicing:
+    enabled: false
+    slice_width: 640
+    slice_height: 640
+    overlap_ratio: 0.2          # neighbouring-tile overlap fraction
+    nms_iou: 0.5                # cross-tile duplicate suppression
+    include_full_frame: true    # also one whole-image pass (large objects)
+
   # Which (image, class) cells to target: skip cells already trusted by the
   # source policy or already verified in the ledger.
   targeting:
