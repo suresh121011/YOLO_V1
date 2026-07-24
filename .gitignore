@@ -167,3 +167,10 @@ temp/
 /check_annotations.py
 /test_custom_image.py
 /test_2.jpeg
+
+# Ad-hoc dataset debug/inspection scripts (underscore-prefixed). The pattern
+# deliberately excludes the tracked package marker scripts/dataset/__init__.py.
+scripts/dataset/_[a-z]*.py
+
+# Stray local dataset directory — real data lives under data/ (DVC-tracked).
+/Dataset/
