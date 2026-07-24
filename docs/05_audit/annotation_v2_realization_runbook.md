@@ -167,33 +167,47 @@ after editing prompts (the prompt fingerprint invalidates the stale run).
 
 ## 8. P6 — SAHI sliced inference for tiny objects
 
-Tiny classes (charger n=80, wire n=234, monitor n=55) are missed at a single
-640px pass. With `sahi` installed, add a sliced-prediction path:
+**Code shipped:** `src/dataset/annotation/sliced.py` (`plan_slices`,
+`remap_box_to_full`, `nms_per_class`, `annotate_sliced`) — dependency-free,
+reuses `annotate_batch`; config in `configs/annotation.yaml` → `slicing`.
+Remaining to realize (GPU):
 
-- New `src/dataset/annotation/backends/yoloe_sahi.py` (or a `sahi: true` option
-  on the yoloe backend) using `sahi.predict.get_sliced_prediction` with the
-  pinned YOLOE weight, then map slice detections back to normalized xywhn and
-  hand off to the same `_detections_from_result` mapping + SAM refine.
-- Gate it to the tiny/priority classes only (SAHI is slow; not worth it for
-  large objects).
-- Mirror the yoloe tests with a mocked sliced-prediction result.
+- In `scripts/dataset/12_auto_annotate.py`, when `slicing.enabled`, call
+  `annotate_sliced(backend, image, priority_target_ids, SliceConfig(...))` for
+  the **priority classes only** (SAHI is slow; skip large objects), then SAM
+  refine + validate as usual.
+- Set `slicing.enabled: true` and tune `slice_*`/`overlap_ratio` for the eval
+  imagery. Optional: swap the `sahi` package in behind `annotate_sliced`
+  (uncomment it in `requirements-annotation.txt`) — the geometry contract is
+  unchanged.
+- Confirm tiny-class candidate counts rise vs the non-sliced run.
 
 ---
 
 ## 9. P8 — CVAT → FiftyOne review UI
 
-Replace the CVAT YOLO-1.1 round-trip (`cvat_package.py` / `verified_import.py`)
-with FiftyOne, **preserving the ledger + IAA gate** (never automate human
-verdicts for a safety dataset):
+**Code shipped:** `src/dataset/annotation/fiftyone_review.py` — the format
+bridge (YOLO ↔ FiftyOne, `build_review_dataset`, `launch_app`,
+`export_reviewed_labels`), `fiftyone` lazy-imported and in
+`requirements-annotation.txt`. Remaining to realize (needs the package + a real
+batch):
 
-- Export: build a FiftyOne `Dataset` from a verification batch's images +
-  pre-annotation labels (base merged ∪ candidates), launch the App for review.
-- Import: read the reviewed labels back, run the **same** guards
-  (`check_non_target_labels_unchanged`, `extract_deltas`) and record
-  `present_labeled` / `verified_absent` verdicts into `verification_ledger.json`
-  exactly as the CVAT path does.
-- **Parity gate:** on one batch, the FiftyOne path must produce a byte-identical
-  ledger delta to the CVAT path (regression test).
+```bash
+.venv/Scripts/pip install fiftyone
+```
+- In script 13 (`build_verification_batches`), offer the FiftyOne surface as an
+  alternative to the CVAT zip: `build_review_dataset(batch_id, samples,
+  class_names)` from the batch images + `build_preannotation_labels` output,
+  then `launch_app(dataset)` for the reviewer.
+- In script 14 (`import_verified_batch`), point it at
+  `export_reviewed_labels(dataset, out_dir, name_to_id)` output — it's plain
+  YOLO txt, so the **existing** `verified_import` guards
+  (`check_non_target_labels_unchanged`, `extract_deltas`) + ledger verdicts run
+  unchanged.
+- **Parity gate (mandatory):** on one batch, assert the FiftyOne path produces a
+  byte-identical ledger delta to the CVAT path (add a regression test). The
+  shared `verified_import` machinery makes this hold by construction; the test
+  pins it.
 - Keep the YOLO-1.1 CVAT path as a documented fallback.
 
 ---
