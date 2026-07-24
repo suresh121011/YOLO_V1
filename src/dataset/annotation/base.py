@@ -128,6 +128,10 @@ class BackendConfig:
     max_det: int
     prompts: Mapping[str, tuple[str, ...]]
     thresholds: Mapping[str, float]
+    #: NMS IoU threshold passed to model.predict (defaults to Ultralytics' 0.7).
+    iou: float = 0.7
+    #: Class-agnostic NMS — suppress overlapping boxes across classes too.
+    agnostic_nms: bool = False
     extra: Mapping[str, Any] = field(default_factory=dict)
 
     @classmethod
@@ -150,6 +154,8 @@ class BackendConfig:
             "max_det",
             "prompts",
             "thresholds",
+            "iou",
+            "agnostic_nms",
         }
         raw_prompts = raw.get("prompts") or {}
         if not isinstance(raw_prompts, Mapping):
@@ -186,6 +192,8 @@ class BackendConfig:
             max_det=int(raw.get("max_det", 100)),
             prompts=prompts,
             thresholds=thresholds,
+            iou=float(raw.get("iou", 0.7)),
+            agnostic_nms=bool(raw.get("agnostic_nms", False)),
             extra={k: v for k, v in raw.items() if k not in known},
         )
 
@@ -203,6 +211,8 @@ class BackendConfig:
             problems.append(f"imgsz {self.imgsz} must be positive")
         if self.max_det <= 0:
             problems.append(f"max_det {self.max_det} must be positive")
+        if not 0.0 <= self.iou <= 1.0:
+            problems.append(f"iou {self.iou} outside [0, 1]")
         if "default" not in self.thresholds:
             problems.append("thresholds must define a 'default' entry")
         for cls_name, value in self.thresholds.items():
@@ -225,21 +235,28 @@ class BackendConfig:
 
 
 def prompt_fingerprint(
-    prompts: Mapping[str, tuple[str, ...]], thresholds: Mapping[str, float]
+    prompts: Mapping[str, tuple[str, ...]],
+    thresholds: Mapping[str, float],
+    extra_params: Mapping[str, Any] | None = None,
 ) -> str:
     """Stable fingerprint over prompts + thresholds (canonical JSON).
 
     Changes iff any prompt string, class set, or threshold changes — recorded
     in every candidates artifact so prompt tuning invalidates stale runs.
+
+    Args:
+        extra_params: Optional extra inference knobs that also affect the
+            output (e.g. a backend's ``iou`` / ``agnostic_nms`` NMS settings).
+            Omitted when ``None`` so the canonical form — and therefore the
+            hash — is byte-identical to callers that pass none.
     """
-    canonical = json.dumps(
-        {
-            "prompts": {k: list(v) for k, v in sorted(prompts.items())},
-            "thresholds": dict(sorted(thresholds.items())),
-        },
-        separators=(",", ":"),
-        ensure_ascii=False,
-    )
+    payload: dict[str, Any] = {
+        "prompts": {k: list(v) for k, v in sorted(prompts.items())},
+        "thresholds": dict(sorted(thresholds.items())),
+    }
+    if extra_params:
+        payload["extra"] = {k: extra_params[k] for k in sorted(extra_params)}
+    canonical = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
     return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 

@@ -32,6 +32,12 @@ auto_annotation:
       conf_floor: 0.05              # record everything above this; per-class
                                     # thresholds below decide candidate status
       max_det: 100
+      iou: 0.7                      # NMS IoU threshold (Ultralytics default).
+                                    # Lower → suppresses more overlaps.
+      agnostic_nms: false           # true → also suppress overlapping boxes
+                                    # across different classes (class-agnostic
+                                    # NMS). Both feed the run fingerprint, so
+                                    # tuning them invalidates stale candidates.
       # Taxonomy class → text prompts. ALL 23 classes are listed; an empty
       # list means the class is never prompted (L2 scope honesty — see the
       # plan/ADR-P5-02: custom-capture classes are L1 territory; open-vocab
