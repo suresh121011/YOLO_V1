@@ -22,3 +22,13 @@ clip @ git+https://github.com/ultralytics/CLIP.git@a57ec09a1668b6a5905ff323d7347
 # Image IO for the annotation stages (transitively present via ultralytics;
 # listed for explicitness, mirroring the psutil precedent in requirements.txt).
 Pillow>=10.0,<12.0
+
+# Sliced (SAHI-style) inference for tiny objects (P6). src/dataset/annotation/
+# sliced.py ships a dependency-free tiler, so this is optional — install only if
+# you swap in the sahi library behind annotate_sliced.
+# sahi>=0.11,<0.12
+
+# FiftyOne review UI (P8, ADR review-tool decision) — replaces CVAT as the human
+# verification surface (src/dataset/annotation/fiftyone_review.py). Optional: the
+# format bridge imports without it; only the App-driving functions need it.
+fiftyone>=1.0,<2.0
