@@ -5,6 +5,18 @@
 equivalent). **Verdict up front: 🔴 NOT READY for Dataset v1.0 freeze or YOLO
 training.** The realization work is real, blocking work — not cosmetic polish.
 
+> **CORRECTION (post-review finding).** The Phase-A "whole-pipeline `dvc.lock`
+> drift" below was diagnosed on branch `phase-5-annotation-quality-v2`, which was
+> later found to be **cut off an old `main` before the local_captures
+> integration (PR #8)** — it has no `ingest_local_zips` stage and its `dvc.lock`
+> never referenced local_captures. The 14,005-image `data/merged` on disk was a
+> **stale cross-branch artifact**, so the "drift" was largely a branch/workspace
+> mismatch, not M7/V2 staleness. **The real dataset lives on `main`** (which has
+> local_captures + P1–P7). The definitive DVC-drift analysis and the dedup
+> rebuild are being redone on an up-to-date `main`. The **verdict, council, and
+> R0–R13 plan still stand** — they concern the real pipeline; only the drift
+> attribution is corrected.
+
 ---
 
 ## Phase A — Repository Verification (evidence)
