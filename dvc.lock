@@ -236,8 +236,8 @@ stages:
       nfiles: 122
     - path: data/raw/local_captures
       hash: md5
-      md5: 47b3169cc7fbfebe34f0f62baac864e8.dir
-      size: 6763236257
+      md5: 7001dc3b87b6a40efe8d579df9e66fca.dir
+      size: 6763484073
       nfiles: 51743
     - path: data/raw/negatives
       hash: md5
@@ -421,8 +421,8 @@ stages:
       nfiles: 0
     - path: data/raw/local_captures
       hash: md5
-      md5: 47b3169cc7fbfebe34f0f62baac864e8.dir
-      size: 6763236257
+      md5: 7001dc3b87b6a40efe8d579df9e66fca.dir
+      size: 6763484073
       nfiles: 51743
     - path: data/raw/negatives
       hash: md5
@@ -450,8 +450,8 @@ stages:
       size: 4738
     - path: src/dataset/dedup.py
       hash: md5
-      md5: 0dabc8ed5d1f330a155b4aa9c336f7ac
-      size: 9341
+      md5: 5adf8381e8ec831e41b499e3f9b90acf
+      size: 10541
     - path: src/dataset/filters.py
       hash: md5
       md5: 6da1f5a22d2db67b9ee119044dc69459
@@ -466,6 +466,7 @@ stages:
         dedup:
           hamming_threshold: 5
           check_flips: true
+          hash_size: 16
         indoor_filter:
           enabled: true
           brightness_outdoor_threshold: 160
@@ -480,22 +481,22 @@ stages:
     outs:
     - path: data/merged
       hash: md5
-      md5: a8872c2ec2413e4ca42dd62c32c9ff6c.dir
-      size: 3913806957
-      nfiles: 28012
+      md5: 0aa4251de21145a0e3669fcdadc0ce5c.dir
+      size: 4481616196
+      nfiles: 34846
   split_train_val_test:
     cmd: python scripts/dataset/split_dataset.py
     deps:
     - path: data/merged
       hash: md5
-      md5: a8872c2ec2413e4ca42dd62c32c9ff6c.dir
-      size: 3913806957
-      nfiles: 28012
+      md5: 0aa4251de21145a0e3669fcdadc0ce5c.dir
+      size: 4481616196
+      nfiles: 34846
     - path: data/merged_verified
       hash: md5
-      md5: 56379d6b6b13b0d9cc8b745209c60430.dir
-      size: 3654993
-      nfiles: 14005
+      md5: 54fcad56a1f3e6c036ca1d047956551b.dir
+      size: 5362255
+      nfiles: 17422
     - path: scripts/dataset/split_dataset.py
       hash: md5
       md5: fe8902789ae9e9866e604dff91244388
@@ -524,17 +525,17 @@ stages:
     outs:
     - path: data/processed/images
       hash: md5
-      md5: 164259b458a5cf8804fec631d9098bee.dir
-      size: 3902916786
-      nfiles: 14005
+      md5: 55695bc828318f9fc1c8f88a718cd92f.dir
+      size: 4472687252
+      nfiles: 17422
     - path: data/processed/labels
       hash: md5
-      md5: 245df6a5bb597b265b8712639f21e5a6.dir
-      size: 3654993
-      nfiles: 14005
+      md5: 6fedab5be2de0b9f9fb5aabddb0b7f10.dir
+      size: 5362255
+      nfiles: 17422
     - path: data/processed/split_report
       hash: md5
-      md5: ce253b3e1e7e8f0242a39d46ce92429d.dir
+      md5: e0f7db02621a2738ebeee209db9497e1.dir
       size: 1292
       nfiles: 2
   qa_check:
@@ -546,19 +547,19 @@ stages:
       size: 2254
     - path: data/merged
       hash: md5
-      md5: a8872c2ec2413e4ca42dd62c32c9ff6c.dir
-      size: 3913806957
-      nfiles: 28012
+      md5: 0aa4251de21145a0e3669fcdadc0ce5c.dir
+      size: 4481616196
+      nfiles: 34846
     - path: data/processed/images
       hash: md5
-      md5: 164259b458a5cf8804fec631d9098bee.dir
-      size: 3902916786
-      nfiles: 14005
+      md5: 55695bc828318f9fc1c8f88a718cd92f.dir
+      size: 4472687252
+      nfiles: 17422
     - path: data/processed/labels
       hash: md5
-      md5: 245df6a5bb597b265b8712639f21e5a6.dir
-      size: 3654993
-      nfiles: 14005
+      md5: 6fedab5be2de0b9f9fb5aabddb0b7f10.dir
+      size: 5362255
+      nfiles: 17422
     - path: scripts/dataset/dataset_stats.py
       hash: md5
       md5: f0ff4843eecd4c86e9304733ac2adfc9
@@ -569,13 +570,13 @@ stages:
       size: 30510
     - path: scripts/qa/run_full_qa.py
       hash: md5
-      md5: 409173381090ff2bb02fa6b89357c4b9
-      size: 26147
+      md5: b21964d815996f4c10fb866c89f0bba1
+      size: 30598
     outs:
     - path: data/qa_reports/annotation_qa_report.json
       hash: md5
-      md5: 83b19cc968eaa7e46de7102b824cc41e
-      size: 17217
+      md5: d5393708fb168d5002c85a606eed76a7
+      size: 19575
   train_yolo11n:
     cmd: python scripts/training/train_yolo.py --config 
       configs/training/yolo11n_config.yaml
@@ -642,17 +643,17 @@ stages:
       size: 173
     - path: data/merged
       hash: md5
-      md5: a8872c2ec2413e4ca42dd62c32c9ff6c.dir
-      size: 3913806957
-      nfiles: 28012
+      md5: 0aa4251de21145a0e3669fcdadc0ce5c.dir
+      size: 4481616196
+      nfiles: 34846
     - path: data/processed/images
       hash: md5
-      md5: 164259b458a5cf8804fec631d9098bee.dir
-      size: 3902916786
-      nfiles: 14005
+      md5: 55695bc828318f9fc1c8f88a718cd92f.dir
+      size: 4472687252
+      nfiles: 17422
     - path: data/processed/split_report
       hash: md5
-      md5: ce253b3e1e7e8f0242a39d46ce92429d.dir
+      md5: e0f7db02621a2738ebeee209db9497e1.dir
       size: 1292
       nfiles: 2
     - path: scripts/dataset/11_generate_completeness.py
@@ -682,12 +683,12 @@ stages:
     outs:
     - path: data/processed/completeness.json
       hash: md5
-      md5: 53679b6a9feb2adbb2bace41133508e0
-      size: 2114275
+      md5: 4f18b726837aa8e94b0557b17e6a7525
+      size: 2637259
     - path: data/qa_reports/completeness_report.json
       hash: md5
-      md5: e5d6cec5b727385fd52b589a27a4ddb2
-      size: 2663
+      md5: db86dbb66c1174298b633a5f5958b96d
+      size: 2662
   auto_annotate:
     cmd: python scripts/dataset/12_auto_annotate.py
     deps:
@@ -831,9 +832,9 @@ stages:
       nfiles: 0
     - path: data/merged/labels
       hash: md5
-      md5: afc12e733cfffddd34e388454b1043d0.dir
-      size: 3654993
-      nfiles: 14005
+      md5: 656f9b0241f3a02ddd1696dfe9faf0c8.dir
+      size: 5362255
+      nfiles: 17422
     - path: scripts/dataset/15_apply_verified_labels.py
       hash: md5
       md5: 4092c80ba22c297c1726f1ff7af7291f
@@ -845,9 +846,9 @@ stages:
     outs:
     - path: data/merged_verified
       hash: md5
-      md5: 56379d6b6b13b0d9cc8b745209c60430.dir
-      size: 3654993
-      nfiles: 14005
+      md5: 54fcad56a1f3e6c036ca1d047956551b.dir
+      size: 5362255
+      nfiles: 17422
   coverage_report:
     cmd: python scripts/dataset/16_coverage_report.py
     deps:
@@ -943,11 +944,11 @@ stages:
       nfiles: 22
     - path: scripts/dataset/20_ingest_local_zips.py
       hash: md5
-      md5: 374daeaac965e3a6b9607a771e418cad
-      size: 35190
+      md5: fe44bb043d6f413f13de74284aec0161
+      size: 34765
     outs:
     - path: data/raw/local_captures
       hash: md5
-      md5: 47b3169cc7fbfebe34f0f62baac864e8.dir
-      size: 6763236257
+      md5: 7001dc3b87b6a40efe8d579df9e66fca.dir
+      size: 6763484073
       nfiles: 51743
