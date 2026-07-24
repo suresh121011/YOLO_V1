@@ -39,6 +39,12 @@ class DedupSettings:
 
     hamming_threshold: int = 5
     check_flips: bool = True
+    #: aHash grid size; the hash is ``hash_size**2`` bits. 8 → 64-bit (default,
+    #: coarse). Raising to 16 → 256-bit discriminates genuinely-distinct capture
+    #: frames an 8×8 hash wrongly merges (P2 finding). NOTE ``hamming_threshold``
+    #: is an ABSOLUTE bit count, so a larger grid makes a fixed threshold
+    #: proportionally stricter (fewer drops) — retune the two together.
+    hash_size: int = 8
 
 
 @dataclass(frozen=True)
@@ -108,8 +114,7 @@ class SourcesConfig:
             return False
         if source.noncommercial and not self.allow_noncommercial:
             logger.warning(
-                f"Source '{name}' skipped: non-commercial license and "
-                f"allow_noncommercial is false"
+                f"Source '{name}' skipped: non-commercial license and allow_noncommercial is false"
             )
             return False
         return True
@@ -165,6 +170,7 @@ def load_sources_config(path: Path | None = None) -> SourcesConfig:
         dedup=DedupSettings(
             hamming_threshold=int(dedup_raw.get("hamming_threshold", 5)),
             check_flips=bool(dedup_raw.get("check_flips", True)),
+            hash_size=int(dedup_raw.get("hash_size", 8)),
         ),
         indoor_filter=IndoorFilterSettings(
             enabled=bool(filter_raw.get("enabled", True)),

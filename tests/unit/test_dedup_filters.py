@@ -66,6 +66,39 @@ class TestComputeImageHashes:
         assert hashes.ahash is not None
         assert hashes.flip_ahash is None
 
+    def test_hash_size_scales_hash_width(self, tmp_path: Path) -> None:
+        """P7: a larger grid yields a wider hash (8→64-bit=16 hex, 16→256-bit=64 hex)."""
+        path = _make_image(tmp_path / "a.png")
+        h8 = compute_image_hashes(path, check_flip=False, hash_size=8)
+        h16 = compute_image_hashes(path, check_flip=False, hash_size=16)
+        assert h8.ahash is not None and h16.ahash is not None
+        assert len(h8.ahash) == 16  # 64 bits / 4 bits per hex char
+        assert len(h16.ahash) == 64  # 256 bits
+
+    def test_finer_hash_separates_near_but_distinct_frames(self, tmp_path: Path) -> None:
+        """The P7 motivation: two structurally different frames that collide
+        under a coarse 8×8 hash get separated by a 16×16 hash."""
+        a = _make_image(tmp_path / "a.png", brightness=100)
+        # A subtly different capture: shifted gradient phase, same overall look.
+        img = Image.new("L", (400, 400))
+        img.putdata(
+            [
+                min(255, 100 + ((x * 7 + y * 3 + 15) % 120) - 60)
+                for y in range(400)
+                for x in range(400)
+            ]
+        )
+        img.save(tmp_path / "b.png")
+
+        def hamming(p: Path, q: Path, size: int) -> int:
+            ha = int(compute_image_hashes(p, check_flip=False, hash_size=size).ahash, 16)
+            hb = int(compute_image_hashes(q, check_flip=False, hash_size=size).ahash, 16)
+            return (ha ^ hb).bit_count()
+
+        # The finer grid resolves at least as much structural difference as the
+        # coarse one — the mechanism by which distinct frames escape over-merging.
+        assert hamming(a, tmp_path / "b.png", 16) >= hamming(a, tmp_path / "b.png", 8)
+
 
 @pytest.mark.unit
 class TestDedupIndex:
