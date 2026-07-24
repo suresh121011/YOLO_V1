@@ -24,6 +24,7 @@ import logging
 import threading
 import time
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -39,13 +40,14 @@ from .tts_engine import PiperTTS
 logger = logging.getLogger(__name__)
 
 
-def _load_flags(path: str = "configs/feature_flags.yaml") -> dict:
+def _load_flags(path: str = "configs/feature_flags.yaml") -> dict[str, Any]:
     """Load feature flags from YAML. Returns empty dict if file missing."""
     p = Path(path)
     if not p.exists():
         logger.warning(f"Feature flags file not found: {path}. Using defaults.")
         return {}
-    return yaml.safe_load(p.read_text(encoding="utf-8")).get("feature_flags", {})
+    result = yaml.safe_load(p.read_text(encoding="utf-8")).get("feature_flags", {})
+    return result if isinstance(result, dict) else {}
 
 
 class ElderlyAssistantPipeline:
@@ -103,6 +105,7 @@ class ElderlyAssistantPipeline:
         self._rule_engine = RuleEngine(rules_path=rules_path, fps=target_fps)
 
         # ── Piper TTS (non-blocking) ─────────────────────────────────────
+        self._tts: PiperTTS | None = None
         try:
             self._tts = PiperTTS(
                 model_path=tts_model_path,
@@ -110,7 +113,6 @@ class ElderlyAssistantPipeline:
             )
         except Exception as e:
             logger.warning(f"TTS init failed: {e}. Running in silent mode.")
-            self._tts = None
 
         # ── Logger ───────────────────────────────────────────────────────
         self._logger = StructuredLogger(log_dir=log_dir)
@@ -132,7 +134,7 @@ class ElderlyAssistantPipeline:
     # Main entry point
     # ─────────────────────────────────────────
 
-    def process_frame(self, frame) -> dict:
+    def process_frame(self, frame: Any) -> dict[str, Any]:
         """Process one camera frame through the full pipeline.
 
         Args:
@@ -214,6 +216,7 @@ class ElderlyAssistantPipeline:
             memory_update_ms=memory_ms,
             vlm_ms=vlm_ms,
             rule_eval_ms=rule_ms,
+            tts_queue_ms=None,
             total_ms=total_ms,
             fps=1000.0 / max(total_ms, 1.0),
             ram_mb=self._get_ram_mb(),
@@ -263,7 +266,8 @@ class ElderlyAssistantPipeline:
 
             import psutil
 
-            return psutil.Process(os.getpid()).memory_info().rss / 1e6
+            rss: float = psutil.Process(os.getpid()).memory_info().rss / 1e6
+            return rss
         except Exception:
             return 0.0
 

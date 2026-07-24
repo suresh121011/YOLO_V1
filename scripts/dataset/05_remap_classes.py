@@ -132,6 +132,15 @@ def main() -> int:
         if not config.is_source_allowed(name):
             logger.info(f"[{name}] disabled/gated — skipping")
             continue
+        # Identity sources (local_captures, custom_captures, negatives) are
+        # annotated directly in taxonomy-id space — there is nothing to remap.
+        # The merge stage consumes their raw labels (07_merge_datasets.py
+        # "fall back to raw labels" path for already-taxonomy sources), so
+        # remapping them (with the empty identity table) would drop every
+        # annotation. Skip them here — by design, not as a fallback.
+        if (source.remap_table or "identity") == "identity":
+            logger.info(f"[{name}] identity (already taxonomy) — merge reads raw labels; skipping")
+            continue
         if not find_label_files(source.output_dir / "labels"):
             logger.info(f"[{name}] no label files (source empty or skipped) — skipping")
             continue
