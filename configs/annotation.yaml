@@ -74,6 +74,31 @@ auto_annotation:
         charger: 0.20               # small object — recall matters, humans filter
         wire: 0.20
 
+    # Seeder upgrade over yolo_world (P5, annotation V2 plan). YOLOE improves
+    # on YOLO-Worldv2 (+3.5 AP LVIS, 1.4× faster) and adds batched inference
+    # (annotate_batch). Disabled + unpinned until an operator downloads a YOLOE
+    # weight into models/annotators/ and records its sha256 (pin-bootstrap flow,
+    # same determinism contract as yolo_world). Prompts mirror yolo_world.
+    yoloe:
+      enabled: false
+      weights: models/annotators/yoloe-11l-seg.pt
+      weights_sha256: ""            # pin when first downloaded (load() hard-fails empty)
+      imgsz: 640
+      conf_floor: 0.05
+      max_det: 100
+      iou: 0.7
+      agnostic_nms: false
+      prompts:                      # same phrasing set as yolo_world above
+        face: ["human face", "person's face"]
+        medicine_bottle: ["medicine bottle", "pill bottle", "prescription bottle"]
+        charger: ["phone charger", "power adapter", "charging brick plugged into wall socket"]
+        wire: ["electrical wire", "power cable", "charging cable on the floor"]
+        cupboard: ["cupboard", "wardrobe", "steel almirah", "kitchen cabinet"]
+      thresholds:
+        default: 0.25
+        charger: 0.20
+        wire: 0.20
+
     # Second-opinion grounding backend (optional extra — requirements-
     # annotation.txt). Disabled by default; enable ONLY if measured yolo_world
     # precision on priority classes is < 0.4 (decision recorded at M8).
@@ -114,6 +139,10 @@ auto_annotation:
     enabled: true
     weights: models/annotators/mobile_sam.pt
     weights_sha256: "6dbb90523a35330fedd7f1d3dfc66f995213d81b29a5ca8108dbcdd4e37d6c2f"
+    # SAM2 upgrade path (P5): ultralytics.SAM auto-detects SAM2 from the weight
+    # filename, so switching to SAM2/SAM2.1 for tighter masks is a weights swap
+    # only — download e.g. sam2.1_b.pt into models/annotators/, point `weights`
+    # here, and record its sha256. No code change (refine.py loads from config).
   # Which (image, class) cells to target: skip cells already trusted by the
   # source policy or already verified in the ledger.
   targeting:

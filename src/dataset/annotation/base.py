@@ -299,6 +299,19 @@ class AutoAnnotator(ABC):
                               unverified cells; computed by targeting.py).
         """
 
+    def annotate_batch(
+        self, image_paths: list[Path], target_class_ids: tuple[int, ...]
+    ) -> list[list[Detection]]:
+        """Annotate several images, returning one detection list per path.
+
+        Default implementation loops :meth:`annotate` (byte-identical to the
+        per-image path). Backends whose model supports batched inference (e.g.
+        :mod:`.yoloe`) override this with a single batched forward pass for a
+        large speed-up at dataset scale, while preserving the same per-image
+        results and ordering.
+        """
+        return [self.annotate(path, target_class_ids) for path in image_paths]
+
     @abstractmethod
     def fingerprint(self) -> ModelFingerprint:
         """Reproducibility record for the loaded model (post-``load`` only)."""
