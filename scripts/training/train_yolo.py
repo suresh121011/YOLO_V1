@@ -133,7 +133,7 @@ def save_metrics_json(metrics: dict, output_dir: Path) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     metrics_path = output_dir / "metrics.json"
 
-    with open(metrics_path, "w", encoding="utf-8") as f:
+    with open(metrics_path, "w", encoding="utf-8", newline="\n") as f:
         json.dump(metrics, f, indent=2)
 
     logger.info(f"Metrics saved: {metrics_path}")

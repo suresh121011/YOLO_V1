@@ -78,7 +78,13 @@ def build_verified_labels_overlay(
         else:
             combined = base_text
 
-        (output_dir / f"{stem}.txt").write_text(combined, encoding="utf-8")
+        # newline="\n" is load-bearing here, not cosmetic. This overlay is
+        # `split.source_labels_dir`, so EVERY training label passes through this
+        # write. read_text() above already normalised the source's newlines to
+        # "\n", so a default text-mode write would re-expand all of them to CRLF
+        # and make data/merged_verified — and therefore data/processed — hash
+        # differently on Windows than on Linux.
+        (output_dir / f"{stem}.txt").write_text(combined, encoding="utf-8", newline="\n")
 
     logger.info(
         f"Verified-labels overlay: {result.images_total} images, "

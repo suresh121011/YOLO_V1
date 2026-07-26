@@ -212,7 +212,9 @@ def import_verified_batch(
                 )
                 + "\n"
             )
-            (verified_labels_dir / f"{stem}.txt").write_text(delta_text, encoding="utf-8")
+            (verified_labels_dir / f"{stem}.txt").write_text(
+                delta_text, encoding="utf-8", newline="\n"
+            )
             result.delta_files_written += 1
         result.images_imported += 1
 

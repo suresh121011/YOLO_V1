@@ -49,8 +49,11 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # Modules whose writers feed a DVC output. A text-mode write here corrupts a
 # tracked hash, so every write call in them must pin ``newline``.
 DVC_OUTPUT_WRITER_MODULES = (
+    "src/dataset/annotation/apply.py",
     "src/dataset/annotation/candidates.py",
     "src/dataset/annotation/ledger.py",
+    "src/dataset/annotation/verified_import.py",
+    "scripts/training/train_yolo.py",
     "src/dataset/completeness.py",
     "src/dataset/manifest.py",
     "src/dataset/merge.py",
@@ -139,6 +142,29 @@ class TestWritersEmitLf:
         rows = dest.read_text(encoding="utf-8").strip().splitlines()
         assert len(rows) == 2
         assert all(len(r.split()) == 5 for r in rows)
+
+    def test_verified_labels_overlay(self, tmp_path: Path) -> None:
+        """The overlay is `split.source_labels_dir` — every training label passes here.
+
+        A CRLF write in this stage propagates into `data/merged_verified` and
+        then `data/processed`, which is how 17,402 CRLF labels reached the split
+        even after the merge itself had been fixed.
+        """
+        from src.dataset.annotation.apply import build_verified_labels_overlay
+
+        merged = tmp_path / "merged"
+        verified = tmp_path / "verified"
+        out = tmp_path / "out"
+        for d in (merged, verified, out):
+            d.mkdir()
+        # multi-line label: single-line content has no newline to translate
+        (merged / "img.txt").write_text(
+            "3 0.5 0.5 0.2 0.2\n0 0.1 0.1 0.05 0.05\n", encoding="utf-8", newline="\n"
+        )
+        build_verified_labels_overlay(
+            merged_labels_dir=merged, verified_labels_dir=verified, output_dir=out
+        )
+        _assert_lf_only(out / "img.txt")
 
     @pytest.mark.parametrize(
         "writer",
