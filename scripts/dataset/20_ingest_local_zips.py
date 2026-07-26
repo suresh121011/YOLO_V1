@@ -182,6 +182,28 @@ _ARCHIVE_CLASS_REMAPS: dict[str, dict[str, int]] = {
     "laptop": {
         "laptop": 12,
     },
+    "medicine bottle": {
+        # Flat archive (no inner ZIPs). 501 images / 880 boxes over a 33-class
+        # source vocabulary, nearly all of it out-of-taxonomy clutter.
+        "medicine bottle": 3,  # 809 boxes -- the class this archive exists for
+        # 'bottle' (17 boxes) is the SAME object: all 17 crops were visually
+        # inspected 2026-07-27 and every one is a medicine bottle (COF-15 and
+        # Kofol cough syrup, Lorazepam and Rx pill bottles, Emetrol, Januvia,
+        # Liver Care syrup, Milk of Magnesia). Not one beverage bottle among
+        # them, and indistinguishable from the 'medicine bottle' samples -- the
+        # annotator simply used the shorter name. Mapping to water_bottle would
+        # have poisoned a safety class; dropping would have lost real data.
+        "bottle": 3,
+        "person": 0,
+        "book": 9,
+        "medicine strip": 2,
+        # dropped: vase, table, glass, plate, laptop, buttol, cup, buttle,
+        #          agarbati stand, microoben, ball, g, bottol, food plate,
+        #          switch, flower, car, cylinder, gas, fire hydrant,
+        #          skateboard, dining table, chair, toothbrush, potted plant,
+        #          apple, lizard, donut  -- out of taxonomy or too ambiguous
+        #          ('cylinder'/'gas' here are not LPG cylinders).
+    },
     "medicine strip": {
         # Per-inner-ZIP inspection: Strip1 and Strip2 use 'tablet',
         # Strip3 may use 'strip' or 'circle'. Map all three => medicine_strip.
@@ -257,6 +279,7 @@ _ZIP_META: dict[str, tuple[str, str, bool]] = {
     "gas cylinder": ("gas_cylinder", "gas_cylinder", False),
     "knife": ("knife", "knife", False),
     "laptop": ("laptop", "laptop", False),
+    "medicine bottle": ("medicine_bottle", "medicine_bottle", False),
     "medicine strip": ("medicine_strip", "medicine_strip", True),  # TEMPORARY
     "monitor": ("monitor", "monitor", False),
     "passport": ("passport", "passport", False),
@@ -608,6 +631,27 @@ def _count_inner_zips(outer: Path) -> int:
         return 0
 
 
+def _is_flat_yolo_archive(zf: zipfile.ZipFile) -> bool:
+    """True when the ZIP *itself* is a YOLO dataset rather than a wrapper.
+
+    Most archives here nest one or more ``*.yolov11.zip`` exports inside an
+    outer ZIP. A few are flat: ``<name>/data.yaml`` + ``<name>/images/`` +
+    ``<name>/labels/`` sitting directly in the outer archive.
+
+    The check is deliberately positive — a ``data.yaml`` *and* at least one
+    image beneath an ``images/`` directory. Treating "no inner ZIPs" alone as
+    "must be flat" would make a corrupt or empty archive silently ingest as an
+    empty dataset instead of failing loudly.
+    """
+    names = zf.namelist()
+    has_yaml = any(n.endswith("data.yaml") for n in names)
+    has_images = any(
+        "/images/" in n and not n.endswith("/") and PurePosixPath(n).suffix.lower() in IMAGE_EXTS
+        for n in names
+    )
+    return has_yaml and has_images
+
+
 # ---------------------------------------------------------------------------
 # Core ingestion
 # ---------------------------------------------------------------------------
@@ -669,29 +713,52 @@ def ingest_one(
                 # Find inner .zip files
                 inner_zip_entries = [n for n in outer_zf.namelist() if n.endswith(".zip")]
                 if not inner_zip_entries:
-                    logger.warning("  No inner ZIPs found in %s -- skipping", z.name)
-                    return None
+                    # Some archives are a FLAT export -- the dataset sits directly
+                    # in the outer ZIP (``<name>/data.yaml`` + ``<name>/images/``
+                    # + ``<name>/labels/``) with no inner .zip wrapper. That layout
+                    # is still a valid YOLO dataset, so hand the outer handle to
+                    # the same processor: it reads data.yaml for class names and
+                    # derives labels via ``<parent>/labels/<stem>.txt``, which
+                    # resolves identically for both layouts.
+                    if not _is_flat_yolo_archive(outer_zf):
+                        logger.warning(
+                            "  No inner ZIPs and no flat dataset layout in %s -- skipping",
+                            z.name,
+                        )
+                        return None
 
-                logger.info("  Found %d inner ZIP(s)", len(inner_zip_entries))
-                for inner_entry in sorted(inner_zip_entries):
-                    logger.info("    Processing inner: %s", inner_entry)
-                    with outer_zf.open(inner_entry) as inner_file:
-                        inner_bytes = io.BytesIO(inner_file.read())
-                    try:
-                        with zipfile.ZipFile(inner_bytes) as inner_zf:
-                            _process_inner_zip(
-                                inner_zf,
-                                inner_entry,
-                                remap_table,
-                                images_out,
-                                labels_out,
-                                image_hashes,
-                                stats,
-                                slug_prefix=slug_prefix,
-                            )
-                    except zipfile.BadZipFile as e:
-                        logger.error("    Bad inner ZIP %s: %s", inner_entry, e)
-                        continue
+                    logger.info("  Flat dataset layout detected (no inner ZIPs)")
+                    _process_inner_zip(
+                        outer_zf,
+                        z.name,
+                        remap_table,
+                        images_out,
+                        labels_out,
+                        image_hashes,
+                        stats,
+                        slug_prefix=slug_prefix,
+                    )
+                else:
+                    logger.info("  Found %d inner ZIP(s)", len(inner_zip_entries))
+                    for inner_entry in sorted(inner_zip_entries):
+                        logger.info("    Processing inner: %s", inner_entry)
+                        with outer_zf.open(inner_entry) as inner_file:
+                            inner_bytes = io.BytesIO(inner_file.read())
+                        try:
+                            with zipfile.ZipFile(inner_bytes) as inner_zf:
+                                _process_inner_zip(
+                                    inner_zf,
+                                    inner_entry,
+                                    remap_table,
+                                    images_out,
+                                    labels_out,
+                                    image_hashes,
+                                    stats,
+                                    slug_prefix=slug_prefix,
+                                )
+                        except zipfile.BadZipFile as e:
+                            logger.error("    Bad inner ZIP %s: %s", inner_entry, e)
+                            continue
 
         except zipfile.BadZipFile as e:
             logger.error("  Bad outer ZIP %s: %s -- SKIPPED", z.name, e)
