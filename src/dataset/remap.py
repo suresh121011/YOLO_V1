@@ -160,7 +160,11 @@ def remap_label_file(
 
     target_path = dest if dest is not None else path
     target_path.parent.mkdir(parents=True, exist_ok=True)
-    target_path.write_text("\n".join(out_lines) + ("\n" if out_lines else ""), encoding="utf-8")
+    target_path.write_text(
+        "\n".join(out_lines) + ("\n" if out_lines else ""),
+        encoding="utf-8",
+        newline="\n",
+    )
 
 
 def remap_label_dir(
@@ -233,6 +237,7 @@ def remap_label_dir(
             )
             + "\n",
             encoding="utf-8",
+            newline="\n",
         )
 
     logger.info(

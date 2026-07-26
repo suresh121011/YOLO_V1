@@ -111,7 +111,9 @@ class BaseDownloader(ABC):
         class_counts = self.fetch(effective_limit)
 
         (self.output_dir / SOURCE_CLASSES_FILENAME).write_text(
-            json.dumps(self.source_classes(), indent=2) + "\n", encoding="utf-8"
+            json.dumps(self.source_classes(), indent=2) + "\n",
+            encoding="utf-8",
+            newline="\n",
         )
 
         images = sorted(self.images_dir.glob("*"))
@@ -196,7 +198,11 @@ def write_yolo_label(
 ) -> None:
     """Write a YOLO label file from (class_id, cx, cy, w, h) tuples."""
     lines = [f"{cls} {cx:.6f} {cy:.6f} {w:.6f} {h:.6f}" for cls, cx, cy, w, h in boxes]
-    dest.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+    dest.write_text(
+        "\n".join(lines) + ("\n" if lines else ""),
+        encoding="utf-8",
+        newline="\n",
+    )
 
 
 def coco_bbox_to_yolo(

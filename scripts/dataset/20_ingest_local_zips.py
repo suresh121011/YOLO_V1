@@ -543,7 +543,7 @@ def _process_inner_zip(
             with inner_zip.open(label_entry) as lf:
                 raw_text = lf.read().decode("utf-8", errors="replace")
             remapped = _remap_label_content(raw_text, id_map, stats)
-            dest_lbl.write_text(remapped, encoding="utf-8")
+            dest_lbl.write_text(remapped, encoding="utf-8", newline="\n")
         else:
             dest_lbl.write_text("", encoding="utf-8")
 
@@ -735,7 +735,9 @@ def ingest_one(
     if not sc_dict:
         sc_dict = {"0": primary_cls}  # fallback
     (dest / "source_classes.json").write_text(
-        json.dumps(sc_dict, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        json.dumps(sc_dict, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+        newline="\n",
     )
 
     # manifest.json
@@ -767,7 +769,9 @@ def ingest_one(
         ),
     }
     (dest / "manifest.json").write_text(
-        json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+        newline="\n",
     )
 
     summary = {
@@ -783,7 +787,11 @@ def ingest_one(
         "duplicates_skipped": stats.get("dups", 0),
         "ingested_at": _utc_now(),
     }
-    sentinel.write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    sentinel.write_text(
+        json.dumps(summary, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
     return summary
 
 
@@ -810,7 +818,11 @@ def write_ingest_index(out_root: Path, results: list[dict]) -> None:
             if "slug" in r
         },
     }
-    index_path.write_text(json.dumps(index, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    index_path.write_text(
+        json.dumps(index, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
     logger.info("Ingest index => %s", index_path.relative_to(REPO_ROOT))
 
 

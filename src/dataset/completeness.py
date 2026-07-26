@@ -149,6 +149,7 @@ def save_completeness(artifact: dict[str, Any], path: Path) -> None:
     path.write_text(
         json.dumps(artifact, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
     logger.info(f"Completeness artifact written: {path}")
 

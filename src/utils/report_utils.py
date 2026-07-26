@@ -69,6 +69,13 @@ def git_commit_short() -> str:
 def save_json_report(data: dict[str, Any], path: Path) -> Path:
     """Write a dict as a formatted JSON file.
 
+    ``newline="\\n"`` is mandatory, not cosmetic: several of these reports are
+    DVC outputs, and DVC hashes the bytes on disk. Python's default text mode
+    emits CRLF on Windows and LF on Linux, so the same report would carry two
+    different hashes depending on the machine that produced it — and git, which
+    normalises to LF via ``.gitattributes``, would disagree with both. Writing
+    LF explicitly makes the bytes reproducible across platforms.
+
     Args:
         data: Dict to serialize. Must be JSON-serializable.
         path: Output file path. Parent directories are created automatically.
@@ -78,7 +85,7 @@ def save_json_report(data: dict[str, Any], path: Path) -> Path:
     """
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(path, "w", encoding="utf-8") as f:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         json.dump(data, f, indent=2, ensure_ascii=False, default=str)
 
     logger.info(f"JSON report written: {path}")
@@ -176,7 +183,7 @@ def save_markdown_report(
             lines.append(format_table(table["headers"], table["rows"]))
             lines.append("")
 
-    path.write_text("\n".join(lines), encoding="utf-8")
+    path.write_text("\n".join(lines), encoding="utf-8", newline="\n")
     logger.info(f"Markdown report written: {path}")
     return path
 

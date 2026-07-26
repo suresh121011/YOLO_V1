@@ -158,6 +158,7 @@ def main() -> int:
     (batches_root / CVAT_LABELS_FILENAME).write_text(
         json.dumps(build_cvat_labels_spec(class_names_by_id), indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
 
     total = 0
