@@ -175,7 +175,11 @@ def merge_sources(
                             kept_annotations=parse_label_file(kept.label_path),
                         )
                         if result.transplanted:
-                            with open(kept.label_path, "a", encoding="utf-8") as f:
+                            # newline="\n": the label was copied byte-exact from a
+                            # source that already uses LF, so appending in default
+                            # text mode would leave one CRLF line in an otherwise
+                            # LF file and make the merged hash platform-specific.
+                            with open(kept.label_path, "a", encoding="utf-8", newline="\n") as f:
                                 f.write("\n".join(render_transplanted_lines(result.transplanted)))
                                 f.write("\n")
                             labels_salvaged += len(result.transplanted)

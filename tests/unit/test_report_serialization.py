@@ -54,6 +54,7 @@ DVC_OUTPUT_WRITER_MODULES = (
     "src/dataset/completeness.py",
     "src/dataset/manifest.py",
     "src/dataset/merge.py",
+    "src/dataset/cross_dataset_salvage.py",
     "src/dataset/remap.py",
     "src/dataset/capture/ingest.py",
     "src/dataset/downloaders/base.py",
@@ -164,14 +165,23 @@ class TestNoTextModeWritesRemain:
             kwargs = {kw.arg for kw in node.keywords}
 
             is_write_text = isinstance(node.func, ast.Attribute) and node.func.attr == "write_text"
-            is_open_w = (
+            # Any text-mode write: "w", "a", "wt", "at", "w+", "a+", "r+" …
+            # Append mode matters as much as write — a salvage path appending one
+            # CRLF line to an otherwise-LF label file is what slipped through the
+            # first version of this sweep and put 170 CRLF files into data/merged.
+            # Binary modes ("wb", "ab") translate nothing and are exempt.
+            is_open_text_write = (
                 isinstance(node.func, ast.Name)
                 and node.func.id == "open"
                 and any(
-                    isinstance(a, ast.Constant) and a.value in ("w", "wt") for a in node.args[1:2]
+                    isinstance(a, ast.Constant)
+                    and isinstance(a.value, str)
+                    and "b" not in a.value
+                    and any(m in a.value for m in ("w", "a", "+"))
+                    for a in node.args[1:2]
                 )
             )
-            if not (is_write_text or is_open_w):
+            if not (is_write_text or is_open_text_write):
                 continue
 
             # write_text("") for a deliberately empty file has no newline to
@@ -182,7 +192,7 @@ class TestNoTextModeWritesRemain:
                     continue
 
             if "newline" not in kwargs:
-                call = "write_text" if is_write_text else 'open(..., "w")'
+                call = "write_text" if is_write_text else "open(..., text-write mode)"
                 found.append(f"line {node.lineno}: {call}")
         return found
 
