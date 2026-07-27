@@ -108,21 +108,36 @@ The taxonomy includes direct PII/health signals: `passport` (ID document),
   `dvc cache dir --local <path-outside-synced-tree>` (writes `.dvc/config.local`, gitignored).
   Cloud sync on the cache causes corruption/thrash; excluding `data/` from sync is also
   recommended.
-- **DVC remote (`storage`)**: an S3 remote is configured as the default in
-  `.dvc/config` at `s3://elderly-assistant-mlops/datasets/yolo_v1`. Activation
-  steps (run on the machine that holds the smoke data):
-  1. Create the S3 bucket `elderly-assistant-mlops` (or update the URL via
-     `dvc remote modify storage url s3://<bucket>/<prefix>` for S3-compatible providers;
-     set `endpointurl` for R2/B2/MinIO).
-  2. `pip install "dvc[s3]"` and export credentials (see `.env.example`); credentials must
-     never enter tracked config — use env vars, an AWS profile, or
-     `dvc remote modify --local` (writes gitignored `.dvc/config.local`).
-  3. `dvc push` — uploads the cache for every `dvc.lock` output; from then on
-     `dvc push`/`dvc pull` is part of every dataset release (definition of done).
+- **DVC remotes** — two are configured, and `localstore` is the **default**:
+  | Remote | URL | Role |
+  |---|---|---|
+  | `localstore` (default) | `C:\dvc_remote` | Fast, free second copy on the same machine. Default so a bare `dvc push` cannot incur S3 transfer by accident. |
+  | `storage` | `s3://elderly-assistant-mlops-329117470647-ap-south-1-an/datasets/yolo_v1` (`ap-south-1`) | Off-site copy. Explicit: `dvc push -r storage`. |
+
+  **Activated 2026-07-27 — risk C-1 (single-copy dataset) is CLOSED.** The first
+  `dvc push -r storage` uploaded **46,337 objects / 6.21 GB**; `dvc status -c -r storage`
+  reports *"Cache and remote are in sync"*. The bucket is `ap-south-1` with SSE-AES256
+  default encryption and **versioning enabled**, so an accidental `dvc gc` or overwrite
+  stays recoverable.
+
+  To use the remotes from a fresh clone:
+  1. `pip install "dvc[s3]"` — the S3 extra is already in the project dependencies.
+  2. Provide AWS credentials via the **standard chain** (default profile, `AWS_PROFILE`,
+     env vars, or an instance role in CI). `.dvc/config` deliberately sets **no `profile`
+     key** — pinning one would break every machine that does not use that name.
+     Credentials must never enter tracked config; use `dvc remote modify --local`
+     (writes gitignored `.dvc/config.local`) if you need a per-machine override.
+  3. `dvc pull -r storage` to fetch the dataset. `dvc push`/`dvc pull` is part of every
+     dataset release (definition of done).
   4. Gate check: on any clean machine, `dvc pull && dvc repro qa_check` must succeed —
      see `reproduction_log.md` in this directory for executed reproduction tests.
-  **Phase-3 data collection must not start before step 3 is done** — until the first
-  `dvc push`, the dataset exists on a single machine (risk C1 in the Phase-2 review).
+
+  For S3-compatible providers (R2/B2/MinIO), point the URL elsewhere with
+  `dvc remote modify storage url s3://<bucket>/<prefix>` and set `endpointurl`.
+
+  Note the cache holds more objects than S3 (67,578 vs 46,337): `dvc push` uploads only
+  what the current `dvc.lock` references, while the cache also retains orphans from
+  superseded builds. `dvc gc` reclaims them — it is destructive, so run it deliberately.
 - **Custom captures and the eval set enter DVC as `frozen: true` stages**
   (`ingest_custom_captures`, `ingest_eval_set` in `dvc.yaml`), not as normal
   stages with the capture inbox as a dependency. A normal stage was rejected:

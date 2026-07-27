@@ -229,9 +229,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `src/config/config_loader.py`; `psutil` added to stub overrides
 
 ### Changed
-- DVC: default S3 remote `storage` configured in `.dvc/config`
-  (`s3://elderly-assistant-mlops/datasets/yolo_v1`; activation runbook in
-  docs/04 §6); `dvc` dependency now installs the S3 extra (`dvc[s3]`)
+- DVC: two remotes in `.dvc/config` — `localstore` (`C:\dvc_remote`) is the
+  **default** so a bare `dvc push` cannot incur S3 transfer by accident, and
+  `storage` is the off-site S3 copy at
+  `s3://elderly-assistant-mlops-329117470647-ap-south-1-an/datasets/yolo_v1`
+  (`ap-south-1`), used explicitly via `dvc push -r storage`. No `profile` key is
+  set — credentials resolve through the standard AWS chain, so pinning a profile
+  name cannot break other machines or CI. Runbook in docs/04 §6; `dvc` dependency
+  installs the S3 extra (`dvc[s3]`).
+  **Activated 2026-07-27, closing risk C-1 (single-copy dataset):** 46,337 objects
+  / 6.21 GB uploaded, `dvc status -c -r storage` in sync, bucket has SSE-AES256
+  and versioning enabled.
 - CI: test matrix expanded to ubuntu+windows × py3.10/3.12; coverage gate
   enabled (`fail_under = 40`, ratchet-only); mypy widened to
   `src/dataset src/utils src/config src/logging` (`src/pipeline` joins in
