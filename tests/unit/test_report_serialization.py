@@ -157,14 +157,37 @@ class TestWritersEmitLf:
         out = tmp_path / "out"
         for d in (merged, verified, out):
             d.mkdir()
-        # multi-line label: single-line content has no newline to translate
+        # A delta must exist: without one the overlay is a byte-for-byte
+        # copyfile (the ADR-P5-01 passthrough) and never reaches the text
+        # write, so a no-delta fixture would not exercise newline= at all.
         (merged / "img.txt").write_text(
             "3 0.5 0.5 0.2 0.2\n0 0.1 0.1 0.05 0.05\n", encoding="utf-8", newline="\n"
         )
+        (verified / "img.txt").write_text("10 0.9 0.9 0.05 0.05\n", encoding="utf-8", newline="\n")
         build_verified_labels_overlay(
             merged_labels_dir=merged, verified_labels_dir=verified, output_dir=out
         )
         _assert_lf_only(out / "img.txt")
+        assert len((out / "img.txt").read_text(encoding="utf-8").strip().splitlines()) == 3
+
+    def test_overlay_passthrough_is_byte_exact(self, tmp_path: Path) -> None:
+        """No verdict → byte-for-byte copy, whatever the source bytes are.
+
+        This is the ADR-P5-01 invariant. A text-mode round-trip would silently
+        rewrite line endings per-platform, so the passthrough must not go
+        through read_text/write_text at all.
+        """
+        from src.dataset.annotation.apply import build_verified_labels_overlay
+
+        merged = tmp_path / "merged"
+        out = tmp_path / "out"
+        merged.mkdir()
+        # Deliberately CRLF: the copy must preserve it rather than normalise.
+        (merged / "img.txt").write_bytes(b"3 0.5 0.5 0.2 0.2\r\n")
+        build_verified_labels_overlay(
+            merged_labels_dir=merged, verified_labels_dir=tmp_path / "absent", output_dir=out
+        )
+        assert (out / "img.txt").read_bytes() == (merged / "img.txt").read_bytes()
 
     @pytest.mark.parametrize(
         "writer",
