@@ -11,7 +11,7 @@
 # The full dataset build is therefore: set `mode: full`, then `dvc repro`.
 # ─────────────────────────────────────────────────────────────────────────────
 
-mode: smoke
+mode: full
 
 smoke:
   # Max images fetched per source in smoke mode
@@ -100,9 +100,27 @@ sources:
     indoor_filter: true       # apply brightness/aspect heuristics at merge
     trusted_classes:
       [person, water_bottle, knife, laptop, monitor, chair, bed, toilet, sink, book]
+    # Per-class box budgets. An image is fetched only when EVERY class in it
+    # is still under its cap (src/dataset/downloaders/coco.py) — capping only
+    # some classes does not bound the rest, it just stops gating: with only
+    # person/chair capped, train2017 produced 36,469 person boxes from an 800
+    # cap. Every class COCO contributes therefore needs an entry here.
+    #
+    # 1200 measured on train2017: 5,300 images / 11,737 boxes / ~2.2 h, every
+    # class at its cap except laptop (932 — genuinely exhausted). Keeps COCO a
+    # supporting source rather than the dominant one (the whole current
+    # dataset is 89,127 boxes).
     class_caps:               # prevent imbalance (docs 01_download_coco_subset)
-      person: 800
-      chair: 500
+      person: 1200
+      chair: 1200
+      book: 1200
+      bottle: 1200
+      knife: 1200
+      tv: 1200
+      sink: 1200
+      laptop: 1200
+      bed: 1200
+      toilet: 1200
 
   openimages:
     enabled: true
