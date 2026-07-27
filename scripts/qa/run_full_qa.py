@@ -146,17 +146,40 @@ def check_image_quality(
     """
     try:
         import cv2
+        import numpy as np
     except ImportError:
         logger.warning("OpenCV not available — blur/low-light checks skipped")
         return {"available": False}, 0, {"blurry": [], "low_light": []}
 
+    def _imread_gray(path: Path) -> np.ndarray | None:
+        """Read an image as grayscale, tolerating non-ASCII paths.
+
+        ``cv2.imread`` goes through the Windows ANSI file APIs, so it returns
+        None for any path containing non-ASCII characters and logs a misleading
+        "check file path/integrity". The dataset has 88 such images — Thai and
+        French filenames in the local_captures person/stove slugs — which were
+        silently dropped from the blur/low-light screen (17,799 scanned of
+        17,888). They are not corrupt: reading the bytes ourselves and decoding
+        from memory works, which is also what ultralytics does internally, so
+        training was never affected.
+        """
+        try:
+            buf = np.fromfile(path, dtype=np.uint8)
+        except OSError:
+            return None
+        if buf.size == 0:
+            return None
+        return cv2.imdecode(buf, cv2.IMREAD_GRAYSCALE)
+
     blurry: list[str] = []
     dark: list[str] = []
     scanned = 0
+    unreadable = 0
 
     for image_path in find_image_files(data_dir / "images"):
-        gray = cv2.imread(str(image_path), cv2.IMREAD_GRAYSCALE)
+        gray = _imread_gray(image_path)
         if gray is None:
+            unreadable += 1
             continue
         scanned += 1
         if float(cv2.Laplacian(gray, cv2.CV_64F).var()) < blur_threshold:
@@ -165,10 +188,16 @@ def check_image_quality(
             dark.append(image_path.name)
 
     warnings = len(blurry) + len(dark)
+    if unreadable:
+        # Surfaced rather than silent: an image the screen cannot read is an
+        # unscreened image, and the previous code could not distinguish that
+        # from a clean pass.
+        logger.warning(f"Image quality: {unreadable} image(s) unreadable — not screened")
     logger.info(f"Image quality: {scanned} scanned, {len(blurry)} blurry, {len(dark)} low-light")
     report = {
         "available": True,
         "scanned": scanned,
+        "unreadable": unreadable,
         "blur_variance_threshold": blur_threshold,
         "low_light_brightness_threshold": low_light_threshold,
         "blurry_count": len(blurry),

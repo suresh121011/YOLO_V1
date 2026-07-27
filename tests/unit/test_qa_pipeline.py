@@ -692,3 +692,57 @@ class TestSweepL4L5Reports:
         report = sweep_l4_l5_reports(coverage_path, quality_path, data_yaml)
         assert report["problems_count"] == 0
         assert report["live_images_total"] is None
+
+
+# ─── Image-quality screen: non-ASCII paths (Windows) ──────────────────────────
+
+from scripts.qa.run_full_qa import check_image_quality  # noqa: E402
+
+
+class TestImageQualityUnicodePaths:
+    """The blur/low-light screen must read every image it is handed.
+
+    ``cv2.imread`` uses the Windows ANSI file APIs, so it returns None for any
+    path containing non-ASCII characters and logs a misleading "check file
+    path/integrity". In the real build that silently dropped 88 images from the
+    screen — Thai and French filenames under the local_captures person/stove
+    slugs — reporting "17,799 scanned" against 17,888 present. The files are not
+    corrupt; only this reader could not open them.
+    """
+
+    @staticmethod
+    def _write(path: Path, colour: int) -> None:
+        from PIL import Image
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+        Image.new("RGB", (48, 48), (colour, colour, colour)).save(path)
+
+    def test_non_ascii_filenames_are_screened(self, tmp_path: Path) -> None:
+        pytest.importorskip("cv2")
+        images = tmp_path / "images"
+        # Thai and French names mirroring the real local_captures filenames.
+        self._write(images / "stove__ดาวน์โหลด.jpg", 5)  # near-black → low light
+        self._write(images / "person__télécharger (7).jpg", 5)
+        self._write(images / "plain_ascii.jpg", 5)
+
+        report, _warnings, quarantine = check_image_quality(tmp_path)
+
+        assert report["available"] is True
+        assert report["scanned"] == 3, (
+            f"expected all 3 images screened, got {report['scanned']} — "
+            "non-ASCII paths are being skipped again"
+        )
+        assert report.get("unreadable", 0) == 0
+        assert len(quarantine["low_light"]) == 3
+
+    def test_unreadable_images_are_counted_not_silent(self, tmp_path: Path) -> None:
+        """A file the screen cannot decode must be reported, not ignored."""
+        pytest.importorskip("cv2")
+        images = tmp_path / "images"
+        self._write(images / "good.jpg", 5)
+        images.joinpath("broken.jpg").write_bytes(b"not an image")
+
+        report, _warnings, _q = check_image_quality(tmp_path)
+
+        assert report["scanned"] == 1
+        assert report["unreadable"] == 1
