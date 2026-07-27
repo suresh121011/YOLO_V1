@@ -167,6 +167,64 @@ class TestSweep:
         assert result.checked == 1
         assert len(result.missing) == 1
 
+    def test_cache_false_outs_are_skipped(self, tmp_path: Path) -> None:
+        """`cache: false` outs are git-tracked by design and never cached.
+
+        Demanding a cache object for them is a false positive — the first
+        version of this sweep reported all five QA reports plus the ledger as
+        "missing from cache and remote", which read as data loss when it was
+        simply the declared design.
+        """
+        cache, remote = tmp_path / "cache", tmp_path / "remote"
+        cache.mkdir()
+        remote.mkdir()
+        lock = _write_lock(
+            tmp_path / "dvc.lock",
+            {"qa_check": {"metrics": [{"path": "data/qa_reports/qa.json", "md5": "aaaa1111"}]}},
+        )
+        # Without the skip set it is reported missing …
+        assert not sweep(lock, cache, remote, deep=False).ok
+        # … and with it, the sweep passes and counts the skip.
+        result = sweep(lock, cache, remote, deep=False, skip_paths={"data/qa_reports/qa.json"})
+        assert result.ok
+        assert result.skipped_uncached == 1
+        assert result.checked == 0
+
+    def test_uncached_outs_parses_dvc_yaml(self, tmp_path: Path) -> None:
+        import yaml as _yaml
+
+        dvc_yaml = tmp_path / "dvc.yaml"
+        dvc_yaml.write_text(
+            _yaml.safe_dump(
+                {
+                    "stages": {
+                        "gen": {
+                            "outs": [
+                                "data/processed/completeness.json",
+                                {"data/qa_reports/completeness_report.json": {"cache": False}},
+                            ]
+                        },
+                        "qa": {
+                            "metrics": [
+                                {"data/qa_reports/annotation_qa_report.json": {"cache": False}}
+                            ]
+                        },
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+        found = verify_lock_objects.uncached_outs(dvc_yaml)
+        assert found == {
+            "data/qa_reports/completeness_report.json",
+            "data/qa_reports/annotation_qa_report.json",
+        }
+        # a plain string out (cached) must NOT be treated as uncached
+        assert "data/processed/completeness.json" not in found
+
+    def test_uncached_outs_missing_file_is_empty(self, tmp_path: Path) -> None:
+        assert verify_lock_objects.uncached_outs(tmp_path / "nope.yaml") == set()
+
     def test_report_dict_is_serializable(self, tmp_path: Path) -> None:
         cache, remote = tmp_path / "cache", tmp_path / "remote"
         cache.mkdir()

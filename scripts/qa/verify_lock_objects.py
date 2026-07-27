@@ -58,6 +58,7 @@ class SweepResult:
     checked: int = 0
     missing: list[Missing] = field(default_factory=list)
     unreadable_dirs: list[str] = field(default_factory=list)
+    skipped_uncached: int = 0
 
     @property
     def ok(self) -> bool:
@@ -66,6 +67,7 @@ class SweepResult:
     def to_dict(self) -> dict[str, Any]:
         return {
             "checked": self.checked,
+            "skipped_uncached": self.skipped_uncached,
             "missing_count": len(self.missing),
             "missing": [vars(m) for m in self.missing],
             "unreadable_dir_objects": self.unreadable_dirs,
@@ -111,12 +113,46 @@ def _dir_member_hashes(cache: Path, md5: str) -> list[str] | None:
     return [item["md5"] for item in listing if isinstance(item, dict) and "md5" in item]
 
 
-def sweep(lock_path: Path, cache: Path, remote: Path | None, deep: bool) -> SweepResult:
+def uncached_outs(dvc_yaml: Path) -> set[str]:
+    """Paths declared ``cache: false`` — deliberately never stored by DVC.
+
+    Small, reviewable artifacts (the QA reports and the verification ledger) are
+    git-tracked instead of cached; see the dvc.yaml note above
+    ``import_verified_annotations``. DVC records their hash in dvc.lock for
+    change detection but writes no cache object, so demanding one is a false
+    positive — the first version of this sweep reported all five as "missing
+    from cache and remote" and I mistook a deliberate design for data loss.
+    """
+    if not dvc_yaml.exists():
+        return set()
+    spec = yaml.safe_load(dvc_yaml.read_text(encoding="utf-8")) or {}
+    uncached: set[str] = set()
+    for body in (spec.get("stages") or {}).values():
+        for section in ("outs", "metrics", "plots"):
+            for entry in body.get(section) or []:
+                if isinstance(entry, dict):
+                    for path, opts in entry.items():
+                        if isinstance(opts, dict) and opts.get("cache") is False:
+                            uncached.add(path.replace("\\", "/"))
+    return uncached
+
+
+def sweep(
+    lock_path: Path,
+    cache: Path,
+    remote: Path | None,
+    deep: bool,
+    skip_paths: set[str] | None = None,
+) -> SweepResult:
     lock = yaml.safe_load(lock_path.read_text(encoding="utf-8")) or {}
     result = SweepResult()
     seen: set[str] = set()
+    skip = skip_paths or set()
 
     for stage, section, path, md5 in _iter_lock_entries(lock):
+        if path.replace("\\", "/") in skip:
+            result.skipped_uncached += 1
+            continue
         if md5 in seen:
             continue
         seen.add(md5)
@@ -176,6 +212,17 @@ def main(argv: list[str] | None = None) -> int:
         help="skip expanding .dir objects into their member files",
     )
     parser.add_argument("--json", type=Path, default=None, help="write the report here")
+    parser.add_argument(
+        "--dvc-yaml",
+        type=Path,
+        default=REPO_ROOT / "dvc.yaml",
+        help="read cache:false outs from here so they are not reported missing",
+    )
+    parser.add_argument(
+        "--include-uncached",
+        action="store_true",
+        help="also check cache:false outs (they legitimately have no cache object)",
+    )
     args = parser.parse_args(argv)
 
     cache = args.cache or _default_cache()
@@ -183,12 +230,15 @@ def main(argv: list[str] | None = None) -> int:
         print(f"FAIL: {args.lock} not found", file=sys.stderr)
         return 2
 
-    result = sweep(args.lock, cache, args.remote, deep=not args.no_deep)
+    skip = set() if args.include_uncached else uncached_outs(args.dvc_yaml)
+    result = sweep(args.lock, cache, args.remote, deep=not args.no_deep, skip_paths=skip)
 
     print(f"dvc.lock object sweep — {args.lock}")
     print(f"  cache : {cache}")
     print(f"  remote: {args.remote or '(not checked)'}")
     print(f"  objects checked: {result.checked}")
+    if result.skipped_uncached:
+        print(f"  skipped (cache: false, git-tracked by design): {result.skipped_uncached}")
 
     if result.missing:
         print(f"\n  MISSING OBJECTS: {len(result.missing)}")
