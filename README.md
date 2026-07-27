@@ -43,7 +43,31 @@ pip install -e .
 
 # 5. Verify setup
 make check
+
+# 6. Fetch the dataset (requires AWS credentials — see below)
+dvc pull -r storage
 ```
+
+### Getting the data
+
+The code clones from git; the **dataset does not**. It lives in DVC remotes, so a
+fresh clone has an empty `data/` until you pull:
+
+| Remote | Where | Use |
+|---|---|---|
+| `storage` | `s3://…-329117470647-ap-south-1-an/datasets/yolo_v1` (`ap-south-1`) | `dvc pull -r storage` — the off-site copy |
+| `localstore` (default) | `C:\dvc_remote` | Only exists on the machine that built the dataset |
+
+Credentials come from the **standard AWS chain** (default profile, `AWS_PROFILE`,
+env vars, or an instance role). `.dvc/config` sets no `profile` key on purpose, so
+whatever your AWS CLI already resolves will work — configure it once with
+`aws configure`. Credentials must never be committed.
+
+`dvc pull` downloads a prebuilt dataset (~6.2 GB). `dvc repro` is a different thing:
+it **rebuilds** from sources, which takes hours. Use `pull` unless you intend to
+change the pipeline. Full details, including the S3-compatible-provider path and the
+clean-machine gate check, are in
+**[docs/04 Dataset Engineering](./docs/04_dataset_engineering/README.md)**.
 
 ---
 
