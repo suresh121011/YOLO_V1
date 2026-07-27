@@ -28,6 +28,8 @@ from typing import Any
 from src.dataset.downloaders.base import (
     BaseDownloader,
     coco_bbox_to_yolo,
+    is_capped_out,
+    load_class_caps,
     write_yolo_label,
 )
 from src.dataset.remap import REMAP_TABLES
@@ -119,9 +121,7 @@ class CocoDownloader(BaseDownloader):
                 continue
             anns_by_image.setdefault(ann["image_id"], []).append(ann)
 
-        caps: dict[str, int] = {
-            str(k): int(v) for k, v in (self.source.options.get("class_caps") or {}).items()
-        }
+        caps = load_class_caps(self.source.options)
         url_template = str(self.source.options["image_url_template"])
 
         class_counts: dict[str, int] = {}
@@ -155,7 +155,7 @@ class CocoDownloader(BaseDownloader):
             # in half for the same number of downloads, because the images it
             # drops are the person-redundant ones.
             present = {cat_id_to_name[ann["category_id"]] for ann in annotations}
-            if any(class_counts.get(name, 0) >= caps.get(name, 10**9) for name in present):
+            if is_capped_out(present, class_counts, caps):
                 skipped_for_caps += 1
                 continue
 

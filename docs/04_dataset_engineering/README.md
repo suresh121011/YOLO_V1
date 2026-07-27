@@ -25,7 +25,52 @@ data/eval/indian_home_v0/                              ← locked real-home eval
 
 - **Smoke vs full:** `configs/dataset_sources.yaml` → `mode: smoke` caps every source at
   `smoke.limit_per_source` images. The full dataset build is *one command*: set
-  `mode: full`, then `dvc repro`.
+  `mode: full`, then `dvc repro`. In full mode `limit_per_source` does not apply and
+  per-source volume is governed entirely by `class_caps` (below).
+
+### 1.1 Acquisition budgets (`class_caps`)
+
+`sources.<name>.class_caps` is a per-class **box budget**, read from config only —
+no downloader hardcodes one. A source with no `class_caps` is unbounded, which is
+the pre-cap behaviour.
+
+An image is fetched only when **every** class it contains is still under budget
+(`src/dataset/downloaders/base.py::is_capped_out`, shared by COCO and Open Images).
+The check runs *before* the network call, so a capped-out image costs nothing.
+
+Gating on *every* class rather than *any* is the load-bearing detail. Once an image
+is fetched its whole label file is credited, so under an "any class still under cap"
+rule a saturated class rides along on images recruited by other classes and keeps
+growing. Measured on COCO train2017, an 800-box `person` cap produced **36,469**
+person boxes and `chair`'s 500 produced 18,009 — the config comment says
+"prevent imbalance", and it was doing the opposite. Capping only *some* classes has
+the same effect, because the uncapped ones never saturate and so never gate.
+
+Two rules follow:
+
+1. **Cap every class a source contributes**, or cap none.
+2. Set the budget from measured availability, not intuition. Both source
+   annotation indexes can be analysed offline before any image is fetched — the
+   COCO instances JSON and the Open Images bbox CSV both live in
+   `data/downloads_cache/` and are outside the DVC outs.
+
+Measured effect at the budgets now configured:
+
+| Source | Uncapped | Configured | Result |
+|---|---|---|---|
+| COCO train2017 | 26,409 imgs / 135,098 boxes / ~11 h | 1200 × 10 classes | 5,300 imgs / 11,737 boxes / ~2.2 h, every class at cap (laptop 932, exhausted) |
+| Open Images train | 14,562 imgs / 21,135 boxes / ~6 h | Door 1200; Cupboard/Gas stove 2000 | 2,021 imgs / 2,953 boxes / ~0.8 h — Door 1,200, Cupboard 1,233, Gas stove 520 |
+
+Open Images is 92% `Door` (13,382 of 14,562 images), so only `Door` needs a real
+budget; the other two are capped above their ceilings, which documents intent
+without truncating them. `Gas stove` remaps to taxonomy `stove` — at 267 boxes the
+scarcest safety class in the build — so its 520 recovered boxes roughly triple it.
+Cupboard and Gas stove land just under their 1,353 / 526 ceilings because a
+saturated `Door` blocks the 164 images (1.1%) holding more than one of the three.
+
+Residual overshoot is bounded by the box count of the last admitted image — a cap
+of 2 plus an image holding 3 boxes of that class yields 3. That is inherent to
+gating on entry, and is pinned by `tests/unit/test_coco_class_caps.py`.
 - **Reproducibility:** all downloads are annotation-manifest-first with per-image fetch;
   every stage is deterministic given the config + seed; DVC tracks stage inputs/outputs.
 - **Naming resolution (audit fix):** new acquisition scripts use the numbered scheme from

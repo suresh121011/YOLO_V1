@@ -21,6 +21,7 @@ import json
 import logging
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +35,37 @@ logger = logging.getLogger(__name__)
 DEFAULT_TIMEOUT_S = 60
 DEFAULT_RETRIES = 3
 RETRY_BACKOFF_S = 2.0
+
+#: Budget for a class with no ``class_caps`` entry — effectively unbounded.
+#: A source that declares no caps therefore behaves exactly as before.
+UNCAPPED = 10**9
+
+
+def load_class_caps(options: Mapping[str, Any]) -> dict[str, int]:
+    """Per-class box budgets from a source's ``class_caps`` option.
+
+    Always read from configuration; no downloader hardcodes a budget.
+    """
+    return {str(k): int(v) for k, v in (options.get("class_caps") or {}).items()}
+
+
+def is_capped_out(
+    present: Iterable[str],
+    class_counts: Mapping[str, int],
+    caps: Mapping[str, int],
+) -> bool:
+    """True when ANY class in ``present`` has exhausted its budget.
+
+    Callers skip such images. Gating on *every* present class — rather than
+    fetching whenever *some* class is still under cap — is what makes a cap
+    bind: an image's whole label file is credited once it is fetched, so a
+    saturated class riding along on images recruited by others keeps growing.
+    On COCO train2017 that turned an 800-box ``person`` cap into 36,469 boxes.
+
+    Shared by every downloader so the semantics are defined once. Classes with
+    no cap entry use :data:`UNCAPPED` and never block.
+    """
+    return any(class_counts.get(name, 0) >= caps.get(name, UNCAPPED) for name in present)
 
 
 class DownloadSkippedError(Exception):

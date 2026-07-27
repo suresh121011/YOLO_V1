@@ -229,6 +229,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `src/config/config_loader.py`; `psutil` added to stub overrides
 
 ### Changed
+- Acquisition budgets: `class_caps` now bounds accumulation, not just selection,
+  and Open Images gained cap support it never had. Both downloaders share one
+  rule (`base.is_capped_out`): fetch an image only when **every** class in it is
+  under budget, checked before the network call.
+  Found while launching the `mode: full` build. The old rule fetched on *any*
+  class being under cap and then credited the whole label file, so a saturated
+  class rode along on other classes' recruits — an 800-box `person` cap yielded
+  **36,469** person boxes on COCO train2017, against a config comment reading
+  "prevent imbalance". Capping only some classes had the same effect, since
+  uncapped ones never saturate and so never gate.
+  Measured on the real annotation indexes, offline, before fetching anything:
+  COCO 26,409 imgs / 135,098 boxes / ~11 h → **5,300 / 11,737 / ~2.2 h** at 1200
+  per class, every class at cap; Open Images 14,562 / 21,135 / ~6 h →
+  **2,021 / 2,953 / ~0.8 h**. Open Images is 92% `Door`, so only `Door` is
+  budgeted; `Gas stove` (taxonomy `stove`, the scarcest safety class at 267
+  boxes) is left effectively uncapped and contributes 520.
+  WIDER FACE's existing single-class cap was verified correct and unchanged.
 - Release ladder: new `dataset-v0.6.0` track in `configs/release.yaml`
   (`mode: full`, gates RG1–RG8) describing the local-capture build — ADR-P5-13.
   It adds RG8 (zero split leakage) over `v0.5.0` and claims **neither** RG9

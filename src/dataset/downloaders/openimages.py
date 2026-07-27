@@ -22,7 +22,12 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from src.dataset.downloaders.base import BaseDownloader, write_yolo_label
+from src.dataset.downloaders.base import (
+    BaseDownloader,
+    is_capped_out,
+    load_class_caps,
+    write_yolo_label,
+)
 from src.dataset.remap import REMAP_TABLES
 
 logger = logging.getLogger(__name__)
@@ -39,7 +44,11 @@ class OpenImagesDownloader(BaseDownloader):
         return {str(i): name for i, name in enumerate(wanted)}
 
     def _query_extras(self) -> dict[str, Any]:
-        return {"split": self._split(), "classes": sorted(self._wanted_names())}
+        return {
+            "split": self._split(),
+            "classes": sorted(self._wanted_names()),
+            "class_caps": self.source.options.get("class_caps", {}),
+        }
 
     def _split(self) -> str:
         key = "smoke_split" if self.config.mode == "smoke" else "full_split"
@@ -115,18 +124,32 @@ class OpenImagesDownloader(BaseDownloader):
         logger.info(f"[openimages] {len(boxes_by_image)} candidate images in {split}")
 
         id_to_name = {v: k for k, v in local_ids.items()}
+        caps = load_class_caps(self.source.options)
         class_counts: dict[str, int] = {}
         selected = 0
         failed = 0
+        skipped_for_caps = 0
 
         for image_id in sorted(boxes_by_image):  # deterministic
             if limit is not None and selected >= limit:
                 break
+
+            boxes = boxes_by_image[image_id]
+            # Budget check BEFORE the network call — the point of a cap here
+            # is to not download the image at all. Same rule as COCO
+            # (base.is_capped_out): every class present must still have
+            # budget, because the whole label file is credited once fetched.
+            # No caps configured → every class is UNCAPPED and nothing is
+            # skipped, which is exactly the pre-cap behaviour.
+            present = {id_to_name[local_id] for local_id, *_ in boxes}
+            if is_capped_out(present, class_counts, caps):
+                skipped_for_caps += 1
+                continue
+
             url = url_template.format(split=split, image_id=image_id)
             if not self.fetch_url(url, self.images_dir / f"{image_id}.jpg"):
                 failed += 1
                 continue
-            boxes = boxes_by_image[image_id]
             write_yolo_label(self.labels_dir / f"{image_id}.txt", boxes)
             for local_id, *_ in boxes:
                 name = id_to_name[local_id]
@@ -136,7 +159,7 @@ class OpenImagesDownloader(BaseDownloader):
                 logger.info(f"[openimages] {selected} images fetched…")
 
         logger.info(
-            f"[openimages] done: {selected} images, {failed} fetch failures; "
-            f"counts={class_counts}"
+            f"[openimages] done: {selected} images, {failed} fetch failures, "
+            f"{skipped_for_caps} skipped by caps; counts={class_counts}"
         )
         return class_counts
