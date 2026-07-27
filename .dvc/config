@@ -4,13 +4,24 @@
 ['remote "storage"']
     # Credentials come from the standard AWS chain (env vars / ~/.aws)
     # — NEVER from this tracked file.
-    url = s3://elderly-assistant-mlops/datasets/yolo_v1
+    #
+    # No `profile` is set on purpose: leaving it unset lets the standard chain
+    # resolve credentials (default profile, AWS_PROFILE, env vars, or an
+    # instance role in CI). Pinning a profile name here would break every
+    # machine that does not happen to use that name.
+    #
+    # Bucket is ap-south-1, SSE-AES256 by default, versioning enabled — so an
+    # accidental `dvc gc` or overwrite is recoverable from a previous version.
+    url = s3://elderly-assistant-mlops-329117470647-ap-south-1-an/datasets/yolo_v1
+    region = ap-south-1
     # For S3-compatible providers (Cloudflare R2, Backblaze B2, MinIO):
     # endpointurl = https://<provider-endpoint>
 ['remote "localstore"']
     # Phase-5 default remote (closes audit risk C-1: single-copy dataset).
     # Local disk OUTSIDE the OneDrive-synced tree — protects against sync
-    # corruption and accidental deletion; NOT against disk failure. Migrate to
-    # a second physical disk or the "storage" S3 remote when available:
-    #   copy C:\dvc_remote to the new location, update this url, dvc push.
+    # corruption and accidental deletion; NOT against disk failure, since it
+    # shares a physical drive with the cache. The "storage" S3 remote above is
+    # the off-site copy; this one stays default because it is fast and free,
+    # so `dvc push` costs nothing by accident. Push to S3 explicitly:
+    #   dvc push -r storage
     url = C:\dvc_remote
