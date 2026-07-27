@@ -203,15 +203,70 @@ class TestGateGpu:
 
 
 class TestGateOnedrive:
-    def test_warn_inside_onedrive(self, tmp_path: Path) -> None:
-        repo = tmp_path / "OneDrive" / "Desktop" / "repo"
-        repo.mkdir(parents=True)
+    @staticmethod
+    def _repo(tmp_path: Path, *, under_onedrive: bool, cache_dir: str | None) -> Path:
+        parts = ("OneDrive", "Desktop", "repo") if under_onedrive else ("repo",)
+        repo = tmp_path.joinpath(*parts)
+        (repo / ".dvc").mkdir(parents=True)
+        (repo / ".dvc" / "config").write_text("[core]\n    remote = localstore\n", encoding="utf-8")
+        if cache_dir is not None:
+            (repo / ".dvc" / "config.local").write_text(
+                f"[cache]\n    dir = {cache_dir}\n    type = copy\n", encoding="utf-8"
+            )
+        return repo
+
+    def test_warn_inside_onedrive_with_default_cache(self, tmp_path: Path) -> None:
+        repo = self._repo(tmp_path, under_onedrive=True, cache_dir=None)
         result = gate_onedrive(repo)
         assert result.status == "warn"
-        assert "cache" in result.details
+        assert "working tree" in result.details
+        assert "relocate it" in result.details, "unrelocated cache must still be called out"
+
+    def test_relocated_cache_is_reported_as_already_safe(self, tmp_path: Path) -> None:
+        """The bug this pins: FB5 read the same before and after the fix.
+
+        With the cache moved off OneDrive via config.local, the gate must say
+        so rather than repeat 'relocate the cache' advice that has already
+        been followed — otherwise it carries no signal about the one thing it
+        exists to check.
+        """
+        safe_cache = tmp_path / "dvc_cache"
+        repo = self._repo(tmp_path, under_onedrive=True, cache_dir=str(safe_cache))
+        result = gate_onedrive(repo)
+        assert result.status == "warn", "the working tree is still a real R34 hazard"
+        assert "already off OneDrive" in result.details
+        assert "relocate it" not in result.details
+
+    def test_config_local_overrides_tracked_config(self, tmp_path: Path) -> None:
+        repo = self._repo(tmp_path, under_onedrive=True, cache_dir=str(tmp_path / "safe"))
+        (repo / ".dvc" / "config").write_text(
+            f"[cache]\n    dir = {repo / '.dvc' / 'cache'}\n", encoding="utf-8"
+        )
+        assert "already off OneDrive" in gate_onedrive(repo).details
 
     def test_pass_outside_onedrive(self, tmp_path: Path) -> None:
-        assert gate_onedrive(tmp_path).status == "pass"
+        repo = self._repo(tmp_path, under_onedrive=False, cache_dir=None)
+        assert gate_onedrive(repo).status == "pass"
+
+    def test_cache_under_onedrive_warns_even_when_repo_is_not(self, tmp_path: Path) -> None:
+        onedrive_cache = tmp_path / "OneDrive" / "cache"
+        repo = self._repo(tmp_path, under_onedrive=False, cache_dir=str(onedrive_cache))
+        result = gate_onedrive(repo)
+        assert result.status == "warn"
+        assert "relocate it" in result.details
+
+
+class TestReadDvcCacheDir:
+    def test_defaults_to_dvc_cache(self, tmp_path: Path) -> None:
+        (tmp_path / ".dvc").mkdir()
+        assert preflight.read_dvc_cache_dir(tmp_path) == tmp_path / ".dvc" / "cache"
+
+    def test_relative_dir_resolves_against_dvc_dir(self, tmp_path: Path) -> None:
+        (tmp_path / ".dvc").mkdir()
+        (tmp_path / ".dvc" / "config").write_text(
+            "[cache]\n    dir = ../elsewhere\n", encoding="utf-8"
+        )
+        assert preflight.read_dvc_cache_dir(tmp_path) == (tmp_path / "elsewhere").resolve()
 
 
 # ─── FB6 acquisition mode ─────────────────────────────────────────────────────

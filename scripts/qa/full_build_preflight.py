@@ -292,20 +292,71 @@ def gate_gpu() -> GateResult:
     )
 
 
-def gate_onedrive(repo_root: Path) -> GateResult:
-    """FB5 — OneDrive sync hazard for the repo data tree / DVC cache (R34)."""
-    if not _is_onedrive_path(repo_root):
+def read_dvc_cache_dir(repo_root: Path) -> Path:
+    """Effective DVC cache directory, honoring ``.dvc/config.local``.
+
+    ``config.local`` is untracked and overrides ``config``, which is exactly
+    where a ``dvc cache dir`` relocation lands. Reading only the repo path (or
+    only the tracked config) reports the cache as OneDrive-resident whether or
+    not the relocation happened — see :func:`gate_onedrive`.
+
+    A relative ``dir`` is resolved against ``.dvc/``, matching DVC itself.
+    """
+    dvc_dir = repo_root / ".dvc"
+    configured: str | None = None
+    for name in ("config", "config.local"):  # local wins — read it last
+        path = dvc_dir / name
+        if not path.exists():
+            continue
+        try:
+            sections = _parse_dvc_config(path.read_text(encoding="utf-8"))
+        except OSError as exc:
+            logger.warning(f"Cannot read {path}: {exc}")
+            continue
+        configured = sections.get("cache", {}).get("dir") or configured
+    if configured is None:
+        return dvc_dir / "cache"
+    cache = Path(configured)
+    return cache if cache.is_absolute() else (dvc_dir / cache).resolve()
+
+
+def gate_onedrive(repo_root: Path, cache_dir: Path | None = None) -> GateResult:
+    """FB5 — OneDrive sync hazard for the repo data tree / DVC cache (R34).
+
+    The working tree and the cache are separate hazards with separate
+    mitigations, and the cache one is routinely already fixed via
+    ``.dvc/config.local``. Reporting them as a single lump produced a warning
+    that read the same before and after the relocation — no signal at exactly
+    the moment (a 10-40 GB full build) it is supposed to provide one.
+    """
+    cache = read_dvc_cache_dir(repo_root) if cache_dir is None else cache_dir
+    repo_at_risk = _is_onedrive_path(repo_root)
+    cache_at_risk = _is_onedrive_path(cache)
+
+    if not repo_at_risk and not cache_at_risk:
         return GateResult(
-            "FB5", "onedrive hazard", GATE_STATUS_PASS, f"{repo_root} is outside OneDrive"
+            "FB5",
+            "onedrive hazard",
+            GATE_STATUS_PASS,
+            f"repo tree and DVC cache ({cache}) are both outside OneDrive",
         )
+
+    problems: list[str] = []
+    if repo_at_risk:
+        problems.append(
+            f"the working tree is under OneDrive ({repo_root}) — data/ grows to "
+            f"tens of GB during the full build; pause OneDrive sync for its duration"
+        )
+    if cache_at_risk:
+        problems.append(
+            f"the DVC cache is under OneDrive ({cache}) — relocate it off the "
+            f"synced tree (`dvc cache dir <path>` + `dvc config cache.type copy`)"
+        )
+    else:
+        problems.append(f"the DVC cache is already off OneDrive ({cache}) — no action needed")
+
     return GateResult(
-        "FB5",
-        "onedrive hazard",
-        GATE_STATUS_WARN,
-        f"Repo (and .dvc/cache) live under OneDrive ({repo_root}) — sync can race "
-        f"large builds (risk R34). Before the full build: pause OneDrive sync or "
-        f"relocate the cache off the synced tree "
-        f"(`dvc cache dir <path>` + `dvc config cache.type hardlink,copy`).",
+        "FB5", "onedrive hazard", GATE_STATUS_WARN, f"risk R34: {'; '.join(problems)}."
     )
 
 
