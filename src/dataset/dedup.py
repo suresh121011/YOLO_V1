@@ -219,16 +219,18 @@ def _popcount(value: int) -> int:
 
 
 def _vectorized_popcount(x: np.ndarray) -> np.ndarray:
-    """Elementwise Hamming weight of a uint64 array (SWAR algorithm).
+    """Elementwise Hamming weight of a uint64 array.
 
-    Works on numpy<2.0 (no dependency on the 2.0+ ``np.bitwise_count``
-    ufunc — this project pins ``numpy<2.0``). Unsigned wraparound is
-    intentional and exact for this bit-trick.
+    Uses ``np.bitwise_count`` (numpy 2.0+), which this project now requires.
+    It replaces the SWAR bit-trick used while the project pinned numpy<2.0;
+    both produce identical results (``test_dedup_vectorized`` covers this over
+    the full 256-bit range).
+
+    The intermediate is annotated because ``np.bitwise_count`` is typed as a
+    bare ufunc, so mypy infers ``Any`` and would flag the return as untyped.
     """
-    x = x - ((x >> np.uint64(1)) & np.uint64(0x5555555555555555))
-    x = (x & np.uint64(0x3333333333333333)) + ((x >> np.uint64(2)) & np.uint64(0x3333333333333333))
-    x = (x + (x >> np.uint64(4))) & np.uint64(0x0F0F0F0F0F0F0F0F)
-    return ((x * np.uint64(0x0101010101010101)) >> np.uint64(56)).astype(np.int64)
+    counts: np.ndarray = np.bitwise_count(x).astype(np.int64)
+    return counts
 
 
 def _first_below(distances: np.ndarray, threshold: int) -> int | None:

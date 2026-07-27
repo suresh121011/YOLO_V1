@@ -140,6 +140,7 @@ def lock_eval_set(eval_root: Path) -> Path:
         )
         + "\n",
         encoding="utf-8",
+        newline="\n",
     )
     logger.info(f"Eval set locked: {count} images, digest {digest[:12]}… → {lock_path}")
     return lock_path

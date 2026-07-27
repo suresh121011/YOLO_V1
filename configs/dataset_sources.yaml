@@ -181,6 +181,7 @@ sources:
       # annotated within that source. medicine_strip is TEMPORARY (Roboflow-sourced).
       - person
       - face
+      - medicine_bottle       # medicine bottle.zip — flat archive, 809+17 boxes
       - medicine_strip        # TEMPORARY — replace with own data before release
       - water_bottle          # bottel.zip — VERIFIED: water/beverage bottles only
       - knife

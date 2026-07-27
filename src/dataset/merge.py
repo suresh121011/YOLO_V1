@@ -175,7 +175,11 @@ def merge_sources(
                             kept_annotations=parse_label_file(kept.label_path),
                         )
                         if result.transplanted:
-                            with open(kept.label_path, "a", encoding="utf-8") as f:
+                            # newline="\n": the label was copied byte-exact from a
+                            # source that already uses LF, so appending in default
+                            # text mode would leave one CRLF line in an otherwise
+                            # LF file and make the merged hash platform-specific.
+                            with open(kept.label_path, "a", encoding="utf-8", newline="\n") as f:
                                 f.write("\n".join(render_transplanted_lines(result.transplanted)))
                                 f.write("\n")
                             labels_salvaged += len(result.transplanted)
@@ -227,7 +231,9 @@ def merge_sources(
     manifest.cross_dataset_candidates_linked = cross_dataset_candidates_linked
     manifest.save(output_dir / MERGED_MANIFEST_FILENAME)
     (output_dir / CROSS_DATASET_LINKS_FILENAME).write_text(
-        json.dumps(cross_dataset_links, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        json.dumps(cross_dataset_links, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+        newline="\n",
     )
     logger.info(
         f"Merge complete: {len(manifest.image_provenance)} images → {output_dir} "

@@ -1,6 +1,6 @@
 # ─── Core Runtime Dependencies ────────────────────────────────────────────────
 # Locked versions for reproducible environments
-# Platform: Python 3.10+ on Linux (Raspberry Pi 5) / Android / macOS / Windows
+# Platform: Python 3.10+ / 3.14 on Linux (Raspberry Pi 5) / Android / macOS / Windows
 
 # Object Detection
 # Pinned to the last version whose v8DetectionLoss returns loss_items as an
@@ -9,7 +9,8 @@
 # Bump only alongside a fix-forward that adapts to the dict-shaped loss_items.
 ultralytics==8.4.103
 opencv-python>=4.9,<5.0
-numpy>=1.26,<2.0
+# numpy>=1.26,<2.0  # Python <=3.12 only — no binary wheels for Python 3.13+
+numpy>=2.0,<3.0      # Python 3.14 compatible; numpy 2.x is backward-compatible for this project
 
 # Configuration
 PyYAML>=6.0,<7.0

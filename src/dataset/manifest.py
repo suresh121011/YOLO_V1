@@ -63,6 +63,7 @@ class _JsonManifest:
         path.write_text(
             json.dumps(self.to_dict(), indent=2, ensure_ascii=False) + "\n",
             encoding="utf-8",
+            newline="\n",
         )
 
     @classmethod

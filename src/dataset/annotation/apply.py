@@ -17,6 +17,7 @@ verified yet) produces a byte-identical passthrough of
 from __future__ import annotations
 
 import logging
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -64,21 +65,35 @@ def build_verified_labels_overlay(
     for base_path in sorted(merged_labels_dir.glob("*.txt")):
         stem = base_path.stem
         result.images_total += 1
-        base_text = base_path.read_text(encoding="utf-8")
         delta_path = verified_labels_dir / f"{stem}.txt"
+        dest = output_dir / f"{stem}.txt"
 
-        if delta_path.exists():
-            delta_text = delta_path.read_text(encoding="utf-8")
-            result.images_with_deltas += 1
-            result.delta_lines_added += sum(1 for line in delta_text.splitlines() if line.strip())
-            combined = base_text
-            if combined and not combined.endswith("\n"):
-                combined += "\n"
-            combined += delta_text
-        else:
-            combined = base_text
+        if not delta_path.exists():
+            # No human verdict for this image: copy the bytes verbatim. A
+            # text-mode round-trip would not be a passthrough at all —
+            # read_text() normalises the source's newlines and write_text()
+            # re-expands them per-platform, so the same merged label yields
+            # different bytes on Windows than on Linux. copyfile keeps the
+            # ADR-P5-01 invariant exact and platform-independent.
+            shutil.copyfile(base_path, dest)
+            continue
 
-        (output_dir / f"{stem}.txt").write_text(combined, encoding="utf-8")
+        base_text = base_path.read_text(encoding="utf-8")
+        delta_text = delta_path.read_text(encoding="utf-8")
+        result.images_with_deltas += 1
+        result.delta_lines_added += sum(1 for line in delta_text.splitlines() if line.strip())
+        combined = base_text
+        if combined and not combined.endswith("\n"):
+            combined += "\n"
+        combined += delta_text
+
+        # newline="\n" is load-bearing on the combine path. This overlay is
+        # `split.source_labels_dir`, so every training label with a verdict
+        # passes through here; read_text() above already normalised newlines to
+        # "\n", and a default text-mode write would re-expand them to CRLF,
+        # making data/merged_verified — and so data/processed — hash
+        # differently on Windows than on Linux.
+        dest.write_text(combined, encoding="utf-8", newline="\n")
 
     logger.info(
         f"Verified-labels overlay: {result.images_total} images, "

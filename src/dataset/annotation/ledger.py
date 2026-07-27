@@ -105,6 +105,7 @@ def save_ledger(ledger: Mapping[str, Any], path: Path) -> None:
     path.write_text(
         json.dumps(ledger, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
 
 
