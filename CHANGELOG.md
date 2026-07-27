@@ -229,6 +229,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `src/config/config_loader.py`; `psutil` added to stub overrides
 
 ### Changed
+- Release ladder: new `dataset-v0.6.0` track in `configs/release.yaml`
+  (`mode: full`, gates RG1–RG8) describing the local-capture build — ADR-P5-13.
+  It adds RG8 (zero split leakage) over `v0.5.0` and claims **neither** RG9
+  (custom-capture targets) nor RG10 (A/B + locked-eval evidence), because
+  `data/raw/custom_captures/manifests` is empty and no training run exists.
+  **`dataset-v1.0.0`'s gate list is unchanged** — RG9/RG10 stay mandatory there,
+  now pinned by a test rather than a comment. Exists so Phase-F release-candidate
+  validation is exercised on a real release instead of being debugged during the
+  v1.0 cut. Also: `record_release.cmd` in `dvc.yaml` was still pinned to
+  `dataset-v0.5.0`, and `configs/release.yaml`'s header claimed to be a DVC
+  params file when `dvc.yaml` never referenced it — both corrected.
 - DVC: two remotes in `.dvc/config` — `localstore` (`C:\dvc_remote`) is the
   **default** so a bare `dvc push` cannot incur S3 transfer by accident, and
   `storage` is the off-site S3 copy at

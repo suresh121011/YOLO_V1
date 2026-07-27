@@ -11,6 +11,7 @@ import pytest
 import yaml
 
 from src.dataset.release.gates import (
+    ALL_GATE_IDS,
     GATE_STATUS_FAIL,
     GATE_STATUS_PASS,
     aggregate_custom_class_counts,
@@ -634,3 +635,59 @@ class TestEvaluateRelease:
         rg9 = next(r for r in report.results if r.gate_id == "RG9")
         assert rg9.status == GATE_STATUS_FAIL
         assert "gas_cylinder" in rg9.details
+
+
+# ─── The real configs/release.yaml ladder ──────────────────────────────────────
+
+
+class TestShippedReleaseLadder:
+    """Guards the hand-edited track table in ``configs/release.yaml``.
+
+    Tracks are written by hand, and a typo'd gate id is silently harmless in
+    the worst possible way: ``evaluate_release``'s ``needs()`` never matches
+    it, so the gate is never computed — but the id still sits in
+    ``required_gate_ids``, and ``verdict`` only aggregates results that were
+    actually produced. A misspelt ``RG11`` therefore reads as one fewer thing
+    standing between the build and a tag. These tests are the reason a new
+    track can be added without re-deriving that risk each time.
+    """
+
+    @staticmethod
+    def _ladder() -> dict[str, Any]:
+        return load_release_config(Path("configs/release.yaml"))
+
+    def test_every_declared_gate_id_is_implemented(self) -> None:
+        unknown = {
+            version: sorted(set(track.get("gates", [])) - set(ALL_GATE_IDS))
+            for version, track in self._ladder().items()
+            if set(track.get("gates", [])) - set(ALL_GATE_IDS)
+        }
+        assert not unknown, f"unimplemented gate ids would be silently skipped: {unknown}"
+
+    def test_every_track_declares_a_valid_mode(self) -> None:
+        bad = {
+            version: track.get("mode")
+            for version, track in self._ladder().items()
+            if track.get("mode") not in {"smoke", "full"}
+        }
+        assert not bad, f"MODE is a hard prerequisite; these tracks cannot pass: {bad}"
+
+    def test_every_track_requires_at_least_one_gate(self) -> None:
+        """A track with no gates would report PASS having checked nothing."""
+        for version, track in self._ladder().items():
+            assert track.get("gates"), f"{version} declares no gates"
+
+    def test_v1_0_0_still_requires_rg9_and_rg10(self) -> None:
+        """ADR-P5-13 promised the v1.0 bar would not move to let v0.6.0 pass.
+
+        RG9 (real Indian-home captures) and RG10 (A/B + locked-eval evidence)
+        are the two gates the current build cannot satisfy. Adding the
+        v0.6.0 track is only honest while they stay mandatory here.
+        """
+        v1_gates = set(self._ladder()["dataset-v1.0.0"]["gates"])
+        assert {"RG9", "RG10"} <= v1_gates
+
+    def test_v0_6_0_does_not_claim_capture_or_training_evidence(self) -> None:
+        v06_gates = set(self._ladder()["dataset-v0.6.0"]["gates"])
+        assert not ({"RG9", "RG10"} & v06_gates)
+        assert "RG8" in v06_gates, "v0.6.0 must still gate on zero split leakage"

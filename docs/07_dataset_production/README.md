@@ -47,6 +47,7 @@ report with residual-risk quantification (`17_dataset_quality_report.py`).
 | Release | Contents |
 |:---|:---|
 | `dataset-v0.5.0` | Full-mode public build, masked-only mitigation, first `dvc push` verified |
+| `dataset-v0.6.0` | + local-capture slugs (`20_ingest_local_zips.py`); adds RG8 zero-leakage. No verification ledger, **no training evidence** — RG9/RG10 not claimed ([ADR-P5-13](adr/ADR-P5-13-v060-local-capture-release-track.md)) |
 | `dataset-v0.7.0` | + ≥3,000 human-verified (image, class) cells on public images |
 | `dataset-v0.9.0` | + custom captures (≥1,000 imgs, ≥2 houses), locked eval set, house-level split, wet_floor R24 decision |
 | `dataset-v1.0.0` | All targets (≥2,000 custom, ≥200 inst/class, ≥3 houses), 0 QA criticals, full-scale A/B evidence — unfreezes `train_yolo11n` |

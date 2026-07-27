@@ -26,6 +26,11 @@ determines what actually blocks that version — `check dataset-v0.5.0` never
 evaluates RG9/RG10 (custom captures, A/B evidence) because that track
 doesn't require them yet; `check dataset-v1.0.0` does.
 
+Ladder: `v0.5.0` → **`v0.6.0`** → `v0.7.0` → `v0.9.0` → `v1.0.0`.
+`dataset-v0.6.0` ([ADR-P5-13](adr/ADR-P5-13-v060-local-capture-release-track.md))
+is the local-capture build: RG1–RG8, no verification ledger and no training
+evidence. It does **not** relax RG9/RG10 — those stay mandatory for `v1.0.0`.
+
 ---
 
 ## 1. Check the current build
