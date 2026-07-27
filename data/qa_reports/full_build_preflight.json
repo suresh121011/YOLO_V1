@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-07-17T12:23:50Z",
+  "generated_at": "2026-07-27T16:48:14Z",
   "verdict": "WARN",
   "gates": [
     {
       "gate_id": "FB1",
       "name": "disk space",
       "status": "pass",
-      "details": "304.4 GB free (≥ 150 GB)"
+      "details": "216.6 GB free (≥ 150 GB)"
     },
     {
       "gate_id": "FB2",
       "name": "dvc remote",
       "status": "pass",
-      "details": "'localstore' at C:\\dvc_remote (304.4 GB free)"
+      "details": "'localstore' at C:\\dvc_remote (216.6 GB free)"
     },
     {
       "gate_id": "FB3",
@@ -23,20 +23,20 @@
     {
       "gate_id": "FB4",
       "name": "gpu",
-      "status": "warn",
-      "details": "torch is installed but reports no CUDA device — the download/merge/split stages run fine, but the auto_annotate stage needs the local NVIDIA GPU (user decision, Phase-5 plan)."
+      "status": "pass",
+      "details": "CUDA device: NVIDIA GeForce RTX 3050 6GB Laptop GPU"
     },
     {
       "gate_id": "FB5",
       "name": "onedrive hazard",
       "status": "warn",
-      "details": "Repo (and .dvc/cache) live under OneDrive (C:\\Users\\haris\\OneDrive\\Desktop\\YOLO_V1) — sync can race large builds (risk R34). Before the full build: pause OneDrive sync or relocate the cache off the synced tree (`dvc cache dir <path>` + `dvc config cache.type hardlink,copy`)."
+      "details": "risk R34: the working tree is under OneDrive (C:\\Users\\haris\\OneDrive\\Desktop\\YOLO_V1) — data/ grows to tens of GB during the full build; pause OneDrive sync for its duration; the DVC cache is already off OneDrive (C:\\dvc_cache) — no action needed."
     },
     {
       "gate_id": "FB6",
       "name": "acquisition mode",
-      "status": "warn",
-      "details": "mode: smoke — this preflight targets the full build; flip configs/dataset_sources.yaml mode to 'full' at M7 (bundled with the WIDER class_caps + Roboflow slug changes)."
+      "status": "pass",
+      "details": "mode: full"
     }
   ]
 }
