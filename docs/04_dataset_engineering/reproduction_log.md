@@ -11,7 +11,7 @@ Executed clean-machine reproduction tests for the Phase-2 dataset pipeline
 |---|---|
 | **Machine** | Ephemeral Linux container (x86_64, Python 3.11.15) — no prior repo state, no DVC cache, no dataset |
 | **Commit** | `wp3.0-platform-remediation` @ `b1c1a84` (fresh `git clone`, separate working copy) |
-| **Variant** | Rebuild-from-sources (`dvc repro`), smoke mode. The `dvc pull` variant was **pending** at the time of this run — it required the first `dvc push` from the machine holding the data (see §6 runbook). **That blocker cleared 2026-07-27**: the cache is now on `localstore` and on S3 (46,337 objects / 6.21 GB, `dvc status -c -r storage` in sync). The pull-variant reproduction is therefore **unblocked but still unexecuted** — no clean machine has yet run `dvc pull && dvc repro qa_check`. |
+| **Variant** | Rebuild-from-sources (`dvc repro`), smoke mode. The `dvc pull` variant was **pending** at the time of this run — it required the first `dvc push` from the machine holding the data (see §6 runbook). **That blocker cleared 2026-07-27**: the cache is now on `localstore` and on S3 (46,337 objects / 6.21 GB, `dvc status -c -r storage` in sync). The pull-variant was then **partially executed 2026-07-27** — see "Pull-variant fetch check" below. |
 | **Deps** | `dvc[s3] 3.67.1`, pyyaml, requests, pillow, numpy, opencv-python-headless in a fresh `.venv`. *Deviation:* full `requirements.txt` (ultralytics/torch/sounddevice) not installed — unused by the dataset DAG (training stage frozen). |
 
 ### Result: PASS (for every stage the environment's network policy allowed)
@@ -82,3 +82,41 @@ dvc repro --single-item merge_datasets
 dvc repro --single-item split_train_val_test
 dvc repro --single-item qa_check
 ```
+
+---
+
+## Pull-variant fetch check — 2026-07-27
+
+Records what was actually executed. This is **not** the full clean-machine gate
+(`dvc pull && dvc repro qa_check`); read the limitations before citing it.
+
+| | |
+|---|---|
+| **Method** | `git clone --depth 1` from GitHub into a scratch directory (no DVC cache, no `.dvc/config.local`), then `dvc pull -r storage data/processed/split_report` |
+| **Commit** | `main` @ `cc1cf34` |
+| **Result** | **PASS** — `3 files fetched and 2 files added` |
+| **Content verified** | `split_summary.json`: `total_images` 17,888 · `total_labels` 17,888 · `leakage_count` 0 · splits 14,323 / 1,773 / 1,792 · **0 CRLF bytes** |
+
+### What this establishes
+
+1. The `storage` remote in the tracked `.dvc/config` resolves from a clean
+   checkout. Credentials came from the standard AWS chain with no
+   project-specific setup, which validates the decision to set no `profile` key.
+2. S3 is **readable**, not merely writable — every earlier check confirmed
+   upload only.
+3. The dataset is retrievable by a checkout that never built it, which is the
+   substance of risk C-1.
+4. The LF fix survives workspace → cache → S3 → fresh clone byte-identically.
+
+### Limitations — why this is not the full gate
+
+- **Same machine, same OS, same AWS credentials.** A genuinely independent host
+  (different OS, different IAM principal) is still untested.
+- **One small output pulled**, not the full 6.2 GB — the fetch mechanism was
+  what was unproven; a complete pull would incur real egress to demonstrate the
+  same thing.
+- **`dvc repro qa_check` was not run** in the clone, so end-to-end pipeline
+  reproduction from a pull remains unverified.
+
+The full gate stays open. This closes the narrower question of whether the
+remote is fetchable at all, which until now was assumed rather than tested.
