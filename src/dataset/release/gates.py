@@ -383,8 +383,29 @@ def git_tags_at_head(repo_root: str = ".") -> list[str]:
 # ─── RG6: dvc push executed + dvc status -c clean ─────────────────────────────
 
 
-def rg6_dvc_push_verified(dvc_status_cache_output: str) -> GateResult:
-    """``dvc status -c --quiet`` prints nothing when the cache/remote are in sync."""
+def rg6_dvc_push_verified(dvc_status_cache_output: str, exit_code: int = 0) -> GateResult:
+    """Cache and remote are in sync — judged by BOTH output and exit code.
+
+    ``dvc status -c --quiet`` is documented as "write nothing to stdout; exit 0
+    if no problems arise, otherwise 1". Judging it by stdout alone therefore
+    made this gate unfalsifiable: stdout is empty whether or not objects are
+    pending, so ``"".strip()`` was always falsy and RG6 always passed. It was
+    observed reporting "cache and remote in sync" against a cache holding
+    21,964 un-pushed objects — an entire dataset rebuild — which is exactly the
+    release this gate exists to block.
+
+    Args:
+        dvc_status_cache_output: stdout (non-empty only without ``--quiet``).
+        exit_code: process exit status; non-zero means objects are pending.
+    """
+    if exit_code != 0:
+        detail = dvc_status_cache_output.strip()[:200] or f"exit code {exit_code}"
+        return GateResult(
+            "RG6",
+            "dvc-push-verified",
+            GATE_STATUS_FAIL,
+            f"`dvc status -c` reports pending objects — run `dvc push`: {detail}",
+        )
     if dvc_status_cache_output.strip():
         return GateResult(
             "RG6",
@@ -396,8 +417,13 @@ def rg6_dvc_push_verified(dvc_status_cache_output: str) -> GateResult:
     return GateResult("RG6", "dvc-push-verified", GATE_STATUS_PASS, "cache and remote in sync")
 
 
-def dvc_status_cache(repo_root: str = ".") -> str:
-    """Real ``dvc status -c --quiet`` output."""
+def dvc_status_cache(repo_root: str = ".") -> tuple[str, int]:
+    """Real ``dvc status -c --quiet`` result as ``(stdout, exit_code)``.
+
+    The exit code is the load-bearing half — see :func:`rg6_dvc_push_verified`.
+    A failure to invoke dvc at all returns a non-zero code so the gate fails
+    closed rather than reading an empty string as "in sync".
+    """
     try:
         out = subprocess.run(
             ["dvc", "status", "-c", "--quiet"],
@@ -407,9 +433,9 @@ def dvc_status_cache(repo_root: str = ".") -> str:
             check=False,
             cwd=repo_root,
         )
-        return out.stdout
+        return out.stdout, out.returncode
     except (OSError, subprocess.SubprocessError) as e:
-        return f"<dvc status unavailable: {e}>"
+        return f"<dvc status unavailable: {e}>", 1
 
 
 # ─── RG7: license gate ─────────────────────────────────────────────────────────
@@ -738,7 +764,8 @@ def evaluate_release(
         )
 
     if needs("RG6"):
-        results.append(rg6_dvc_push_verified(dvc_status_cache(repo_root)))
+        status_output, status_code = dvc_status_cache(repo_root)
+        results.append(rg6_dvc_push_verified(status_output, status_code))
 
     if needs("RG7"):
         license_entries = collect_license_entries(raw_root, sources_cfg)

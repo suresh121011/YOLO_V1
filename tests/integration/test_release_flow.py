@@ -267,7 +267,7 @@ def _clean_git_dvc(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     monkeypatch.setattr(gates_mod, "git_porcelain_status", lambda repo_root=".": "")
     monkeypatch.setattr(gates_mod, "git_tags_at_head", lambda repo_root=".": ["dataset-v0.5.0"])
-    monkeypatch.setattr(gates_mod, "dvc_status_cache", lambda repo_root=".": "")
+    monkeypatch.setattr(gates_mod, "dvc_status_cache", lambda repo_root=".": ("", 0))
 
 
 class TestOrchestrationRG5ToRG10:
@@ -302,7 +302,25 @@ class TestOrchestrationRG5ToRG10:
     def test_rg6_fails_when_cache_out_of_sync(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr(gates_mod, "dvc_status_cache", lambda repo_root=".": "new: data/merged")
+        monkeypatch.setattr(
+            gates_mod, "dvc_status_cache", lambda repo_root=".": ("new: data/merged", 1)
+        )
+        fixture = _Fixture(tmp_path)
+        _rewrite_release_track(fixture, ["RG6"])
+        report = fixture.evaluate()
+        assert report.verdict == "FAIL"
+        assert any(f.gate_id == "RG6" for f in report.failures())
+
+    def test_rg6_fails_on_exit_code_alone(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """End-to-end shape of the real defect.
+
+        `dvc status -c --quiet` emits no stdout, so before the fix this exact
+        scenario — objects pending, signalled only by the exit code — produced
+        a PASS through the full orchestrator.
+        """
+        monkeypatch.setattr(gates_mod, "dvc_status_cache", lambda repo_root=".": ("", 1))
         fixture = _Fixture(tmp_path)
         _rewrite_release_track(fixture, ["RG6"])
         report = fixture.evaluate()
