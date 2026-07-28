@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-07-28T02:09:59Z",
+  "timestamp": "2026-07-28T06:28:32Z",
   "data_dir": "data/processed",
   "num_classes": 23,
   "summary": {
@@ -4330,39 +4330,8 @@
   },
   "annotation_sweeps": {
     "available": true,
-    "orphan_candidates_count": 340,
-    "orphan_candidates": [
-      "cross_dataset/coco_000000000139.jpg",
-      "cross_dataset/coco_000000000632.jpg",
-      "cross_dataset/coco_000000000776.jpg",
-      "cross_dataset/coco_000000000872.jpg",
-      "cross_dataset/coco_000000000885.jpg",
-      "cross_dataset/coco_000000001000.jpg",
-      "cross_dataset/coco_000000001268.jpg",
-      "cross_dataset/coco_000000001296.jpg",
-      "cross_dataset/coco_000000001353.jpg",
-      "cross_dataset/coco_000000001584.jpg",
-      "cross_dataset/coco_000000001993.jpg",
-      "cross_dataset/coco_000000002006.jpg",
-      "cross_dataset/coco_000000002153.jpg",
-      "cross_dataset/coco_000000002157.jpg",
-      "cross_dataset/coco_000000002261.jpg",
-      "cross_dataset/coco_000000002431.jpg",
-      "cross_dataset/coco_000000002473.jpg",
-      "cross_dataset/coco_000000002532.jpg",
-      "cross_dataset/coco_000000002592.jpg",
-      "cross_dataset/coco_000000002685.jpg",
-      "cross_dataset/coco_000000003156.jpg",
-      "cross_dataset/coco_000000003255.jpg",
-      "cross_dataset/coco_000000003553.jpg",
-      "cross_dataset/coco_000000003934.jpg",
-      "cross_dataset/coco_000000004134.jpg",
-      "cross_dataset/coco_000000004395.jpg",
-      "cross_dataset/coco_000000004495.jpg",
-      "cross_dataset/coco_000000004765.jpg",
-      "cross_dataset/coco_000000004795.jpg",
-      "cross_dataset/coco_000000005001.jpg"
-    ],
+    "orphan_candidates_count": 0,
+    "orphan_candidates": [],
     "duplicate_ledger_claims_count": 0,
     "duplicate_ledger_claims": [],
     "unused_batches_count": 0,
@@ -4375,11 +4344,8 @@
     "coverage_report_present": true,
     "quality_report_present": true,
     "live_images_total": 24352,
-    "problems_count": 2,
-    "problems": [
-      "coverage_report: image count 188 != live dataset 24352 (completeness.json) — stale, re-run `dvc repro coverage_report`",
-      "dataset_quality_report: images_total 188 != live dataset 24352 (completeness.json) — stale, re-run `dvc repro dataset_quality_report`"
-    ]
+    "problems_count": 0,
+    "problems": []
   },
   "orchestrator": {
     "check_annotations_exit": 2,
@@ -4387,7 +4353,7 @@
     "license_critical": false,
     "image_quality_warnings": 3029,
     "eval_overlap_critical": false,
-    "annotation_sweep_warnings": 340,
-    "l4_l5_report_warnings": 2
+    "annotation_sweep_warnings": 0,
+    "l4_l5_report_warnings": 0
   }
 }
