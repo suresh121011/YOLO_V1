@@ -5,8 +5,8 @@ stages:
     deps:
     - path: scripts/dataset/01_download_coco_subset.py
       hash: md5
-      md5: f2a3c8a09c8a9fc0b7e9f4a58cbb37e9
-      size: 2640
+      md5: 164470fd596ff38fb0e67587487698d4
+      size: 2553
     - path: src/dataset/downloaders/base.py
       hash: md5
       md5: 339e13bc82b121e3c2d8826ed6a302dd
