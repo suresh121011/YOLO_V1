@@ -11,7 +11,7 @@
 # The full dataset build is therefore: set `mode: full`, then `dvc repro`.
 # ─────────────────────────────────────────────────────────────────────────────
 
-mode: smoke
+mode: full
 
 smoke:
   # Max images fetched per source in smoke mode
@@ -100,9 +100,27 @@ sources:
     indoor_filter: true       # apply brightness/aspect heuristics at merge
     trusted_classes:
       [person, water_bottle, knife, laptop, monitor, chair, bed, toilet, sink, book]
+    # Per-class box budgets. An image is fetched only when EVERY class in it
+    # is still under its cap (src/dataset/downloaders/coco.py) — capping only
+    # some classes does not bound the rest, it just stops gating: with only
+    # person/chair capped, train2017 produced 36,469 person boxes from an 800
+    # cap. Every class COCO contributes therefore needs an entry here.
+    #
+    # 1200 measured on train2017: 5,300 images / 11,737 boxes / ~2.2 h, every
+    # class at its cap except laptop (932 — genuinely exhausted). Keeps COCO a
+    # supporting source rather than the dominant one (the whole current
+    # dataset is 89,127 boxes).
     class_caps:               # prevent imbalance (docs 01_download_coco_subset)
-      person: 800
-      chair: 500
+      person: 1200
+      chair: 1200
+      book: 1200
+      bottle: 1200
+      knife: 1200
+      tv: 1200
+      sink: 1200
+      laptop: 1200
+      bed: 1200
+      toilet: 1200
 
   openimages:
     enabled: true
@@ -118,6 +136,28 @@ sources:
     indoor_filter: true       # apply brightness/aspect heuristics at merge
     classes: ["Door", "Cupboard", "Gas stove"]
     trusted_classes: [door, cupboard, stove]
+    # Budgets measured on the real v6 train bbox CSV (14.6M rows streamed):
+    #   Door       13,382 images / 19,256 boxes   ← 92% of the source
+    #   Cupboard      872 images /  1,353 boxes
+    #   Gas stove     473 images /    526 boxes
+    # Uncapped that is 14,562 images (~6 h) with Door swamping the other two.
+    #
+    # Only Door needs bounding. Cupboard and Gas stove are set above their
+    # available ceilings deliberately — the cap documents intent without
+    # truncating a scarce class. `Gas stove` remaps to taxonomy `stove`, the
+    # scarcest safety class in the build at 267 boxes, so every one of its 526
+    # boxes is wanted; a Door-sized budget would forfeit nothing today but
+    # would silently start truncating if Open Images grows.
+    #
+    # Measured result of the budgets below: 2,021 images / 2,953 boxes (~0.8 h)
+    # — Door 1,200, Cupboard 1,233, Gas stove 520. Cupboard and Gas stove land
+    # slightly under their 1,353 / 526 ceilings because a saturated Door blocks
+    # the 164 images (1.1%) that hold more than one of the three classes. That
+    # is the strict rule working as intended, not a cap misfire.
+    class_caps:
+      Door: 1200              # matches the COCO per-class budget
+      Cupboard: 2000          # above the ~1,353 ceiling — effectively uncapped
+      Gas stove: 2000         # above the ~526 ceiling — effectively uncapped
 
   roboflow:
     enabled: true

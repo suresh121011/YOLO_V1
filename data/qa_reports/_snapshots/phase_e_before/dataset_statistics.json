@@ -1,0 +1,400 @@
+{
+  "timestamp": "2026-07-27T00:30:03Z",
+  "data_dir": "C:\\Users\\haris\\OneDrive\\Desktop\\YOLO_V1\\data\\processed",
+  "num_classes": 23,
+  "empty_classes": [],
+  "unknown_class_ids": [],
+  "safety_critical_counts": {
+    "medicine_strip": 2741,
+    "medicine_bottle": 786,
+    "knife": 2556,
+    "stove": 267,
+    "gas_cylinder": 8089,
+    "wire": 835,
+    "wet_floor": 18057
+  },
+  "custom_required_counts": {
+    "medicine_strip": 2741,
+    "stove": 267,
+    "gas_cylinder": 8089,
+    "passport": 381,
+    "cupboard": 3279,
+    "wet_floor": 18057,
+    "walking_stick": 3562,
+    "support_handle": 1000
+  },
+  "imbalance": {
+    "max_ratio": 0.3938873741963715,
+    "min_ratio": 0.0012341939030821188,
+    "imbalance_ratio": 319.1,
+    "gini_coefficient": 0.7183
+  },
+  "splits": {
+    "train": {
+      "total_images": 14323,
+      "total_labels": 14323,
+      "total_boxes": 71598,
+      "classes": {
+        "0": {
+          "name": "person",
+          "images_with_class": 1076,
+          "bounding_boxes": 28263
+        },
+        "1": {
+          "name": "face",
+          "images_with_class": 751,
+          "bounding_boxes": 1737
+        },
+        "2": {
+          "name": "medicine_strip",
+          "images_with_class": 243,
+          "bounding_boxes": 2138
+        },
+        "3": {
+          "name": "medicine_bottle",
+          "images_with_class": 374,
+          "bounding_boxes": 636
+        },
+        "4": {
+          "name": "water_bottle",
+          "images_with_class": 125,
+          "bounding_boxes": 137
+        },
+        "5": {
+          "name": "knife",
+          "images_with_class": 1703,
+          "bounding_boxes": 2014
+        },
+        "6": {
+          "name": "stove",
+          "images_with_class": 129,
+          "bounding_boxes": 222
+        },
+        "7": {
+          "name": "gas_cylinder",
+          "images_with_class": 709,
+          "bounding_boxes": 6562
+        },
+        "8": {
+          "name": "passport",
+          "images_with_class": 185,
+          "bounding_boxes": 308
+        },
+        "9": {
+          "name": "book",
+          "images_with_class": 1090,
+          "bounding_boxes": 3661
+        },
+        "10": {
+          "name": "charger",
+          "images_with_class": 82,
+          "bounding_boxes": 94
+        },
+        "11": {
+          "name": "wire",
+          "images_with_class": 662,
+          "bounding_boxes": 662
+        },
+        "12": {
+          "name": "laptop",
+          "images_with_class": 285,
+          "bounding_boxes": 370
+        },
+        "13": {
+          "name": "monitor",
+          "images_with_class": 96,
+          "bounding_boxes": 97
+        },
+        "14": {
+          "name": "cupboard",
+          "images_with_class": 696,
+          "bounding_boxes": 2640
+        },
+        "15": {
+          "name": "door",
+          "images_with_class": 1039,
+          "bounding_boxes": 1345
+        },
+        "16": {
+          "name": "chair",
+          "images_with_class": 632,
+          "bounding_boxes": 1450
+        },
+        "17": {
+          "name": "bed",
+          "images_with_class": 266,
+          "bounding_boxes": 284
+        },
+        "18": {
+          "name": "toilet",
+          "images_with_class": 389,
+          "bounding_boxes": 520
+        },
+        "19": {
+          "name": "sink",
+          "images_with_class": 336,
+          "bounding_boxes": 389
+        },
+        "20": {
+          "name": "wet_floor",
+          "images_with_class": 1504,
+          "bounding_boxes": 14408
+        },
+        "21": {
+          "name": "walking_stick",
+          "images_with_class": 1710,
+          "bounding_boxes": 2854
+        },
+        "22": {
+          "name": "support_handle",
+          "images_with_class": 646,
+          "bounding_boxes": 807
+        }
+      }
+    },
+    "val": {
+      "total_images": 1773,
+      "total_labels": 1773,
+      "total_boxes": 8650,
+      "classes": {
+        "0": {
+          "name": "person",
+          "images_with_class": 113,
+          "bounding_boxes": 3052
+        },
+        "1": {
+          "name": "face",
+          "images_with_class": 107,
+          "bounding_boxes": 224
+        },
+        "2": {
+          "name": "medicine_strip",
+          "images_with_class": 40,
+          "bounding_boxes": 364
+        },
+        "3": {
+          "name": "medicine_bottle",
+          "images_with_class": 46,
+          "bounding_boxes": 75
+        },
+        "4": {
+          "name": "water_bottle",
+          "images_with_class": 14,
+          "bounding_boxes": 16
+        },
+        "5": {
+          "name": "knife",
+          "images_with_class": 213,
+          "bounding_boxes": 289
+        },
+        "6": {
+          "name": "stove",
+          "images_with_class": 15,
+          "bounding_boxes": 25
+        },
+        "7": {
+          "name": "gas_cylinder",
+          "images_with_class": 95,
+          "bounding_boxes": 734
+        },
+        "8": {
+          "name": "passport",
+          "images_with_class": 24,
+          "bounding_boxes": 43
+        },
+        "9": {
+          "name": "book",
+          "images_with_class": 115,
+          "bounding_boxes": 454
+        },
+        "10": {
+          "name": "charger",
+          "images_with_class": 4,
+          "bounding_boxes": 4
+        },
+        "11": {
+          "name": "wire",
+          "images_with_class": 90,
+          "bounding_boxes": 90
+        },
+        "12": {
+          "name": "laptop",
+          "images_with_class": 36,
+          "bounding_boxes": 44
+        },
+        "13": {
+          "name": "monitor",
+          "images_with_class": 13,
+          "bounding_boxes": 13
+        },
+        "14": {
+          "name": "cupboard",
+          "images_with_class": 90,
+          "bounding_boxes": 311
+        },
+        "15": {
+          "name": "door",
+          "images_with_class": 121,
+          "bounding_boxes": 165
+        },
+        "16": {
+          "name": "chair",
+          "images_with_class": 77,
+          "bounding_boxes": 172
+        },
+        "17": {
+          "name": "bed",
+          "images_with_class": 23,
+          "bounding_boxes": 23
+        },
+        "18": {
+          "name": "toilet",
+          "images_with_class": 52,
+          "bounding_boxes": 68
+        },
+        "19": {
+          "name": "sink",
+          "images_with_class": 48,
+          "bounding_boxes": 59
+        },
+        "20": {
+          "name": "wet_floor",
+          "images_with_class": 193,
+          "bounding_boxes": 2013
+        },
+        "21": {
+          "name": "walking_stick",
+          "images_with_class": 197,
+          "bounding_boxes": 317
+        },
+        "22": {
+          "name": "support_handle",
+          "images_with_class": 79,
+          "bounding_boxes": 95
+        }
+      }
+    },
+    "test": {
+      "total_images": 1792,
+      "total_labels": 1792,
+      "total_boxes": 8879,
+      "classes": {
+        "0": {
+          "name": "person",
+          "images_with_class": 147,
+          "bounding_boxes": 3791
+        },
+        "1": {
+          "name": "face",
+          "images_with_class": 89,
+          "bounding_boxes": 183
+        },
+        "2": {
+          "name": "medicine_strip",
+          "images_with_class": 29,
+          "bounding_boxes": 239
+        },
+        "3": {
+          "name": "medicine_bottle",
+          "images_with_class": 45,
+          "bounding_boxes": 75
+        },
+        "4": {
+          "name": "water_bottle",
+          "images_with_class": 18,
+          "bounding_boxes": 18
+        },
+        "5": {
+          "name": "knife",
+          "images_with_class": 217,
+          "bounding_boxes": 253
+        },
+        "6": {
+          "name": "stove",
+          "images_with_class": 13,
+          "bounding_boxes": 20
+        },
+        "7": {
+          "name": "gas_cylinder",
+          "images_with_class": 84,
+          "bounding_boxes": 793
+        },
+        "8": {
+          "name": "passport",
+          "images_with_class": 19,
+          "bounding_boxes": 30
+        },
+        "9": {
+          "name": "book",
+          "images_with_class": 123,
+          "bounding_boxes": 363
+        },
+        "10": {
+          "name": "charger",
+          "images_with_class": 12,
+          "bounding_boxes": 12
+        },
+        "11": {
+          "name": "wire",
+          "images_with_class": 83,
+          "bounding_boxes": 83
+        },
+        "12": {
+          "name": "laptop",
+          "images_with_class": 44,
+          "bounding_boxes": 63
+        },
+        "13": {
+          "name": "monitor",
+          "images_with_class": 7,
+          "bounding_boxes": 7
+        },
+        "14": {
+          "name": "cupboard",
+          "images_with_class": 90,
+          "bounding_boxes": 328
+        },
+        "15": {
+          "name": "door",
+          "images_with_class": 122,
+          "bounding_boxes": 164
+        },
+        "16": {
+          "name": "chair",
+          "images_with_class": 88,
+          "bounding_boxes": 196
+        },
+        "17": {
+          "name": "bed",
+          "images_with_class": 26,
+          "bounding_boxes": 29
+        },
+        "18": {
+          "name": "toilet",
+          "images_with_class": 51,
+          "bounding_boxes": 59
+        },
+        "19": {
+          "name": "sink",
+          "images_with_class": 44,
+          "bounding_boxes": 48
+        },
+        "20": {
+          "name": "wet_floor",
+          "images_with_class": 174,
+          "bounding_boxes": 1636
+        },
+        "21": {
+          "name": "walking_stick",
+          "images_with_class": 223,
+          "bounding_boxes": 391
+        },
+        "22": {
+          "name": "support_handle",
+          "images_with_class": 75,
+          "bounding_boxes": 98
+        }
+      }
+    }
+  }
+}

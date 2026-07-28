@@ -3,7 +3,9 @@
 #
 # Read by: scripts/dataset/18_make_release.py
 #          (src/dataset/release/gates.py, src/dataset/release/manifest.py)
-# Used as the DVC params file for the record_release stage (see dvc.yaml).
+# NOT a DVC params file — `record_release` is frozen and declares no params or
+# deps, so editing this file never re-triggers a stage. It is read only by the
+# release CLI a human invokes directly (docs/07 release_runbook.md).
 #
 # Versioning scheme (data/DATASET_CHANGELOG.md, docs/03 dvc_pipeline.md):
 #   dataset-v{major}.{minor}.{patch}
@@ -32,6 +34,23 @@ releases:
     # Full-mode public build, masked-only mitigation, first-push verified.
     mode: full
     gates: [RG1, RG2, RG3, RG4, RG5, RG6, RG7]
+    min_verified_cells: 0
+
+  dataset-v0.6.0:
+    # Full-mode public + LOCAL-CAPTURE build (ADR-P5-13). The v0.5.0 track
+    # describes a public-sources-only build; this one also carries the 23
+    # local-capture slugs ingested by 20_ingest_local_zips.py.
+    #
+    # RG9/RG10 are deliberately NOT required, and are NOT weakened to
+    # accommodate this track: the custom-capture channel
+    # (data/raw/custom_captures) is genuinely empty and no training
+    # evidence exists. They stay mandatory for v1.0.0.
+    #
+    # Adds RG8 over v0.5.0 — split leakage must be zero. With no locked
+    # eval set the eval-overlap/house-exclusivity arms report
+    # `available: false` and are skipped; the leakage arm is real.
+    mode: full
+    gates: [RG1, RG2, RG3, RG4, RG5, RG6, RG7, RG8]
     min_verified_cells: 0
 
   dataset-v0.7.0:

@@ -1,0 +1,545 @@
+{
+  "timestamp": "2026-07-27T00:29:25Z",
+  "data_dir": "data/processed",
+  "num_classes": 23,
+  "summary": {
+    "total_images": 17888,
+    "total_labels": 17888,
+    "total_boxes": 89127,
+    "critical_issues": 0,
+    "warning_issues": 28,
+    "info_issues": 0,
+    "total_issues": 28
+  },
+  "checks": {
+    "invalid_yolo_format": {
+      "status": "PASS",
+      "count": 0
+    },
+    "invalid_class_ids": {
+      "status": "PASS",
+      "count": 0
+    },
+    "bbox_out_of_bounds": {
+      "status": "PASS",
+      "count": 0
+    },
+    "zero_area_boxes": {
+      "status": "PASS",
+      "count": 0
+    },
+    "duplicate_annotations": {
+      "status": "WARNING",
+      "count": 8
+    },
+    "unknown_class_names": {
+      "status": "PASS",
+      "count": 0
+    },
+    "missing_label_files": {
+      "status": "PASS",
+      "count": 0
+    },
+    "missing_image_files": {
+      "status": "PASS",
+      "count": 0
+    },
+    "empty_label_files": {
+      "status": "WARNING",
+      "count": 20
+    },
+    "inconsistent_pairs": {
+      "status": "PASS",
+      "count": 0
+    },
+    "corrupted_images": {
+      "status": "PASS",
+      "count": 0
+    },
+    "duplicate_images": {
+      "status": "PASS",
+      "count": 0
+    },
+    "train_val_leakage": {
+      "status": "PASS",
+      "count": 0
+    },
+    "train_test_leakage": {
+      "status": "PASS",
+      "count": 0
+    }
+  },
+  "issues": [
+    {
+      "check": "duplicate_annotations",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data/processed/labels/train/local_captures_gas_cylinder__VID_20260217_111902_frame_012_jpg.rf.J1XhY5NYDkJAVZNeWPIC.txt",
+      "line": 15,
+      "message": "Line 15 is a duplicate of line 8: '7 0.595170 0.817708 0.235795 0.295139'"
+    },
+    {
+      "check": "duplicate_annotations",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data/processed/labels/train/local_captures_gas_cylinder__VID_20260226152816_frame_005_jpg.rf.9WuJ8iKDmRKgj6A1Rldj.txt",
+      "line": 16,
+      "message": "Line 16 is a duplicate of line 5: '7 0.475694 0.377841 0.215278 0.210227'"
+    },
+    {
+      "check": "duplicate_annotations",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data/processed/labels/train/local_captures_gas_cylinder__VID_20260226152816_frame_013_jpg.rf.1p2JrKIRk26ayld76240.txt",
+      "line": 24,
+      "message": "Line 24 is a duplicate of line 12: '7 0.600694 0.865057 0.250000 0.264205'"
+    },
+    {
+      "check": "duplicate_annotations",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data/processed/labels/train/local_captures_gas_cylinder__VID_20260226152922_frame_003_jpg.rf.qkWxNPwIm4CrSUmMwyDR.txt",
+      "line": 17,
+      "message": "Line 17 is a duplicate of line 16: '7 0.744792 0.362216 0.184028 0.156250'"
+    },
+    {
+      "check": "duplicate_annotations",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data/processed/labels/train/local_captures_gas_cylinder__VID_20260226153048_frame_001_jpg.rf.tUytTchCxAyLipqF6eBk.txt",
+      "line": 14,
+      "message": "Line 14 is a duplicate of line 11: '7 0.137153 0.370739 0.163194 0.139205'"
+    },
+    {
+      "check": "duplicate_annotations",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data/processed/labels/train/local_captures_gas_cylinder__VID_20260318_173920_frame_007_jpg.rf.7eNt0me1bZjCvablWqNM.txt",
+      "line": 11,
+      "message": "Line 11 is a duplicate of line 10: '7 0.240057 0.812500 0.025568 0.104167'"
+    },
+    {
+      "check": "duplicate_annotations",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data/processed/labels/train/local_captures_gas_cylinder__VID_20260318_174350_frame_011_jpg.rf.etqHqHSEdq73pnGHFWvX.txt",
+      "line": 29,
+      "message": "Line 29 is a duplicate of line 5: '7 0.248177 0.841204 0.110937 0.189815'"
+    },
+    {
+      "check": "duplicate_annotations",
+      "severity": "WARNING",
+      "split": "train",
+      "file": "data/processed/labels/train/local_captures_gas_cylinder__VID_20260318_174350_frame_011_jpg.rf.etqHqHSEdq73pnGHFWvX.txt",
+      "line": 45,
+      "message": "Line 45 is a duplicate of line 31: '7 0.633854 0.715741 0.103125 0.175926'"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "test",
+      "file": "data/processed/labels/test/negatives_000000014888.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000014888.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "test",
+      "file": "data/processed/labels/test/negatives_000000015272.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000015272.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "test",
+      "file": "data/processed/labels/test/negatives_000000047010.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000047010.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "test",
+      "file": "data/processed/labels/test/negatives_000000087875.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000087875.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "test",
+      "file": "data/processed/labels/test/negatives_000000106266.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000106266.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "test",
+      "file": "data/processed/labels/test/negatives_000000155291.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000155291.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "test",
+      "file": "data/processed/labels/test/negatives_000000184321.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000184321.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "test",
+      "file": "data/processed/labels/test/negatives_000000311909.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000311909.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "test",
+      "file": "data/processed/labels/test/negatives_000000348488.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000348488.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "test",
+      "file": "data/processed/labels/test/negatives_000000354753.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000354753.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "test",
+      "file": "data/processed/labels/test/negatives_000000369751.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000369751.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "test",
+      "file": "data/processed/labels/test/negatives_000000372317.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000372317.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "test",
+      "file": "data/processed/labels/test/negatives_000000420472.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000420472.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "test",
+      "file": "data/processed/labels/test/negatives_000000444879.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000444879.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "test",
+      "file": "data/processed/labels/test/negatives_000000446117.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000446117.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "test",
+      "file": "data/processed/labels/test/negatives_000000462756.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000462756.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "test",
+      "file": "data/processed/labels/test/negatives_000000509656.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000509656.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "test",
+      "file": "data/processed/labels/test/negatives_000000511321.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000511321.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "test",
+      "file": "data/processed/labels/test/negatives_000000514979.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000514979.txt"
+    },
+    {
+      "check": "empty_label_files",
+      "severity": "WARNING",
+      "split": "test",
+      "file": "data/processed/labels/test/negatives_000000545129.txt",
+      "line": 0,
+      "message": "Label file is empty: negatives_000000545129.txt"
+    }
+  ],
+  "license_report": {
+    "allow_noncommercial": true,
+    "sources": [
+      {
+        "source": "coco",
+        "license": "CC BY 4.0 (annotations); images retain original Flickr licenses",
+        "noncommercial": false,
+        "image_count": 60,
+        "gate_violation": false
+      },
+      {
+        "source": "negatives",
+        "license": "inherits COCO licensing (sampled from COCO)",
+        "noncommercial": false,
+        "image_count": 20,
+        "gate_violation": false
+      },
+      {
+        "source": "openimages",
+        "license": "Annotations CC BY 4.0; images CC BY 2.0 (per Open Images terms)",
+        "noncommercial": false,
+        "image_count": 60,
+        "gate_violation": false
+      },
+      {
+        "source": "wider_face",
+        "license": "research-only / non-commercial (WIDER FACE terms)",
+        "noncommercial": true,
+        "image_count": 60,
+        "gate_violation": false
+      }
+    ],
+    "violation": false
+  },
+  "label_completeness": {
+    "available": true,
+    "label_completeness": {
+      "coco": [
+        "person",
+        "water_bottle",
+        "knife",
+        "laptop",
+        "monitor",
+        "chair",
+        "bed",
+        "toilet",
+        "sink",
+        "book"
+      ],
+      "openimages": [
+        "door",
+        "cupboard",
+        "stove"
+      ],
+      "wider_face": [
+        "face"
+      ],
+      "local_captures": [
+        "person",
+        "face",
+        "medicine_bottle",
+        "medicine_strip",
+        "water_bottle",
+        "knife",
+        "stove",
+        "gas_cylinder",
+        "passport",
+        "book",
+        "charger",
+        "wire",
+        "laptop",
+        "monitor",
+        "cupboard",
+        "door",
+        "chair",
+        "bed",
+        "toilet",
+        "sink",
+        "wet_floor",
+        "walking_stick",
+        "support_handle"
+      ],
+      "negatives": []
+    },
+    "sources": [
+      {
+        "source": "coco",
+        "total": 60,
+        "accepted": 53,
+        "duplicates": 0,
+        "filtered_out": 7,
+        "missing_labels": 0
+      },
+      {
+        "source": "openimages",
+        "total": 60,
+        "accepted": 57,
+        "duplicates": 0,
+        "filtered_out": 3,
+        "missing_labels": 0
+      },
+      {
+        "source": "wider_face",
+        "total": 60,
+        "accepted": 60,
+        "duplicates": 0,
+        "filtered_out": 0,
+        "missing_labels": 0
+      },
+      {
+        "source": "local_captures",
+        "total": 26339,
+        "accepted": 17698,
+        "duplicates": 2991,
+        "filtered_out": 0,
+        "missing_labels": 5650
+      },
+      {
+        "source": "negatives",
+        "total": 20,
+        "accepted": 20,
+        "duplicates": 0,
+        "filtered_out": 0,
+        "missing_labels": 0
+      }
+    ],
+    "duplicates_removed": 2991,
+    "filtered_out": 10
+  },
+  "image_quality": {
+    "available": true,
+    "scanned": 17799,
+    "blur_variance_threshold": 100.0,
+    "low_light_brightness_threshold": 40.0,
+    "blurry_count": 2554,
+    "blurry_samples": [
+      "local_captures_book__0d6f54c1a331d990_jpg.rf.mVPMC0pZ3PtyESJmQuNk.jpg",
+      "local_captures_book__1426ed66aa3ca7da_jpg.rf.SmJnb1UuxEFC7lNWPCjH.jpg",
+      "local_captures_book__2f7d35f9b3b59060_jpg.rf.KheEjm5kJHtBuLYun5vU.jpg",
+      "local_captures_book__342f4c0ac57f578c_jpg.rf.Q8UPWzxkaNxS5ciNUcUF.jpg",
+      "local_captures_book__4a85ef562effebd7_jpg.rf.UzmPZMXUkm5W8uRmNW50.jpg",
+      "local_captures_book__54b309df74190a9b_jpg.rf.eMRuiqpvewRgO8ssYNkc.jpg",
+      "local_captures_book__5bf65d98ccf2cbbf_jpg.rf.68UuhSxgAwbYG1i5OHAr.jpg",
+      "local_captures_book__a13ad60d2ae08729_jpg.rf.fbtFU8AdhAnrH6Lkvmba.jpg",
+      "local_captures_book__a8c72c0db5bd5e27_jpg.rf.AwarOgV6RbYsxoxY5lRt.jpg",
+      "local_captures_book__afbbd1738e4ac013_jpg.rf.mWre0TPEKT9Fu8Y1A3tO.jpg",
+      "local_captures_book__b683a113e6e3d4aa_jpg.rf.gmF5wZxeaCQzlp58ergv.jpg",
+      "local_captures_book__b8caf02cc329da6b_jpg.rf.4rcvBLvQ42HbeMVMqqW4.jpg",
+      "local_captures_book__be78f84a6f5add74_jpg.rf.vRl7A7MnAtcrEuJzdTL6.jpg",
+      "local_captures_book__db5663e9e65c1958_jpg.rf.Z9F43sRAGXz8Kdkl2jXU.jpg",
+      "local_captures_book__de0b28ea7daa0b28_jpg.rf.onVTWyLWliie0AqWRpEq.jpg",
+      "local_captures_bottel__IMG_20240216_205514_jpg.rf.oIeJGtZpU9VPhNLTAAiG.jpg",
+      "local_captures_bottel__IMG_20240216_205630_jpg.rf.akhXFtI9zoQGNlUujJpE.jpg",
+      "local_captures_bottel__IMG_20240216_213639_jpg.rf.XhIk0CusXwzQH8h5Qtjw.jpg",
+      "local_captures_bottel__IMG_20240216_214012_jpg.rf.iXyA6Rq7lMAdJg7u8PY6.jpg",
+      "local_captures_bottel__IMG_20240216_214105_jpg.rf.3BfN69zP77CfIvNleKu3.jpg",
+      "local_captures_bottel__IMG_20240216_215549_jpg.rf.MTEqWS7LwOPN6g9m1Rry.jpg",
+      "local_captures_chair__400050_jpg.rf.kta0NnITHQQUtfT9IaBx.jpg",
+      "local_captures_chair__400138_jpg.rf.lUFSEaEhWzJE4BrC3KhR.jpg",
+      "local_captures_chair__IMG20250304093012_jpg.rf.Y5xYVUhhYUWOyAyM84cM.jpg",
+      "local_captures_chair__IMG20250304093033_jpg.rf.OZH4uT9mmT4zUuvBOmSW.jpg",
+      "local_captures_chair__IMG20250304093102_jpg.rf.37Bhrafkko5jZroJAKVR.jpg",
+      "local_captures_chair__IMG20250304093304_jpg.rf.I3wKJAmNlA18050JR72N.jpg",
+      "local_captures_chair__IMG20250304093501_BURST030_41061877_jpg.rf.Bhu8UJpomfSj9TvlyLUU.jpg",
+      "local_captures_chair__IMG_2080_JPG.rf.nHeMhXwqwytBP33VUdeK.JPG",
+      "local_captures_chair__IMG_2114_JPG.rf.D44i8Bgy8oFZOlnKe2rW.JPG"
+    ],
+    "low_light_count": 174,
+    "low_light_samples": [
+      "local_captures_door__pexels-photo-987640_jpg.rf.iyLD7p1QMzXZr5RPvuEc.jpg",
+      "local_captures_gas_cylinder__VID_20260226152500_frame_007_jpg.rf.s2yC7wYwDyJZBsHP0egE.jpg",
+      "local_captures_knife__2EUC9MCBDZVE_jpg.rf.va5FAI4pAHe9B6kgrxa5.jpg",
+      "local_captures_knife__images - 2025-06-15T191730_572_jpg.rf.VwOJ5GCrhkXIEdZHdKY1.jpg",
+      "local_captures_knife__knife_401_jpg.rf.67ZPjUUaSFjNnVzdIaL2.jpg",
+      "local_captures_monitor__id-sr35-ls24r350fhexxd-dynamicblack-271565214_jpg.rf.mwqQmlHbYNB1aam7TNQB.jpg",
+      "local_captures_walking_stick__0000000972_jpg.rf.E9xN9iETNPyUWGBxsntO.jpg",
+      "local_captures_wet_floor__image1103_jpeg_jpg.rf.MLmitrUaebycY4BSYguj.jpg",
+      "negatives_000000354753.jpg",
+      "local_captures_book__042dab1e18cf8795_jpg.rf.muSz5ck3CJQ3fe4AdXmt.jpg",
+      "local_captures_book__07048ea0ca4d5e4f_jpg.rf.ROMfm6yIRiHeqczMRJ2C.jpg",
+      "local_captures_book__0fa33a83f6cec6fa_jpg.rf.XDuFYIsP6FRyrdy7ftzw.jpg",
+      "local_captures_book__11a74730c006a807_jpg.rf.O7uqqKdPuCkW2d3pqa7D.jpg",
+      "local_captures_book__1751bdd0f71b230a_jpg.rf.eNwmzcKReSqQ2EkbsrDD.jpg",
+      "local_captures_book__1f63189d10dd75a5_jpg.rf.cW6sDicMyIHs68tspKoS.jpg",
+      "local_captures_book__3503b57cb8b59a9c_jpg.rf.ilYua1VUv0WUZaLyephv.jpg",
+      "local_captures_book__38b439c02599ad26_jpg.rf.Y4y9Jb5UwCSTEoI60PfU.jpg",
+      "local_captures_book__604ffb8ccd69c702_jpg.rf.Qoo5x6FZdITatbNDZ8hI.jpg",
+      "local_captures_book__61a5eb30c602a678_jpg.rf.YbzCgJPp7PLHkHK0gd3E.jpg",
+      "local_captures_book__68d455c4140478f9_jpg.rf.EVbodvYCXPgCsXUXvRZ2.jpg",
+      "local_captures_book__6b383c2e9af1e17e_jpg.rf.iwf2CJHBZ4bmwY0S8eWR.jpg",
+      "local_captures_book__7e6489d5d9fd5bb9_jpg.rf.tw45XBvQ0Ywh1ClGNgJU.jpg",
+      "local_captures_book__b54216c86a5fcb3e_jpg.rf.8rR6oMfAnSZQ9axymTJ1.jpg",
+      "local_captures_book__b68f6faf0bbb937e_jpg.rf.5F6SdPZmQmzDpwP6jUPQ.jpg",
+      "local_captures_charger__47_jpg.rf.XjPBYowpCAaBTX01P5PH.jpg",
+      "local_captures_cupboard__7f4c604e89948d40_jpg.rf.mxJfn8IpRTy827qq8k4p.jpg",
+      "local_captures_cupboard__b2bf8592f41dafec_jpg.rf.INm6L7ovs50h4rnINIVf.jpg",
+      "local_captures_cupboard__b51a93fa795b4bad_jpg.rf.M4jMZSwYT5E0nvrbWl35.jpg",
+      "local_captures_door__76a2724a2725d4e7_jpg.rf.l1x7KInUNpm4gjaXY4FS.jpg",
+      "local_captures_face__1 (5699)_jpg_5m51p5b7_ingestion-78f9656b6b-zb2qb_jpg.rf.kHoDJgL0d2hyRcfPpyQp.jpg"
+    ],
+    "quarantine_path": "data/qa_reports/image_quality_quarantine.json"
+  },
+  "eval_set": {
+    "overlap": {
+      "available": true,
+      "eval_image_count": 0,
+      "train_facing_image_count": 35776,
+      "exact_overlap_count": 0,
+      "exact_overlaps": [],
+      "near_overlap_count": 0,
+      "near_overlaps": []
+    },
+    "house_exclusivity": {
+      "available": false
+    }
+  },
+  "annotation_sweeps": {
+    "available": true,
+    "orphan_candidates_count": 0,
+    "orphan_candidates": [],
+    "duplicate_ledger_claims_count": 0,
+    "duplicate_ledger_claims": [],
+    "unused_batches_count": 0,
+    "unused_batches": [],
+    "verified_labels_orphans_count": 0,
+    "verified_labels_orphans": []
+  },
+  "l4_l5_reports": {
+    "available": true,
+    "coverage_report_present": true,
+    "quality_report_present": true,
+    "live_images_total": 17888,
+    "problems_count": 2,
+    "problems": [
+      "coverage_report: image count 188 != live dataset 17888 (completeness.json) — stale, re-run `dvc repro coverage_report`",
+      "dataset_quality_report: images_total 188 != live dataset 17888 (completeness.json) — stale, re-run `dvc repro dataset_quality_report`"
+    ]
+  },
+  "orchestrator": {
+    "check_annotations_exit": 2,
+    "dataset_stats_exit": 0,
+    "license_critical": false,
+    "image_quality_warnings": 2728,
+    "eval_overlap_critical": false,
+    "annotation_sweep_warnings": 0,
+    "l4_l5_report_warnings": 2
+  }
+}

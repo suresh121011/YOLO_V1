@@ -28,6 +28,8 @@ from typing import Any
 from src.dataset.downloaders.base import (
     BaseDownloader,
     coco_bbox_to_yolo,
+    is_capped_out,
+    load_class_caps,
     write_yolo_label,
 )
 from src.dataset.remap import REMAP_TABLES
@@ -119,9 +121,7 @@ class CocoDownloader(BaseDownloader):
                 continue
             anns_by_image.setdefault(ann["image_id"], []).append(ann)
 
-        caps: dict[str, int] = {
-            str(k): int(v) for k, v in (self.source.options.get("class_caps") or {}).items()
-        }
+        caps = load_class_caps(self.source.options)
         url_template = str(self.source.options["image_url_template"])
 
         class_counts: dict[str, int] = {}
@@ -136,15 +136,26 @@ class CocoDownloader(BaseDownloader):
             image_info = images_by_id[image_id]
             annotations = anns_by_image[image_id]
 
-            # Cap check: skip the image when EVERY wanted class in it is
-            # already at its cap (an image is kept if it still contributes).
-            contributing = [
-                ann
-                for ann in annotations
-                if class_counts.get(cat_id_to_name[ann["category_id"]], 0)
-                < caps.get(cat_id_to_name[ann["category_id"]], 10**9)
-            ]
-            if not contributing:
+            # Cap check: fetch the image only when EVERY wanted class in it
+            # still has budget.
+            #
+            # The original rule kept an image if ANY class was under cap. A
+            # saturated class then rode along on images recruited by others
+            # and kept accumulating, because the counting loop below credits
+            # every box in a selected image: on train2017 an 800-box `person`
+            # cap yielded 36,469 person boxes (45x) and `chair`'s 500 yielded
+            # 18,009. Uncapped classes default to 10**9, so almost nothing
+            # ever saturated and the cap barely gated. Smoke mode capped the
+            # whole source at 60 images, so this never surfaced there.
+            #
+            # Requiring every present class to be under cap bounds each class
+            # at cap + (boxes in the final image). Measured on train2017 at
+            # cap 1200 it does NOT starve rare co-occurring classes — `knife`
+            # still reaches its full 1200 — and it cuts total boxes roughly
+            # in half for the same number of downloads, because the images it
+            # drops are the person-redundant ones.
+            present = {cat_id_to_name[ann["category_id"]] for ann in annotations}
+            if is_capped_out(present, class_counts, caps):
                 skipped_for_caps += 1
                 continue
 

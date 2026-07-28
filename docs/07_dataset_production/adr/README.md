@@ -4,7 +4,9 @@ Records the load-bearing design decisions for Production Dataset Engineering
 (missing-annotation resolution L1–L5, Dataset v0.5→v1.0). Each ADR follows the
 Phase-4 format (Status / Context / Decision / Alternatives / Consequences) and
 is referenced from the code, configs, and `dvc.yaml` header that implement it.
-All twelve were ratified together by the council PASS of 2026-07-17.
+ADR-P5-01 through ADR-P5-12 were ratified together by the council PASS of
+2026-07-17; ADR-P5-13 was recorded later (2026-07-27) as part of Phase-F
+release-candidate validation.
 
 | ADR | Decision |
 |:---|:---|
@@ -20,3 +22,4 @@ All twelve were ratified together by the council PASS of 2026-07-17.
 | [ADR-P5-10](ADR-P5-10-ab-benchmark-acceptance-evidence.md) | Full-scale A/B = v1.0 acceptance evidence (one run/arm, fixed config); tuning → Phase 6 |
 | [ADR-P5-11](ADR-P5-11-annotation-deps-optional-extra.md) | Annotation deps optional extra outside CI (FakeAnnotator + importorskip) |
 | [ADR-P5-12](ADR-P5-12-vectorized-dedup.md) | Vectorized-Hamming dedup with decision-equivalence guarantee, over a BK-tree |
+| [ADR-P5-13](ADR-P5-13-v060-local-capture-release-track.md) | `dataset-v0.6.0` track for the local-capture build; RG9/RG10 stay mandatory for v1.0.0 |
