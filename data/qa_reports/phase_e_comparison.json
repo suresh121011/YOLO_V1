@@ -1,0 +1,227 @@
+{
+  "generated_at": "2026-07-28T03:38:29Z",
+  "release_track": "dataset-v1.0.0",
+  "per_class_floor": 200,
+  "labels": {
+    "before": "smoke (public 190)",
+    "after": "full (public 7,426)"
+  },
+  "size": {
+    "before": {
+      "total_images": 17888,
+      "total_labels": 17888,
+      "total_boxes": 89127,
+      "critical_issues": 0,
+      "warning_issues": 28,
+      "train_val_leakage": 0,
+      "train_test_leakage": 0,
+      "license_critical": false,
+      "image_quality_warnings": 2728,
+      "annotation_sweep_warnings": 0,
+      "l4_l5_report_warnings": 2
+    },
+    "after": {
+      "total_images": 24352,
+      "total_labels": 24352,
+      "total_boxes": 104289,
+      "critical_issues": 0,
+      "warning_issues": 505,
+      "train_val_leakage": 0,
+      "train_test_leakage": 0,
+      "license_critical": false,
+      "image_quality_warnings": 3029,
+      "annotation_sweep_warnings": 340,
+      "l4_l5_report_warnings": 2
+    },
+    "delta_images": "+6,464",
+    "delta_boxes": "+15,162"
+  },
+  "per_class": {
+    "before": {
+      "monitor": 117,
+      "chair": 1818,
+      "person": 35106,
+      "book": 4478,
+      "bed": 336,
+      "knife": 2556,
+      "water_bottle": 171,
+      "sink": 496,
+      "toilet": 647,
+      "laptop": 477,
+      "door": 1674,
+      "stove": 267,
+      "cupboard": 3279,
+      "face": 2144,
+      "charger": 110,
+      "gas_cylinder": 8089,
+      "medicine_bottle": 786,
+      "medicine_strip": 2741,
+      "passport": 381,
+      "support_handle": 1000,
+      "walking_stick": 3562,
+      "wet_floor": 18057,
+      "wire": 835
+    },
+    "after": {
+      "person": 35978,
+      "knife": 3681,
+      "book": 5571,
+      "chair": 2890,
+      "bed": 1402,
+      "sink": 1577,
+      "water_bottle": 1313,
+      "laptop": 1370,
+      "monitor": 1253,
+      "toilet": 1748,
+      "door": 2770,
+      "cupboard": 4306,
+      "stove": 759,
+      "face": 4110,
+      "charger": 110,
+      "gas_cylinder": 8089,
+      "medicine_bottle": 786,
+      "medicine_strip": 2741,
+      "passport": 381,
+      "support_handle": 1000,
+      "walking_stick": 3562,
+      "wet_floor": 18057,
+      "wire": 835
+    },
+    "delta": {
+      "bed": 1066,
+      "book": 1093,
+      "chair": 1072,
+      "charger": 0,
+      "cupboard": 1027,
+      "door": 1096,
+      "face": 1966,
+      "gas_cylinder": 0,
+      "knife": 1125,
+      "laptop": 893,
+      "medicine_bottle": 0,
+      "medicine_strip": 0,
+      "monitor": 1136,
+      "passport": 0,
+      "person": 872,
+      "sink": 1081,
+      "stove": 492,
+      "support_handle": 0,
+      "toilet": 1101,
+      "walking_stick": 0,
+      "water_bottle": 1142,
+      "wet_floor": 0,
+      "wire": 0
+    }
+  },
+  "contribution": {
+    "before": {
+      "per_source": {
+        "coco": 53,
+        "openimages": 57,
+        "wider_face": 60,
+        "local_captures": 17698,
+        "negatives": 20
+      },
+      "public": {
+        "coco": 53,
+        "openimages": 57,
+        "wider_face": 60,
+        "negatives": 20
+      },
+      "local": {
+        "local_captures": 17698
+      },
+      "public_total": 190,
+      "local_total": 17698
+    },
+    "after": {
+      "per_source": {
+        "coco": 4951,
+        "openimages": 1881,
+        "wider_face": 97,
+        "local_captures": 16926,
+        "negatives": 497
+      },
+      "public": {
+        "coco": 4951,
+        "openimages": 1881,
+        "wider_face": 97,
+        "negatives": 497
+      },
+      "local": {
+        "local_captures": 16926
+      },
+      "public_total": 7426,
+      "local_total": 16926
+    }
+  },
+  "imbalance": {
+    "before": {
+      "max_ratio": 0.3938873741963715,
+      "min_ratio": 0.0012341939030821188,
+      "imbalance_ratio": 319.1,
+      "gini_coefficient": 0.7183
+    },
+    "after": {
+      "max_ratio": 0.34498365120003066,
+      "min_ratio": 0.00105476128834297,
+      "imbalance_ratio": 327.1,
+      "gini_coefficient": 0.6238
+    }
+  },
+  "completeness": {
+    "before": {
+      "images_total": 17888,
+      "by_split": {
+        "test": 1792,
+        "train": 14323,
+        "val": 1773
+      },
+      "by_policy": {
+        "coco": 53,
+        "local_captures": 17698,
+        "negatives": 20,
+        "openimages": 57,
+        "wider_face": 60
+      },
+      "policy_count": 5,
+      "unused_policies": []
+    },
+    "after": {
+      "images_total": 24352,
+      "by_split": {
+        "test": 1882,
+        "train": 20588,
+        "val": 1882
+      },
+      "by_policy": {
+        "coco": 4951,
+        "local_captures": 16926,
+        "negatives": 497,
+        "openimages": 1881,
+        "wider_face": 97
+      },
+      "policy_count": 5,
+      "unused_policies": []
+    }
+  },
+  "shortfall_vs_v1": [
+    {
+      "class": "charger",
+      "count": 110,
+      "floor": 200,
+      "short_by": 90,
+      "needs_custom_capture": false
+    }
+  ],
+  "custom_required_classes": [
+    "medicine_strip",
+    "stove",
+    "gas_cylinder",
+    "passport",
+    "cupboard",
+    "wet_floor",
+    "walking_stick",
+    "support_handle"
+  ]
+}
