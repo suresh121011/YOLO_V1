@@ -600,8 +600,8 @@ stages:
     outs:
     - path: data/qa_reports/annotation_qa_report.json
       hash: md5
-      md5: 7e41fa281bae761ab4e5f9cb120ffebc
-      size: 143132
+      md5: 4117bc0c120d0f226ef3f73653d5ae6d
+      size: 141495
   train_yolo11n:
     cmd: python scripts/training/train_yolo.py --config 
       configs/training/yolo11n_config.yaml
@@ -727,18 +727,18 @@ stages:
       size: 173
     - path: data/merged
       hash: md5
-      md5: 2d31886b030acf91aa84e7f4d75a123b.dir
-      size: 37087111
-      nfiles: 377
+      md5: 910ee3304260f5370af8699cd071bf9f.dir
+      size: 5606363091
+      nfiles: 48706
     - path: scripts/dataset/12_auto_annotate.py
       hash: md5
-      md5: e5b9222fb9c76810121cb1f41f5de431
-      size: 13650
+      md5: 8a1e703c809adf845edcaf1686796841
+      size: 14270
     - path: src/dataset/annotation
       hash: md5
-      md5: 11722aa09fce1a6217acc400939dde12.dir
-      size: 121515
-      nfiles: 15
+      md5: 992be08e682ad2c0ffb084360969654a.dir
+      size: 175992
+      nfiles: 22
     params:
       configs/annotation.yaml:
         auto_annotation:
@@ -752,6 +752,8 @@ stages:
               imgsz: 640
               conf_floor: 0.05
               max_det: 100
+              iou: 0.7
+              agnostic_nms: false
               prompts:
                 person: []
                 face:
@@ -795,20 +797,74 @@ stages:
                 default: 0.25
                 charger: 0.2
                 wire: 0.2
+            yoloe:
+              enabled: false
+              weights: models/annotators/yoloe-11l-seg.pt
+              weights_sha256: ''
+              imgsz: 640
+              conf_floor: 0.05
+              max_det: 100
+              iou: 0.7
+              agnostic_nms: false
+              prompts:
+                face:
+                - human face
+                - person's face
+                medicine_bottle:
+                - medicine bottle
+                - pill bottle
+                - prescription bottle
+                charger:
+                - phone charger
+                - power adapter
+                - charging brick plugged into wall socket
+                wire:
+                - electrical wire
+                - power cable
+                - charging cable on the floor
+                cupboard:
+                - cupboard
+                - wardrobe
+                - steel almirah
+                - kitchen cabinet
+              thresholds:
+                default: 0.25
+                charger: 0.2
+                wire: 0.2
             grounding_dino:
               enabled: false
               hf_model: IDEA-Research/grounding-dino-base
               hf_revision: ''
               box_threshold: 0.3
               text_threshold: 0.25
+              enable_below_precision: 0.4
             cross_dataset:
-              enabled: false
+              enabled: true
               match: exact_sha256
+              links_path: data/merged/cross_dataset_links.json
+              prompts:
+                charger:
+                - cross_dataset
+                wire:
+                - cross_dataset
+                medicine_bottle:
+                - cross_dataset
+                cupboard:
+                - cross_dataset
+                face:
+                - cross_dataset
           refinement:
             enabled: true
             weights: models/annotators/mobile_sam.pt
             weights_sha256: 
               6dbb90523a35330fedd7f1d3dfc66f995213d81b29a5ca8108dbcdd4e37d6c2f
+          slicing:
+            enabled: false
+            slice_width: 640
+            slice_height: 640
+            overlap_ratio: 0.2
+            nms_iou: 0.5
+            include_full_frame: true
           targeting:
             skip_trusted_cells: true
             priority_classes:
@@ -820,17 +876,17 @@ stages:
     outs:
     - path: data/annotation/candidates
       hash: md5
-      md5: 8380954b33404243919a0df40932dbd7.dir
-      size: 137088
-      nfiles: 1
+      md5: f4922cb1e44c675ac606e45634459556.dir
+      size: 4148415
+      nfiles: 2
   build_verification_batches:
     cmd: python scripts/dataset/13_build_verification_batches.py
     outs:
     - path: data/annotation/batches
       hash: md5
-      md5: 1e53e0e7f1b2717dc82def19a21157b3.dir
-      size: 31202
-      nfiles: 3
+      md5: b88c333975524004105008a6e81046ff.dir
+      size: 15350190
+      nfiles: 83
   import_verified_annotations:
     cmd: python scripts/dataset/14_import_verified_batch.py
     outs:
@@ -883,32 +939,164 @@ stages:
       size: 2254
     - path: data/annotation/candidates
       hash: md5
-      md5: 8380954b33404243919a0df40932dbd7.dir
-      size: 137088
-      nfiles: 1
+      md5: f4922cb1e44c675ac606e45634459556.dir
+      size: 4148415
+      nfiles: 2
     - path: data/annotation/verification_ledger.json
       hash: md5
       md5: 7db92f1d0ace8eacfe1e528454ae331c
       size: 173
     - path: data/processed/completeness.json
       hash: md5
-      md5: 6fdcc46631a4dc2096ff67377bdd7b70
-      size: 23061
+      md5: 7f98a39b9a68e1aa9e2230c9d25f8bc4
+      size: 3169359
     - path: data/processed/labels
       hash: md5
-      md5: 6bfdb5cfd36ccc85670f5f5d1f7960d5.dir
-      size: 62700
-      nfiles: 188
+      md5: 1b1f86c7a639a6c1ad83a197a86998a9.dir
+      size: 5885671
+      nfiles: 24352
     - path: scripts/dataset/16_coverage_report.py
       hash: md5
-      md5: 8fe2c36eb6dce60303395f8e0f69fa5d
-      size: 6855
+      md5: 09ce7922efa0ec48581f66601006c8ec
+      size: 8153
     - path: src/dataset/annotation/coverage.py
       hash: md5
-      md5: b6593dee860904ee9f0d118470d28c81
-      size: 19072
+      md5: eaf43aafc806b2d4394bc3ed40eec7ec
+      size: 21798
     params:
       configs/annotation.yaml:
+        auto_annotation:
+          device: cuda:0
+          backends:
+            yolo_world:
+              enabled: true
+              weights: models/annotators/yolov8x-worldv2.pt
+              weights_sha256: 
+                41e771bfbbb8894dd857f3fef7cac3b3578dffd49fd3547101efa6a606a02a0e
+              imgsz: 640
+              conf_floor: 0.05
+              max_det: 100
+              iou: 0.7
+              agnostic_nms: false
+              prompts:
+                person: []
+                face:
+                - human face
+                - person's face
+                medicine_strip: []
+                medicine_bottle:
+                - medicine bottle
+                - pill bottle
+                - prescription bottle
+                water_bottle: []
+                knife: []
+                stove: []
+                gas_cylinder: []
+                passport: []
+                book: []
+                charger:
+                - phone charger
+                - power adapter
+                - charging brick plugged into wall socket
+                wire:
+                - electrical wire
+                - power cable
+                - charging cable on the floor
+                laptop: []
+                monitor: []
+                cupboard:
+                - cupboard
+                - wardrobe
+                - steel almirah
+                - kitchen cabinet
+                door: []
+                chair: []
+                bed: []
+                toilet: []
+                sink: []
+                wet_floor: []
+                walking_stick: []
+                support_handle: []
+              thresholds:
+                default: 0.25
+                charger: 0.2
+                wire: 0.2
+            yoloe:
+              enabled: false
+              weights: models/annotators/yoloe-11l-seg.pt
+              weights_sha256: ''
+              imgsz: 640
+              conf_floor: 0.05
+              max_det: 100
+              iou: 0.7
+              agnostic_nms: false
+              prompts:
+                face:
+                - human face
+                - person's face
+                medicine_bottle:
+                - medicine bottle
+                - pill bottle
+                - prescription bottle
+                charger:
+                - phone charger
+                - power adapter
+                - charging brick plugged into wall socket
+                wire:
+                - electrical wire
+                - power cable
+                - charging cable on the floor
+                cupboard:
+                - cupboard
+                - wardrobe
+                - steel almirah
+                - kitchen cabinet
+              thresholds:
+                default: 0.25
+                charger: 0.2
+                wire: 0.2
+            grounding_dino:
+              enabled: false
+              hf_model: IDEA-Research/grounding-dino-base
+              hf_revision: ''
+              box_threshold: 0.3
+              text_threshold: 0.25
+              enable_below_precision: 0.4
+            cross_dataset:
+              enabled: true
+              match: exact_sha256
+              links_path: data/merged/cross_dataset_links.json
+              prompts:
+                charger:
+                - cross_dataset
+                wire:
+                - cross_dataset
+                medicine_bottle:
+                - cross_dataset
+                cupboard:
+                - cross_dataset
+                face:
+                - cross_dataset
+          refinement:
+            enabled: true
+            weights: models/annotators/mobile_sam.pt
+            weights_sha256: 
+              6dbb90523a35330fedd7f1d3dfc66f995213d81b29a5ca8108dbcdd4e37d6c2f
+          slicing:
+            enabled: false
+            slice_width: 640
+            slice_height: 640
+            overlap_ratio: 0.2
+            nms_iou: 0.5
+            include_full_frame: true
+          targeting:
+            skip_trusted_cells: true
+            priority_classes:
+            - charger
+            - wire
+            - medicine_bottle
+            - cupboard
+            - face
         coverage:
           iou_match_threshold: 0.5
           estimation_conf:
@@ -916,8 +1104,8 @@ stages:
     outs:
     - path: data/qa_reports/coverage_report.json
       hash: md5
-      md5: 79704372065f90cf47c7cccc188bc669
-      size: 30032
+      md5: 6e120a15ce80e19905b4a3835e8fd3db
+      size: 3615965
   dataset_quality_report:
     cmd: python scripts/dataset/17_dataset_quality_report.py
     deps:
@@ -927,38 +1115,43 @@ stages:
       size: 2254
     - path: data/annotation/batches
       hash: md5
-      md5: 1e53e0e7f1b2717dc82def19a21157b3.dir
-      size: 31202
-      nfiles: 3
+      md5: b88c333975524004105008a6e81046ff.dir
+      size: 15350190
+      nfiles: 83
     - path: data/annotation/verification_ledger.json
       hash: md5
       md5: 7db92f1d0ace8eacfe1e528454ae331c
       size: 173
     - path: data/merged/merged_manifest.json
       hash: md5
-      md5: 7c869d9f77fa0c7b275dafb861764f07
-      size: 11671
+      md5: 6cb7e97f3ccc0e4afe2e198ff20614b6
+      size: 2004822
     - path: data/processed/completeness.json
       hash: md5
-      md5: 6fdcc46631a4dc2096ff67377bdd7b70
-      size: 23061
+      md5: 7f98a39b9a68e1aa9e2230c9d25f8bc4
+      size: 3169359
     - path: data/qa_reports/coverage_report.json
       hash: md5
-      md5: 79704372065f90cf47c7cccc188bc669
-      size: 30032
+      md5: 6e120a15ce80e19905b4a3835e8fd3db
+      size: 3615965
+    - path: data/raw/custom_captures/manifests
+      hash: md5
+      md5: d751713988987e9331980363e24189ce.dir
+      size: 0
+      nfiles: 0
     - path: scripts/dataset/17_dataset_quality_report.py
       hash: md5
       md5: f0defbee831c954947f05b269cb8aa2a
       size: 3529
     - path: src/dataset/annotation/quality.py
       hash: md5
-      md5: f68a1de0f0b83ff739fd398c5d23057e
-      size: 10054
+      md5: 11b65db7394a590b16ee8adba20fabd4
+      size: 11844
     outs:
     - path: data/qa_reports/dataset_quality_report.json
       hash: md5
-      md5: 7160c0285e1e5a142ff89a2cdf3875e9
-      size: 6956
+      md5: 1a77bd32fb3c1c3e808981c78cfe3b97
+      size: 7135
   ingest_local_zips:
     cmd: python scripts/dataset/20_ingest_local_zips.py --validate
     deps:

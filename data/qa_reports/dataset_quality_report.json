@@ -1,66 +1,67 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-18T05:26:49Z",
+  "generated_at": "2026-07-28T06:20:47Z",
   "generator": {
     "script": "scripts/dataset/17_dataset_quality_report.py"
   },
   "taxonomy_fingerprint": "sha256:a831924bb82e23ffbc6cc1d56647a78cc72ff5e329920569b05bd5ae99c2f125",
   "dataset_scale": {
-    "images_total": 188,
+    "images_total": 24352,
     "images_by_split": {
-      "test": 12,
-      "train": 164,
-      "val": 12
+      "test": 1882,
+      "train": 20588,
+      "val": 1882
     },
     "images_by_source": {
-      "coco": 53,
-      "negatives": 18,
-      "openimages": 57,
-      "wider_face": 60
+      "coco": 4951,
+      "local_captures": 16926,
+      "negatives": 497,
+      "openimages": 1881,
+      "wider_face": 97
     },
     "instances_per_class": {
-      "person": 202,
-      "face": 1254,
-      "medicine_strip": 0,
-      "medicine_bottle": 0,
-      "water_bottle": 13,
-      "knife": 10,
-      "stove": 6,
-      "gas_cylinder": 0,
-      "passport": 0,
-      "book": 15,
-      "charger": 0,
-      "wire": 0,
-      "laptop": 1,
-      "monitor": 5,
-      "cupboard": 34,
-      "door": 39,
-      "chair": 14,
-      "bed": 5,
-      "toilet": 3,
-      "sink": 4,
-      "wet_floor": 0,
-      "walking_stick": 0,
-      "support_handle": 0
+      "person": 35978,
+      "face": 4110,
+      "medicine_strip": 2741,
+      "medicine_bottle": 786,
+      "water_bottle": 1313,
+      "knife": 3681,
+      "stove": 759,
+      "gas_cylinder": 8089,
+      "passport": 381,
+      "book": 5571,
+      "charger": 110,
+      "wire": 835,
+      "laptop": 1370,
+      "monitor": 1253,
+      "cupboard": 4306,
+      "door": 2770,
+      "chair": 2890,
+      "bed": 1402,
+      "toilet": 1748,
+      "sink": 1577,
+      "wet_floor": 18057,
+      "walking_stick": 3562,
+      "support_handle": 1000
     },
     "custom_images_total": 0,
     "houses_total": 0
   },
   "completeness_summary": {
-    "policies_count": 4,
-    "mean_trusted_classes_per_image": 6.25,
-    "masked_cell_fraction": 0.7283
+    "policies_count": 5,
+    "mean_trusted_classes_per_image": 18.724,
+    "masked_cell_fraction": 0.1859
   },
   "coverage_summary": {
-    "residual_missing_total": 122.85,
-    "unknown_objects_total": 351,
-    "mean_completeness": 0.8796,
-    "p10_completeness": 0.6061,
-    "images_below_0_5": 8
+    "residual_missing_total": 2370.55,
+    "unknown_objects_total": 6773,
+    "mean_completeness": 0.9677,
+    "p10_completeness": 0.8955,
+    "images_below_0_5": 331
   },
   "per_class_risk": {
     "person": {
-      "annotated_instances": 202,
+      "annotated_instances": 35978,
       "unverified_candidates": 0,
       "verified_present": 0,
       "verified_absent": 0,
@@ -68,15 +69,15 @@
       "coverage_score": 1.0
     },
     "face": {
-      "annotated_instances": 1254,
-      "unverified_candidates": 217,
+      "annotated_instances": 4110,
+      "unverified_candidates": 915,
       "verified_present": 0,
       "verified_absent": 0,
-      "residual_missing_estimate": 75.95,
-      "coverage_score": 0.9429
+      "residual_missing_estimate": 320.25,
+      "coverage_score": 0.9277
     },
     "medicine_strip": {
-      "annotated_instances": 0,
+      "annotated_instances": 2741,
       "unverified_candidates": 0,
       "verified_present": 0,
       "verified_absent": 0,
@@ -84,15 +85,15 @@
       "coverage_score": 1.0
     },
     "medicine_bottle": {
-      "annotated_instances": 0,
-      "unverified_candidates": 46,
+      "annotated_instances": 786,
+      "unverified_candidates": 163,
       "verified_present": 0,
       "verified_absent": 0,
-      "residual_missing_estimate": 16.1,
-      "coverage_score": 0.0
+      "residual_missing_estimate": 57.05,
+      "coverage_score": 0.9323
     },
     "water_bottle": {
-      "annotated_instances": 13,
+      "annotated_instances": 1313,
       "unverified_candidates": 0,
       "verified_present": 0,
       "verified_absent": 0,
@@ -100,7 +101,7 @@
       "coverage_score": 1.0
     },
     "knife": {
-      "annotated_instances": 10,
+      "annotated_instances": 3681,
       "unverified_candidates": 0,
       "verified_present": 0,
       "verified_absent": 0,
@@ -108,7 +109,7 @@
       "coverage_score": 1.0
     },
     "stove": {
-      "annotated_instances": 6,
+      "annotated_instances": 759,
       "unverified_candidates": 0,
       "verified_present": 0,
       "verified_absent": 0,
@@ -116,7 +117,7 @@
       "coverage_score": 1.0
     },
     "gas_cylinder": {
-      "annotated_instances": 0,
+      "annotated_instances": 8089,
       "unverified_candidates": 0,
       "verified_present": 0,
       "verified_absent": 0,
@@ -124,7 +125,7 @@
       "coverage_score": 1.0
     },
     "passport": {
-      "annotated_instances": 0,
+      "annotated_instances": 381,
       "unverified_candidates": 0,
       "verified_present": 0,
       "verified_absent": 0,
@@ -132,7 +133,7 @@
       "coverage_score": 1.0
     },
     "book": {
-      "annotated_instances": 15,
+      "annotated_instances": 5571,
       "unverified_candidates": 0,
       "verified_present": 0,
       "verified_absent": 0,
@@ -140,15 +141,15 @@
       "coverage_score": 1.0
     },
     "charger": {
-      "annotated_instances": 0,
-      "unverified_candidates": 32,
+      "annotated_instances": 110,
+      "unverified_candidates": 1719,
       "verified_present": 0,
       "verified_absent": 0,
-      "residual_missing_estimate": 11.2,
-      "coverage_score": 0.0
+      "residual_missing_estimate": 601.65,
+      "coverage_score": 0.1546
     },
     "wire": {
-      "annotated_instances": 0,
+      "annotated_instances": 835,
       "unverified_candidates": 0,
       "verified_present": 0,
       "verified_absent": 0,
@@ -156,7 +157,7 @@
       "coverage_score": 1.0
     },
     "laptop": {
-      "annotated_instances": 1,
+      "annotated_instances": 1370,
       "unverified_candidates": 0,
       "verified_present": 0,
       "verified_absent": 0,
@@ -164,7 +165,7 @@
       "coverage_score": 1.0
     },
     "monitor": {
-      "annotated_instances": 5,
+      "annotated_instances": 1253,
       "unverified_candidates": 0,
       "verified_present": 0,
       "verified_absent": 0,
@@ -172,15 +173,15 @@
       "coverage_score": 1.0
     },
     "cupboard": {
-      "annotated_instances": 34,
-      "unverified_candidates": 56,
+      "annotated_instances": 4306,
+      "unverified_candidates": 3976,
       "verified_present": 0,
       "verified_absent": 0,
-      "residual_missing_estimate": 19.6,
-      "coverage_score": 0.6343
+      "residual_missing_estimate": 1391.6,
+      "coverage_score": 0.7558
     },
     "door": {
-      "annotated_instances": 39,
+      "annotated_instances": 2770,
       "unverified_candidates": 0,
       "verified_present": 0,
       "verified_absent": 0,
@@ -188,7 +189,7 @@
       "coverage_score": 1.0
     },
     "chair": {
-      "annotated_instances": 14,
+      "annotated_instances": 2890,
       "unverified_candidates": 0,
       "verified_present": 0,
       "verified_absent": 0,
@@ -196,7 +197,7 @@
       "coverage_score": 1.0
     },
     "bed": {
-      "annotated_instances": 5,
+      "annotated_instances": 1402,
       "unverified_candidates": 0,
       "verified_present": 0,
       "verified_absent": 0,
@@ -204,7 +205,7 @@
       "coverage_score": 1.0
     },
     "toilet": {
-      "annotated_instances": 3,
+      "annotated_instances": 1748,
       "unverified_candidates": 0,
       "verified_present": 0,
       "verified_absent": 0,
@@ -212,7 +213,7 @@
       "coverage_score": 1.0
     },
     "sink": {
-      "annotated_instances": 4,
+      "annotated_instances": 1577,
       "unverified_candidates": 0,
       "verified_present": 0,
       "verified_absent": 0,
@@ -220,7 +221,7 @@
       "coverage_score": 1.0
     },
     "wet_floor": {
-      "annotated_instances": 0,
+      "annotated_instances": 18057,
       "unverified_candidates": 0,
       "verified_present": 0,
       "verified_absent": 0,
@@ -228,7 +229,7 @@
       "coverage_score": 1.0
     },
     "walking_stick": {
-      "annotated_instances": 0,
+      "annotated_instances": 3562,
       "unverified_candidates": 0,
       "verified_present": 0,
       "verified_absent": 0,
@@ -236,7 +237,7 @@
       "coverage_score": 1.0
     },
     "support_handle": {
-      "annotated_instances": 0,
+      "annotated_instances": 1000,
       "unverified_candidates": 0,
       "verified_present": 0,
       "verified_absent": 0,

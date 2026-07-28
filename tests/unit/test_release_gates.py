@@ -170,6 +170,30 @@ class TestRg6DvcPushVerified:
     def test_nonempty_output_fails(self) -> None:
         assert rg6_dvc_push_verified("modified: data/merged\n").status == GATE_STATUS_FAIL
 
+    def test_nonzero_exit_fails_despite_empty_output(self) -> None:
+        """The bug this gate shipped with: it could not fail.
+
+        ``dvc status -c --quiet`` writes nothing to stdout and signals via its
+        exit code, so judging stdout alone made every outcome PASS. It was
+        observed reporting "cache and remote in sync" while 21,964 objects — a
+        whole dataset rebuild — sat un-pushed.
+        """
+        result = rg6_dvc_push_verified("", exit_code=1)
+        assert result.status == GATE_STATUS_FAIL
+        assert "dvc push" in result.details
+
+    def test_failure_detail_falls_back_to_exit_code(self) -> None:
+        """With --quiet there is no stdout to quote, so say something useful."""
+        assert "exit code 1" in rg6_dvc_push_verified("", exit_code=1).details
+
+    def test_unavailable_dvc_fails_closed(self) -> None:
+        """A dvc that cannot be invoked must not read as 'in sync'."""
+        result = rg6_dvc_push_verified("<dvc status unavailable: boom>", exit_code=1)
+        assert result.status == GATE_STATUS_FAIL
+
+    def test_clean_exit_with_empty_output_still_passes(self) -> None:
+        assert rg6_dvc_push_verified("", exit_code=0).status == GATE_STATUS_PASS
+
 
 # ─── RG7 ───────────────────────────────────────────────────────────────────────
 
