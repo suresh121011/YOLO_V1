@@ -209,7 +209,9 @@ class TestLedgerExpansionOverPerSlugBase:
         ctx = _ctx(slug_root, verification_ledger=ledger)
         provider = self._provider()
         provider.resolve_policies(ctx)
-        assert provider.policy_key_for_image(ctx, "local_captures_bed__a.jpg") == "local_captures/bed"
+        assert (
+            provider.policy_key_for_image(ctx, "local_captures_bed__a.jpg") == "local_captures/bed"
+        )
 
     def test_empty_ledger_is_byte_identical_to_no_ledger(self, slug_root: Path) -> None:
         provider = self._provider()
@@ -239,9 +241,7 @@ class TestTargetingUsesTheSameTrust:
                     "duplicates_removed": 0,
                     "filtered_out": 0,
                     "class_counts": {},
-                    "label_completeness": {
-                        SOURCE: ["bed", "chair", "person", "sink", "charger"]
-                    },
+                    "label_completeness": {SOURCE: ["bed", "chair", "person", "sink", "charger"]},
                     "notes": [],
                 }
             ),
@@ -258,9 +258,7 @@ class TestTargetingUsesTheSameTrust:
         promptable = (0, 1, 2, 3, 4, 5)  # every class promptable
         index = load_slug_index(slug_root, SOURCE)
 
-        targets = build_targets(
-            manifest, policies, promptable, IDS_BY_NAME, None, {SOURCE: index}
-        )
+        targets = build_targets(manifest, policies, promptable, IDS_BY_NAME, None, {SOURCE: index})
 
         # charger slug trusts only charger(4) -> everything else is targetable
         assert targets["local_captures_charger__c.jpg"] == (0, 1, 2, 3, 5)
@@ -283,9 +281,7 @@ class TestTargetingUsesTheSameTrust:
         )
         assert targets == {}, "the union suppressed all candidate generation"
 
-    def test_per_slug_source_without_index_is_an_error_not_a_fallback(
-        self, tmp_path: Path
-    ) -> None:
+    def test_per_slug_source_without_index_is_an_error_not_a_fallback(self, tmp_path: Path) -> None:
         manifest = self._manifest(tmp_path)
         with pytest.raises(AnnotationError, match="no slug index was supplied"):
             build_targets(
