@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-28T05:59:28Z",
+  "generator": {
+    "script": "scripts/dataset/12_auto_annotate.py",
+    "git_commit": "844618b"
+  },
+  "run_id": "yolo_world_844618b_40a37b2a",
+  "backend": "yolo_world",
+  "model": {
+    "backend": "yolo_world",
+    "weights_path": "models/annotators/yolov8x-worldv2.pt",
+    "weights_sha256": "41e771bfbbb8894dd857f3fef7cac3b3578dffd49fd3547101efa6a606a02a0e",
+    "library_versions": {
+      "ultralytics": "8.4.103",
+      "torch": "2.13.0+cu130"
+    },
+    "device": "cuda:0",
+    "prompt_fingerprint": "sha256:40a37b2ad1b66581c56f0c63d158783f1071c478da38f98c1a00db11e9c049d6"
+  },
+  "taxonomy_fingerprint": "sha256:a831924bb82e23ffbc6cc1d56647a78cc72ff5e329920569b05bd5ae99c2f125",
+  "inputs": {
+    "images_root": "data\\merged\\images",
+    "merged_manifest_sha256": "a8dd487e573c6bc1b24f482ea78b37108746431da7d911013f2d3f2ecf2c6a2c",
+    "ledger_sha256": "f5d143eb962c513127bec505af241b3e2e7113d0711f738ca2519fec6abaef61"
+  },
+  "determinism": {
+    "seed": 0,
+    "deterministic_algorithms": true,
+    "image_order": "sorted"
+  },
+  "stats": {
+    "images_processed": 6929,
+    "detections_total": 6768,
+    "per_class": {
+      "charger": 1719,
+      "cupboard": 3971,
+      "face": 915,
+      "medicine_bottle": 163
+    },
+    "runtime_s": 1537.219
+  }
+}
