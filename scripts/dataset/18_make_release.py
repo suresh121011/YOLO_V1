@@ -176,9 +176,19 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
         current_hash = compute_file_hash(current_dvc_lock)
         if current_hash != manifest.dvc_lock_sha256:
-            logger.warning(
-                "Current dvc.lock differs from the one recorded at release time — "
-                "expected unless you've checked out this release's tag."
+            # This differs even AT the release tag, and always will: `make`
+            # records dvc.lock as it stood before `dvc commit -f record_release`
+            # wrote the record_release entry. A manifest cannot contain the hash
+            # of a lock file that describes the manifest. The old wording
+            # ("expected unless you've checked out this release's tag") told the
+            # operator the opposite at the one moment they were most likely to
+            # run this.
+            logger.info(
+                "Current dvc.lock differs from the one recorded at release time. "
+                "This is normal — the recorded hash predates the "
+                "`dvc commit -f record_release` that pins the manifest, so it "
+                "never matches, including at the tag. A real problem looks like "
+                "a FAILed gate above, not this line."
             )
         else:
             logger.info("dvc.lock matches the release manifest exactly.")

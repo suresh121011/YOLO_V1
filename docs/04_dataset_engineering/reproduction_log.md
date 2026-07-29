@@ -52,10 +52,25 @@ and pinned by `tests/unit/test_completeness_policy_granularity.py`.
 
 ### Ordering wart, recorded not fixed
 
-The tag names the commit *before* the manifest exists: `make` requires RG5 green
-(clean tree, tag at HEAD) and then writes `data/releases`, dirtying the tree. The
-runbook accepts this (§6 notes a later `dvc.lock` mismatch is expected). Changing
-it would mean force-moving tags.
+`make` requires RG5 green (clean tree, tag at HEAD) and then writes
+`data/releases`, dirtying the tree — so the manifest can never describe the
+commit that contains it. Concretely for this release:
+
+| | |
+|---|---|
+| Manifest's recorded `git_commit` | `956d538` — the gated state: dataset, changelog, ADRs, code |
+| Tag `dataset-v0.6.0` points at | `9982a78` — that state **plus** the manifest and the `record_release` freeze |
+
+The two differ only by the manifest and its lock entry; no dataset-defining
+content changes between them. Re-running `make` to close the gap does not
+converge — each regeneration dirties the tree again, one commit behind forever.
+
+The same structure makes `manifest.dvc_lock_sha256` permanently unequal to the
+`dvc.lock` at the tag, because the recorded hash predates the
+`dvc commit -f record_release` that pins the manifest. `verify` used to warn
+*"expected unless you've checked out this release's tag"*, which told the
+operator the opposite at the one moment they were most likely to run it; the
+message now states the invariant instead of implying a match that cannot occur.
 
 ---
 
