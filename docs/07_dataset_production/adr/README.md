@@ -6,7 +6,10 @@ Phase-4 format (Status / Context / Decision / Alternatives / Consequences) and
 is referenced from the code, configs, and `dvc.yaml` header that implement it.
 ADR-P5-01 through ADR-P5-12 were ratified together by the council PASS of
 2026-07-17; ADR-P5-13 was recorded later (2026-07-27) as part of Phase-F
-release-candidate validation.
+release-candidate validation. ADR-P5-14 and ADR-P5-15 were recorded on
+2026-07-29 around the `dataset-v0.6.0` cut — P5-15 supersedes P5-14 after
+measurement contradicted two of its assumptions; both are listed because the
+superseded record is what the shipped release cites.
 
 | ADR | Decision |
 |:---|:---|
@@ -23,3 +26,5 @@ release-candidate validation.
 | [ADR-P5-11](ADR-P5-11-annotation-deps-optional-extra.md) | Annotation deps optional extra outside CI (FakeAnnotator + importorskip) |
 | [ADR-P5-12](ADR-P5-12-vectorized-dedup.md) | Vectorized-Hamming dedup with decision-equivalence guarantee, over a BK-tree |
 | [ADR-P5-13](ADR-P5-13-v060-local-capture-release-track.md) | `dataset-v0.6.0` track for the local-capture build; RG9/RG10 stay mandatory for v1.0.0 |
+| [ADR-P5-14](ADR-P5-14-per-slug-completeness-policy.md) | ~~Per-slug completeness deferred to v0.7.0 via `image_provenance`~~ — **superseded by P5-15** |
+| [ADR-P5-15](ADR-P5-15-per-slug-trust-resolution-and-targeting.md) | Slug resolves from ingest manifests (no merge rebuild); `targeting.py` must use it too — auto-annotation had never seen 69.5% of the dataset |

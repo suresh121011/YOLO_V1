@@ -1,7 +1,27 @@
 # ADR-P5-14 — Completeness Policy Granularity for `local_captures`: Defer Per-Slug Keys to `dataset-v0.7.0`
 
-**Status:** Accepted 2026-07-29
+**Status:** Accepted 2026-07-29 — **SUPERSEDED the same day by
+[ADR-P5-15](ADR-P5-15-per-slug-trust-resolution-and-targeting.md)**
 **Deciders:** Phase-5 engineering (design review before the `dataset-v0.6.0` ceremony; user decision recorded)
+
+> **Read P5-15 first.** This record is retained because `dataset-v0.6.0`'s
+> changelog and tag cite it, so it must stay resolvable. Its *finding* — the
+> source-level union over-claims trust for 69.5% of the release — is correct and
+> unchanged. Two of its conclusions were contradicted by measurement taken before
+> v0.7.0 began:
+>
+> 1. **The fix does not need a `merge_datasets` rebuild.** Slug is already
+>    recoverable from `data/raw/local_captures/<slug>/manifest.json`
+>    (`image_hashes`, keyed `<slug>__<original>`) at **100% — 26,339 keys, 0
+>    cross-slug collisions, 16,926/16,926 images**. The "Alternatives considered"
+>    section below weighs only `image_provenance` versus filename parsing; it
+>    missed the option that is both cheaper and hash-verifiable.
+> 2. **The blast radius is not confined to `completeness.json`, and it does not
+>    "bite only at train time".** `src/dataset/annotation/targeting.py` reads the
+>    same source-level union, so `auto_annotate` skipped nearly every
+>    local-capture cell as already-trusted. All 6,773 existing candidates come
+>    from public sources — **the auto-annotation pipeline has never run against
+>    69.5% of the dataset.**
 
 ## Context
 

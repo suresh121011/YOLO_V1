@@ -1,14 +1,18 @@
 # Phase-5 Milestone Status
 
-Status tracker for Phase 5 (Production Dataset Engineering / Dataset v1.0),
-branch `phase-5-production-dataset-engineering`. Reflects the repository as
-verified on **2026-07-21** (three-agent cold audit, not prior summaries).
+Status tracker for Phase 5 (Production Dataset Engineering / Dataset v1.0).
+Reflects the repository as verified on **2026-07-29** at `dataset-v0.6.0`
+(`699b9ba`); the previous revision described the pre-Phase-E state of
+2026-07-21 and had drifted substantially.
 
-**Bottom line:** all milestone *tooling* (M0–M11) is implemented, tested, and
-validated (M6 correctness gate PASS; suite 1003 passing). Everything that
-remains is **operational or human-only** — real captures, human verification,
-Roboflow licensing, the full-mode download, the GPU A/B run, and cutting real
-releases. No Phase-5 code gaps remain.
+**Bottom line:** the full-mode build is done and **`dataset-v0.6.0` is
+released**. Milestone tooling (M0–M11) is implemented and tested (suite **1188**
+passing). What remains is mostly operational or human-only — real captures,
+human verification, Roboflow licensing, the GPU A/B run, and the remaining
+releases — **with one code gap now known**: per-slug trust resolution in
+`completeness_policies.py` *and* `targeting.py`
+([ADR-P5-15](adr/ADR-P5-15-per-slug-trust-resolution-and-targeting.md)). The
+earlier claim "no Phase-5 code gaps remain" did not survive measurement.
 
 Legend: ✅ done · ⏳ tooling done / execution pending (operational) · 👤 human track
 
@@ -39,31 +43,62 @@ Legend: ✅ done · ⏳ tooling done / execution pending (operational) · 👤 h
   `medicine_bottle`/`charger`/`wire`/`gas_cylinder`, record slug + version +
   license + class mapping, populate `sources.roboflow.datasets`, set
   `ROBOFLOW_API_KEY`. Status: `datasets: []` (empty) — blocks RG7.
-- **H-C — CVAT verification campaign** 👤 — stand up self-hosted CVAT (Docker)
-  + pin version, create tasks from `cvat_labels.json`, verify candidate boxes,
-  dual-annotate the 10 % IAA sample, export → import → `dvc commit -f`. Status:
-  ledger empty (0 cells). Runbook: `verification_runbook.md`.
+- **H-C — CVAT verification campaign** 👤 — create tasks from `cvat_labels.json`,
+  verify candidate boxes, dual-annotate the 10 % IAA sample, export → import →
+  `dvc commit -f`. **Self-hosted CVAT is UP** (12 containers: `cvat_server`,
+  `cvat_db`, `cvat_ui`, 9 workers — verified 2026-07-29); the "stand it up" step
+  is done. Status: ledger empty (0 cells) — **this is the sole binding blocker on
+  `dataset-v0.7.0`**, alongside `charger` coverage 0.1546 vs the 0.5 floor.
+  Do not start batches until ADR-P5-15's candidate regeneration lands: today's
+  6,773 candidates were selected under the wrong trust model.
+  Runbook: `verification_runbook.md`.
 
 ## Group C — ready, waiting only on execution (no code needed)
 
-All five download stages (full mode) · `auto_annotate` (GPU) ·
-`train_yolo11n`/`evaluate_yolo11n` (frozen, GPU) ·
-`ingest_custom_captures`/`ingest_eval_set` (frozen, human data) · the
-verification-loop stages (human CVAT) · `record_release` (needs a passing full
-build). Each is fully implemented and gated only on real data / real compute /
-a passing full build.
+**Done since:** all five download stages have run in full mode, `auto_annotate`
+has run on GPU, and `record_release` produced `dataset-v0.6.0`.
+
+**Still waiting on execution:** `train_yolo11n`/`evaluate_yolo11n` (frozen, GPU)
+· `ingest_custom_captures`/`ingest_eval_set` (frozen, human data) · the
+verification-loop stages (human CVAT, now unblocked — see H-C).
+
+Two frozen stages carry defects that must clear **before** RG10 training
+evidence is recorded:
+- `train_yolo11n`'s `dvc.lock` dep hashes match neither the LF nor the CRLF form
+  of HEAD, so the recorded run is unreproducible. `dvc status` hides it on every
+  platform because the stage is frozen. Clear it by **re-running training**, then
+  `dvc commit -f` — never by re-stamping hashes.
+- `evaluate_yolo11n` is declared in `dvc.yaml` but absent from `dvc.lock`, which
+  is why `dvc pull` exits 1 on a clean clone.
 
 ## Current shared-state facts
 
-- Build mode: `smoke` (`configs/dataset_sources.yaml`); no full-mode download run.
-- No release tags cut (`dataset-v0.5.0…v1.0.0` do not exist); `data/releases/`
-  is empty.
-- Ledger, `verified_labels/`, `custom_captures/`, and `eval/indian_home_v0/` are
-  empty (drill artifacts only).
-- The branch has **not** been pushed to `origin` — every commit exists locally
-  until the first push.
-- DVC remote: `localstore` → `C:\dvc_remote` (default, off OneDrive);
-  `storage` → S3 (secondary, credentials not configured in-tree).
+*Re-verified 2026-07-29 against the repository at `dataset-v0.6.0` (`699b9ba`).
+The list below previously described the pre-Phase-E state and had drifted on
+every line.*
+
+- Build mode: **`full`** — 24,352 images / 104,289 boxes (Phase E).
+- **`dataset-v0.6.0` is cut and pushed** (annotated tag → `699b9ba`);
+  `data/releases/dataset-v0.6.0/release_manifest.json` is git-tracked, 9 gates
+  recorded, all `pass`. `v0.7.0`/`v0.9.0`/`v1.0.0` do not exist yet.
+- Ledger is **still empty (0 cells)** — this is the binding constraint on
+  `dataset-v0.7.0`, which requires `min_verified_cells: 3000`.
+  `custom_captures/` and `eval/indian_home_v0/` are also still empty.
+- `main` is pushed; HEAD = tag = `origin/main` = `699b9ba`. CI green.
+- DVC: cache `C:\dvc_cache`, `localstore` → `C:\dvc_remote` (default),
+  `storage` → S3 (**68,301 objects / 7.82 GB**, versioning + SSE-AES256 + all
+  four public-access blocks on). `dvc status -c` exits 0 for both remotes;
+  `verify_lock_objects.py --deep` resolves all 67,734 objects.
+- Cross-platform reproducibility **proven** 2026-07-29 in a clean Linux
+  container (`docs/04_dataset_engineering/reproduction_log.md`).
+
+### Known-wrong artifact shipped with `dataset-v0.6.0`
+
+`completeness.json` over-claims trusted classes for **69.5%** of images, and the
+same union suppressed candidate generation for those images
+([ADR-P5-15](adr/ADR-P5-15-per-slug-trust-resolution-and-targeting.md)).
+**Do not train on `dataset-v0.6.0` with `missing_annotation_mitigation`
+enabled.** Fix scheduled for `v0.7.0`.
 
 See [`../../CHANGELOG.md`](../../CHANGELOG.md) `[Unreleased]` for the full
 Phase-5 change list and [`adr/`](adr/README.md) for the design decisions.
