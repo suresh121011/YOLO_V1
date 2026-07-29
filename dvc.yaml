@@ -366,7 +366,18 @@ stages:
     frozen: true
     cmd: python scripts/dataset/18_make_release.py make dataset-v0.6.0
     outs:
-      - data/releases
+      # cache: false — git-tracked, like every other small audit artifact here
+      # (annotation_qa_report, completeness_report, coverage_report,
+      # dataset_quality_report, verification_ledger, eval_report). Without it
+      # `dvc commit -f record_release` gitignores data/releases, and the ~4 KB
+      # file that records what a release IS — gate results, artifact hashes,
+      # licenses, reproducibility block — becomes unreadable to anyone at the
+      # tag who lacks AWS credentials. ADR-P5-07 calls a release an "auditable,
+      # hash-pinned, immutable snapshot"; putting it behind a credentials wall
+      # contradicts that, and the release runbook §5 already says
+      # `git add data/releases`, which cannot work while it is cached.
+      - data/releases:
+          cache: false
 
   # ─── Training (Phase-5 — declared but frozen until the dataset is released) ─
 

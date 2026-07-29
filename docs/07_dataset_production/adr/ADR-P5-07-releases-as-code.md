@@ -37,6 +37,18 @@ importing it — `src/dataset` must never depend on `src/training`.
   test.
 - Constraint: cutting a real release is a semi-irreversible human action (tag +
   `dvc push` + `dvc commit -f record_release`) performed only when gates pass.
+- **Clarified 2026-07-29, cutting `dataset-v0.6.0`.** `record_release`'s out is
+  declared `cache: false` so `release_manifest.json` is **git-tracked**, like
+  every other small audit artifact in `dvc.yaml` (`annotation_qa_report`,
+  `completeness_report`, `coverage_report`, `dataset_quality_report`,
+  `verification_ledger`, `eval_report`). It was originally declared cached,
+  which made `dvc commit -f record_release` add `/releases` to
+  `data/.gitignore` — so the ~4 KB file recording what a release *is* became
+  unreadable to anyone checked out at the tag without AWS credentials. That
+  contradicts "auditable, hash-pinned, immutable snapshot" above, and the
+  release runbook §5 already instructed `git add data/releases`, which cannot
+  work while the out is cached. The dataset itself stays DVC-tracked; only the
+  release record moves into git, where it belongs.
 
 Related: [ADR-P5-08](ADR-P5-08-cross-dataset-label-salvage.md),
 [ADR-P5-09](ADR-P5-09-local-dvc-remote.md),

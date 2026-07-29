@@ -1170,3 +1170,11 @@ stages:
       md5: f88ecc80c2375d81543bae123a20bade.dir
       size: 6772740321
       nfiles: 52748
+  record_release:
+    cmd: python scripts/dataset/18_make_release.py make dataset-v0.6.0
+    outs:
+    - path: data/releases
+      hash: md5
+      md5: 99ce17788eaf172956fae49c249533d2.dir
+      size: 3989
+      nfiles: 1

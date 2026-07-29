@@ -21,9 +21,9 @@ Legend: ✅ done · ⏳ tooling done / execution pending (operational) · 👤 h
 | M2 | CVAT verification round-trip | ✅ | 👤 stand up self-hosted CVAT + real batches (H-C) |
 | M3 | Completeness expansion + label overlay | ✅ | — (activates as the ledger fills) |
 | M4 | Coverage (L4) + quality (L5) reports | ✅ | — |
-| M5 | Release automation (gates RG1–RG10) | ✅ | ⏳ cut real releases |
+| M5 | Release automation (gates RG1–RG10) | ✅ | ✅ **first real release cut 2026-07-29 — `dataset-v0.6.0`**, gates MODE+RG1–RG8 all PASS; remaining tracks v0.7.0 → v1.0.0 |
 | M6 | Correctness-validation gate | ✅ | — (PASS committed) |
-| M7 | Full-mode transition + Dataset v0.5.0 | ✅ | 👤 Roboflow slugs (H-B); ⏳ flip `mode: full` + real download + v0.5.0 |
+| M7 | Full-mode transition + Dataset v0.5.0 | ✅ | ✅ `mode: full` + real download done (Phase E, 24,352 images); released as **`dataset-v0.6.0`** (ADR-P5-13) rather than v0.5.0, which under-describes the local-capture content; 👤 Roboflow slugs (H-B) still open |
 | M8 | Verification at scale + v0.7.0 | ✅ | 👤 ≥3,000 verified cells (H-C); ⏳ v0.7.0 |
 | M9 | Custom capture integration + eval lock + v0.9.0 | ✅ | 👤 captures (H-A), wet_floor pilot, eval lock; ⏳ v0.9.0 |
 | M10 | Evaluation + full-scale A/B evidence | ✅ | ⏳ real GPU A/B run (2 arms) |

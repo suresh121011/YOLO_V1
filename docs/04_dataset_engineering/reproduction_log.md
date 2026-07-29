@@ -7,6 +7,58 @@ oldest-first, so the reader's eye landed on the *weakest* evidence.
 
 ---
 
+## 2026-07-29 — `dataset-v0.6.0` release ceremony (F6/F7/F9)
+
+The release this log's evidence was gathered for. Cut on `main`, gates
+`RG1`–`RG8` per [ADR-P5-13](../07_dataset_production/adr/ADR-P5-13-v060-local-capture-release-track.md).
+
+| | |
+|---|---|
+| **Release** | `dataset-v0.6.0` — 24,352 images / 104,289 boxes, `mode: full` |
+| **Manifest** | `data/releases/dataset-v0.6.0/release_manifest.json` (git-tracked) |
+| **Gates** | MODE, RG1–RG8 all **PASS**; verdict **PASS** |
+| **Reproducibility block** | python 3.14.3 · dvc 3.67.1 · seed 42 · 5 param-file sha256s |
+| **Artifact hashes** | completeness, qa_report, coverage_report, quality_report, merged_manifest, ledger — all recorded |
+
+### Two defects caught during the ceremony, both fixed before anything shipped
+
+1. **The manifest recorded `"dvc": "unknown"`** — in the `reproducibility` block
+   whose only job is to say what produced the release. `_dvc_version()` shelled
+   out to a bare `dvc`, which is not on PATH when the release script runs as
+   `.venv/Scripts/python.exe 18_make_release.py`, and swallowed the `OSError`.
+   Same root cause as the RG6 misattribution fixed the same day; this was the
+   other call site. The first manifest and its tag were local and unpushed, so
+   the ceremony was re-run rather than shipping a release record that could not
+   name its own toolchain.
+2. **`record_release`'s out was DVC-cached, not git-tracked.** `dvc commit -f
+   record_release` added `/releases` to `data/.gitignore`, which would have made
+   the ~4 KB release record unreadable to anyone at the tag without AWS
+   credentials. Every sibling audit artifact in `dvc.yaml` is `cache: false`
+   (`annotation_qa_report`, `completeness_report`, `coverage_report`,
+   `dataset_quality_report`, `verification_ledger`, `eval_report`) and the
+   release runbook §5 already said `git add data/releases`, which cannot work
+   while the out is cached. Fixed in `dvc.yaml`; recorded in
+   [ADR-P5-07](../07_dataset_production/adr/ADR-P5-07-releases-as-code.md).
+   `verify_lock_objects.py` now skips **6** `cache: false` outs, up from 5.
+
+### Known limitations shipped with this release
+
+Enumerated in full in `data/DATASET_CHANGELOG.md`. The load-bearing one:
+`completeness.json` over-claims trusted classes for **69.5%** of images
+(source-level union instead of per-slug), so **this release must not be trained
+on with `missing_annotation_mitigation` enabled**. Deferred to `v0.7.0` with
+evidence in [ADR-P5-14](../07_dataset_production/adr/ADR-P5-14-per-slug-completeness-policy.md)
+and pinned by `tests/unit/test_completeness_policy_granularity.py`.
+
+### Ordering wart, recorded not fixed
+
+The tag names the commit *before* the manifest exists: `make` requires RG5 green
+(clean tree, tag at HEAD) and then writes `data/releases`, dirtying the tree. The
+runbook accepts this (§6 notes a later `dvc.lock` mismatch is expected). Changing
+it would mean force-moving tags.
+
+---
+
 ## 2026-07-29 — Phase F2/F3: full clean-container pull + `dvc repro qa_check` (Linux)
 
 **The full clean-machine gate (route (a)), executed.** Every limitation recorded

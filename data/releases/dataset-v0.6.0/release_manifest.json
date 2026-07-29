@@ -1,0 +1,136 @@
+{
+  "version": "dataset-v0.6.0",
+  "created_at": "2026-07-29T08:18:39+00:00",
+  "git_commit": "956d538",
+  "git_tag": "dataset-v0.6.0",
+  "dvc_lock_sha256": "3a3de0ca81e368b6584400c32dd146f8796a1547568b81f2933c94c6cc42dfe0",
+  "mode": "full",
+  "split_strategy": "group_aware",
+  "taxonomy_fingerprint": "sha256:a831924bb82e23ffbc6cc1d56647a78cc72ff5e329920569b05bd5ae99c2f125",
+  "counts": {
+    "images_total": 24352,
+    "by_split": {
+      "test": 1882,
+      "train": 20588,
+      "val": 1882
+    },
+    "by_source": {
+      "coco": 4951,
+      "local_captures": 16926,
+      "negatives": 497,
+      "openimages": 1881,
+      "wider_face": 97
+    },
+    "instances_per_class": {
+      "person": 35978,
+      "face": 4110,
+      "medicine_strip": 2741,
+      "medicine_bottle": 786,
+      "water_bottle": 1313,
+      "knife": 3681,
+      "stove": 759,
+      "gas_cylinder": 8089,
+      "passport": 381,
+      "book": 5571,
+      "charger": 110,
+      "wire": 835,
+      "laptop": 1370,
+      "monitor": 1253,
+      "cupboard": 4306,
+      "door": 2770,
+      "chair": 2890,
+      "bed": 1402,
+      "toilet": 1748,
+      "sink": 1577,
+      "wet_floor": 18057,
+      "walking_stick": 3562,
+      "support_handle": 1000
+    }
+  },
+  "gates": [
+    {
+      "gate_id": "MODE",
+      "name": "build-mode",
+      "status": "pass",
+      "details": "build mode 'full' matches"
+    },
+    {
+      "gate_id": "RG1",
+      "name": "qa-check",
+      "status": "pass",
+      "details": "0 criticals, artifact sweeps clean"
+    },
+    {
+      "gate_id": "RG2",
+      "name": "completeness-freshness",
+      "status": "pass",
+      "details": "valid and fresh"
+    },
+    {
+      "gate_id": "RG3",
+      "name": "coverage-quality",
+      "status": "pass",
+      "details": "0 verified cells, 0 per-class threshold(s) met"
+    },
+    {
+      "gate_id": "RG4",
+      "name": "changelog-entry",
+      "status": "pass",
+      "details": "entry found for dataset-v0.6.0"
+    },
+    {
+      "gate_id": "RG5",
+      "name": "git-tagged",
+      "status": "pass",
+      "details": "clean tree, tagged 'dataset-v0.6.0'"
+    },
+    {
+      "gate_id": "RG6",
+      "name": "dvc-push-verified",
+      "status": "pass",
+      "details": "cache and remote in sync"
+    },
+    {
+      "gate_id": "RG7",
+      "name": "license-gate",
+      "status": "pass",
+      "details": "noncommercial sources: ['wider_face']; allow_noncommercial=True"
+    },
+    {
+      "gate_id": "RG8",
+      "name": "split-eval-leakage",
+      "status": "pass",
+      "details": "zero leakage, zero overlap"
+    }
+  ],
+  "artifact_hashes": {
+    "completeness": "26c597fc2426b356edc9a829e3b4a691a16002aa995bf31e383ffa5e2a194c28",
+    "qa_report": "a1563c95e3d0ee57e309a173025ad534bfd991c968ead7edb21284272cf784f7",
+    "coverage_report": "bdf44904c21b946ecc44c3647d1695c913e8309f1b5fd6537efe1d166addee0a",
+    "quality_report": "d823a6058107286911b221f139b54b9ecbb1ade273326ae926e5dd71f4693b6f",
+    "merged_manifest": "a8dd487e573c6bc1b24f482ea78b37108746431da7d911013f2d3f2ecf2c6a2c",
+    "ledger": "f5d143eb962c513127bec505af241b3e2e7113d0711f738ca2519fec6abaef61"
+  },
+  "licenses": {
+    "allow_noncommercial": true,
+    "noncommercial_sources": [
+      "wider_face"
+    ],
+    "roboflow_slug_licenses": {}
+  },
+  "changelog_entry_present": true,
+  "dvc_push_verified": true,
+  "reproducibility": {
+    "python": "3.14.3",
+    "dvc": "3.67.1",
+    "seed": 42,
+    "params_files_sha256": {
+      "configs/data.yaml": "e13e70b496fd6db9919946aa856a2aea9de63d70fdbeaa1d9e665f6b3df0b9bd",
+      "configs/dataset_sources.yaml": "70907d5de5f542a08daaadeb8795365e42b91c1d12825e2c922242b367f0128d",
+      "configs/dataset_split_config.yaml": "107c556417f917ebaef0d041d9fbdf6656e6ce6431bd73e1668c1f0c96e7bbac",
+      "configs/annotation.yaml": "55284b182cbeb9288485b5a82c8c771778c6b4468cf8165268bc41807fcc1f88",
+      "configs/release.yaml": "18f5465c515ed0c8c7f6f902572c0dc151e367534a8f6e5ed95231d7c7a1e8db"
+    }
+  },
+  "schema_version": 1
+}
