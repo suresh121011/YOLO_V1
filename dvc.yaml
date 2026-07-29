@@ -219,6 +219,10 @@ stages:
       - data/processed/split_report
       # M3 (ADR-P5-04): trusted_list_with_ledger sources read this directly.
       - data/annotation/verification_ledger.json
+      # ADR-P5-15: per_slug_with_ledger reads each slug's own trusted_classes
+      # from <slug>/manifest.json here. Declared so re-ingesting an archive
+      # re-derives the masks — merge records only the union of all slugs.
+      - data/raw/local_captures
     params:
       - configs/dataset_sources.yaml:
           - completeness
@@ -260,12 +264,20 @@ stages:
     deps:
       - scripts/dataset/12_auto_annotate.py
       - src/dataset/annotation
+      - src/dataset/completeness_policies.py
       - configs/data.yaml
       - data/merged
       - data/annotation/verification_ledger.json
+      # ADR-P5-15: targeting resolves per-slug trust from these manifests. It
+      # must agree with generate_completeness — when it did not, the source-level
+      # union marked every local capture supervised and none was ever targeted.
+      - data/raw/local_captures
     params:
       - configs/annotation.yaml:
           - auto_annotation
+      # Policy modes decide which sources are targetable at all.
+      - configs/dataset_sources.yaml:
+          - completeness
     outs:
       - data/annotation/candidates
 

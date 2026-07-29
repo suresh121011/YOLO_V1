@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-29T11:23:22Z",
+  "generated_at": "2026-07-28T06:20:47Z",
   "generator": {
     "script": "scripts/dataset/17_dataset_quality_report.py"
   },
@@ -48,9 +48,9 @@
     "houses_total": 0
   },
   "completeness_summary": {
-    "policies_count": 27,
-    "mean_trusted_classes_per_image": 3.542,
-    "masked_cell_fraction": 0.846
+    "policies_count": 5,
+    "mean_trusted_classes_per_image": 18.724,
+    "masked_cell_fraction": 0.1859
   },
   "coverage_summary": {
     "residual_missing_total": 2370.55,

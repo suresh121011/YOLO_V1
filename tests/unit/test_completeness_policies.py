@@ -72,6 +72,7 @@ class TestRegistry:
     def test_builtin_modes_registered(self) -> None:
         assert registered_policy_modes() == [
             "per_session",
+            "per_slug_with_ledger",
             "trusted_list",
             "trusted_list_with_ledger",
             "verified_absence_all",

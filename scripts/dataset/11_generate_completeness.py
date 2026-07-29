@@ -133,6 +133,7 @@ def run(args: argparse.Namespace) -> int:
             data_yaml_path=args.data,
             sources_yaml_path=args.sources,
             capture_manifests_dir=args.capture_manifests,
+            raw_root=args.raw_root,
         )
     except (CompletenessError, FileNotFoundError, ValueError) as e:
         logger.error(f"Completeness generation failed: {e}")
@@ -219,6 +220,13 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=Path("data/raw/custom_captures/manifests"),
         help="Per-session capture manifest directory (per_session policies).",
+    )
+    parser.add_argument(
+        "--raw-root",
+        type=Path,
+        default=Path("data/raw"),
+        help="Raw acquisition root; per_slug_with_ledger policies read each "
+        "source's <slug>/manifest.json beneath it (ADR-P5-15).",
     )
     parser.add_argument(
         "--output",
