@@ -40,8 +40,13 @@ from src.dataset.annotation.candidates import (
 )
 from src.dataset.annotation.ledger import LedgerView
 from src.dataset.annotation.registry import available_annotators, get_annotator
-from src.dataset.annotation.targeting import build_targets, promptable_class_ids
+from src.dataset.annotation.targeting import (
+    PER_SLUG_MODES,
+    build_targets,
+    promptable_class_ids,
+)
 from src.dataset.completeness import taxonomy_fingerprint
+from src.dataset.completeness_policies import SlugIndex, load_slug_index
 from src.dataset.manifest import MERGED_MANIFEST_FILENAME, MergedManifest
 from src.utils.config_helpers import get_class_names_from_data_yaml, load_data_config, load_yaml
 from src.utils.dataset_utils import compute_file_hash
@@ -95,6 +100,7 @@ def run_backend(
     verified_cells: dict[str, frozenset[int]],
     ledger_path: Path,
     output_root: Path,
+    slug_indexes: dict[str, SlugIndex] | None = None,
     limit: int | None = None,
 ) -> Path:
     """Generate, validate, and save one backend's candidate artifact.
@@ -120,7 +126,9 @@ def run_backend(
         )
 
     promptable = promptable_class_ids(backend_cfg, ids_by_name)
-    targets = build_targets(manifest, policies, promptable, ids_by_name, verified_cells)
+    targets = build_targets(
+        manifest, policies, promptable, ids_by_name, verified_cells, slug_indexes
+    )
     filenames = sorted(targets)
     if limit is not None:
         filenames = filenames[:limit]
@@ -249,6 +257,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sources-config", type=Path, default=Path("configs/dataset_sources.yaml"))
     parser.add_argument("--data-config", type=Path, default=Path("configs/data.yaml"))
     parser.add_argument("--merged-dir", type=Path, default=Path("data/merged"))
+    parser.add_argument(
+        "--raw-root",
+        type=Path,
+        default=Path("data/raw"),
+        help="Raw acquisition root; per-slug sources read <slug>/manifest.json "
+        "beneath it to resolve per-image trust (ADR-P5-15).",
+    )
     parser.add_argument("--output", type=Path, default=Path("data/annotation/candidates"))
     parser.add_argument(
         "--backend",
@@ -290,6 +305,24 @@ def main() -> int:
         .get("policies", {})
         .items()
     }
+    # Per-slug sources resolve trust per image, not per source. Targeting must
+    # read it exactly as the completeness generator does, or auto-annotation
+    # targets a different cell set than training masks (ADR-P5-15).
+    sources_cfg = load_yaml(args.sources_config)
+    slug_indexes = {
+        source: load_slug_index(
+            args.raw_root
+            / Path(
+                str(
+                    ((sources_cfg.get("sources") or {}).get(source) or {}).get("output_dir", source)
+                )
+            ).name,
+            source,
+        )
+        for source, mode in policies.items()
+        if mode in PER_SLUG_MODES and source in manifest.label_completeness
+    }
+
     ledger_path = Path(
         str(verification_cfg.get("ledger_path", "data/annotation/verification_ledger.json"))
     )
@@ -331,6 +364,7 @@ def main() -> int:
                 verified_cells=verified_cells,
                 ledger_path=ledger_path,
                 output_root=args.output,
+                slug_indexes=slug_indexes,
                 limit=args.limit,
             )
             if args.verify_determinism:

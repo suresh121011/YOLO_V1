@@ -80,7 +80,14 @@ completeness:
     wider_face: trusted_list_with_ledger
     negatives: verified_absence_all
     custom_captures: per_session
-    local_captures: trusted_list_with_ledger   # single-class ZIPs; exhaustive annotation
+    # Per SLUG, not per source (ADR-P5-15). Each ingested archive annotates its
+    # own class set exhaustively — `bed` labels bed/chair/person/sink, `charger`
+    # labels only charger — but merge records one label_completeness entry per
+    # source, i.e. the UNION of all 23 slugs. Under trusted_list_with_ledger that
+    # union marked ~21.7 classes of 23 falsely trusted across 16,926 images
+    # (69.5% of dataset-v0.6.0), and it also told targeting.py every local
+    # capture was already supervised, so auto-annotation never looked at them.
+    local_captures: per_slug_with_ledger
 
 # ─── Sources ──────────────────────────────────────────────────────────────────
 # trusted_classes: classes this source labels EXHAUSTIVELY. Any other taxonomy

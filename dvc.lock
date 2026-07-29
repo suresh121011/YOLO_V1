@@ -681,18 +681,23 @@ stages:
       md5: fe190cc27d9ee38e3590524b849feed6.dir
       size: 1233
       nfiles: 2
+    - path: data/raw/local_captures
+      hash: md5
+      md5: f88ecc80c2375d81543bae123a20bade.dir
+      size: 6772740321
+      nfiles: 52748
     - path: scripts/dataset/11_generate_completeness.py
       hash: md5
-      md5: 0cffbf18b4e746eb10f3bc04f84fe80d
-      size: 8452
+      md5: ded05f7fe4137bd3779952742c6b5adf
+      size: 8737
     - path: src/dataset/completeness.py
       hash: md5
-      md5: 575a300422c96d898f200a3a4d1389a4
-      size: 25181
+      md5: 5c4c7b83a445ec474474d7538777e9da
+      size: 26156
     - path: src/dataset/completeness_policies.py
       hash: md5
-      md5: e6b227f5dd24e0b21dffac1638c59413
-      size: 18665
+      md5: e670acd7ab2b3bf0edbb5f5379e17157
+      size: 28994
     params:
       configs/dataset_sources.yaml:
         completeness:
@@ -704,16 +709,16 @@ stages:
             wider_face: trusted_list_with_ledger
             negatives: verified_absence_all
             custom_captures: per_session
-            local_captures: trusted_list_with_ledger
+            local_captures: per_slug_with_ledger
     outs:
     - path: data/processed/completeness.json
       hash: md5
-      md5: 7f98a39b9a68e1aa9e2230c9d25f8bc4
-      size: 3169359
+      md5: b32da518ea7b917926267e47bf031907
+      size: 3319237
     - path: data/qa_reports/completeness_report.json
       hash: md5
-      md5: 16200bda474d80d33a4b31fe3d4c6872
-      size: 2604
+      md5: 237815255c65e2b43dd7e64387085a52
+      size: 7792
   auto_annotate:
     cmd: python scripts/dataset/12_auto_annotate.py
     deps:
@@ -948,8 +953,8 @@ stages:
       size: 173
     - path: data/processed/completeness.json
       hash: md5
-      md5: 7f98a39b9a68e1aa9e2230c9d25f8bc4
-      size: 3169359
+      md5: b32da518ea7b917926267e47bf031907
+      size: 3319237
     - path: data/processed/labels
       hash: md5
       md5: 1b1f86c7a639a6c1ad83a197a86998a9.dir
@@ -1128,8 +1133,8 @@ stages:
       size: 2004822
     - path: data/processed/completeness.json
       hash: md5
-      md5: 7f98a39b9a68e1aa9e2230c9d25f8bc4
-      size: 3169359
+      md5: b32da518ea7b917926267e47bf031907
+      size: 3319237
     - path: data/qa_reports/coverage_report.json
       hash: md5
       md5: 6e120a15ce80e19905b4a3835e8fd3db
@@ -1150,8 +1155,8 @@ stages:
     outs:
     - path: data/qa_reports/dataset_quality_report.json
       hash: md5
-      md5: 1a77bd32fb3c1c3e808981c78cfe3b97
-      size: 7135
+      md5: 3635a37dea8c7c7d97af706db119a248
+      size: 7134
   ingest_local_zips:
     cmd: python scripts/dataset/20_ingest_local_zips.py --validate
     deps:

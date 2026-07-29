@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-28T01:33:04Z",
+  "generated_at": "2026-07-29T11:00:44Z",
   "artifact_path": "data/processed/completeness.json",
   "taxonomy_fingerprint": "sha256:a831924bb82e23ffbc6cc1d56647a78cc72ff5e329920569b05bd5ae99c2f125",
   "stats": {
@@ -11,37 +11,59 @@
     },
     "by_policy": {
       "coco": 4951,
-      "local_captures": 16926,
+      "local_captures/bed": 199,
+      "local_captures/book": 1321,
+      "local_captures/bottel": 153,
+      "local_captures/chair": 739,
+      "local_captures/charger": 98,
+      "local_captures/cupboard": 324,
+      "local_captures/door": 915,
+      "local_captures/face": 887,
+      "local_captures/gas_cylinder": 888,
+      "local_captures/knife": 2128,
+      "local_captures/laptop": 362,
+      "local_captures/medicine_bottle": 466,
+      "local_captures/medicine_strip": 310,
+      "local_captures/monitor": 112,
+      "local_captures/passport": 228,
+      "local_captures/person": 1201,
+      "local_captures/sink": 353,
+      "local_captures/stove": 151,
+      "local_captures/support_handle": 800,
+      "local_captures/toilet": 455,
+      "local_captures/walking_stick": 2130,
+      "local_captures/wet_floor": 1871,
+      "local_captures/wire": 835,
       "negatives": 497,
       "openimages": 1881,
       "wider_face": 97
     },
     "class_trusted_image_counts": {
-      "bed": 22374,
-      "book": 22374,
-      "chair": 22374,
-      "charger": 17423,
-      "cupboard": 19304,
-      "door": 19304,
-      "face": 17520,
-      "gas_cylinder": 17423,
-      "knife": 22374,
-      "laptop": 22374,
-      "medicine_bottle": 17423,
-      "medicine_strip": 17423,
-      "monitor": 22374,
-      "passport": 17423,
-      "person": 22374,
-      "sink": 22374,
-      "stove": 19304,
-      "support_handle": 17423,
-      "toilet": 22374,
-      "walking_stick": 17423,
-      "water_bottle": 22374,
-      "wet_floor": 17423,
-      "wire": 17423
+      "bed": 5647,
+      "book": 7235,
+      "chair": 6386,
+      "charger": 595,
+      "cupboard": 2702,
+      "door": 3617,
+      "face": 1481,
+      "gas_cylinder": 1385,
+      "knife": 7576,
+      "laptop": 5810,
+      "medicine_bottle": 963,
+      "medicine_strip": 1273,
+      "monitor": 5560,
+      "passport": 725,
+      "person": 7638,
+      "sink": 6000,
+      "stove": 2529,
+      "support_handle": 1297,
+      "toilet": 5903,
+      "walking_stick": 2627,
+      "water_bottle": 5601,
+      "wet_floor": 2368,
+      "wire": 1332
     },
-    "mean_trusted_classes_per_image": 18.724
+    "mean_trusted_classes_per_image": 3.542
   },
   "policies": [
     {
@@ -53,12 +75,188 @@
       "trusted_classes": "person water_bottle knife book laptop monitor chair bed toilet sink"
     },
     {
-      "policy": "local_captures",
-      "mode": "trusted_list_with_ledger",
-      "images": 16926,
-      "trusted_count": 23,
-      "untrusted_count": 0,
-      "trusted_classes": "person face medicine_strip medicine_bottle water_bottle knife stove gas_cylinder passport book charger wire laptop monitor cupboard door chair bed toilet sink wet_floor walking_stick support_handle"
+      "policy": "local_captures/bed",
+      "mode": "per_slug_with_ledger",
+      "images": 199,
+      "trusted_count": 4,
+      "untrusted_count": 19,
+      "trusted_classes": "person chair bed sink"
+    },
+    {
+      "policy": "local_captures/book",
+      "mode": "per_slug_with_ledger",
+      "images": 1321,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "book"
+    },
+    {
+      "policy": "local_captures/bottel",
+      "mode": "per_slug_with_ledger",
+      "images": 153,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "water_bottle"
+    },
+    {
+      "policy": "local_captures/chair",
+      "mode": "per_slug_with_ledger",
+      "images": 739,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "chair"
+    },
+    {
+      "policy": "local_captures/charger",
+      "mode": "per_slug_with_ledger",
+      "images": 98,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "charger"
+    },
+    {
+      "policy": "local_captures/cupboard",
+      "mode": "per_slug_with_ledger",
+      "images": 324,
+      "trusted_count": 3,
+      "untrusted_count": 20,
+      "trusted_classes": "person cupboard door"
+    },
+    {
+      "policy": "local_captures/door",
+      "mode": "per_slug_with_ledger",
+      "images": 915,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "door"
+    },
+    {
+      "policy": "local_captures/face",
+      "mode": "per_slug_with_ledger",
+      "images": 887,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "face"
+    },
+    {
+      "policy": "local_captures/gas_cylinder",
+      "mode": "per_slug_with_ledger",
+      "images": 888,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "gas_cylinder"
+    },
+    {
+      "policy": "local_captures/knife",
+      "mode": "per_slug_with_ledger",
+      "images": 2128,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "knife"
+    },
+    {
+      "policy": "local_captures/laptop",
+      "mode": "per_slug_with_ledger",
+      "images": 362,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "laptop"
+    },
+    {
+      "policy": "local_captures/medicine_bottle",
+      "mode": "per_slug_with_ledger",
+      "images": 466,
+      "trusted_count": 4,
+      "untrusted_count": 19,
+      "trusted_classes": "person medicine_strip medicine_bottle book"
+    },
+    {
+      "policy": "local_captures/medicine_strip",
+      "mode": "per_slug_with_ledger",
+      "images": 310,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "medicine_strip"
+    },
+    {
+      "policy": "local_captures/monitor",
+      "mode": "per_slug_with_ledger",
+      "images": 112,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "monitor"
+    },
+    {
+      "policy": "local_captures/passport",
+      "mode": "per_slug_with_ledger",
+      "images": 228,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "passport"
+    },
+    {
+      "policy": "local_captures/person",
+      "mode": "per_slug_with_ledger",
+      "images": 1201,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "person"
+    },
+    {
+      "policy": "local_captures/sink",
+      "mode": "per_slug_with_ledger",
+      "images": 353,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "sink"
+    },
+    {
+      "policy": "local_captures/stove",
+      "mode": "per_slug_with_ledger",
+      "images": 151,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "stove"
+    },
+    {
+      "policy": "local_captures/support_handle",
+      "mode": "per_slug_with_ledger",
+      "images": 800,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "support_handle"
+    },
+    {
+      "policy": "local_captures/toilet",
+      "mode": "per_slug_with_ledger",
+      "images": 455,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "toilet"
+    },
+    {
+      "policy": "local_captures/walking_stick",
+      "mode": "per_slug_with_ledger",
+      "images": 2130,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "walking_stick"
+    },
+    {
+      "policy": "local_captures/wet_floor",
+      "mode": "per_slug_with_ledger",
+      "images": 1871,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "wet_floor"
+    },
+    {
+      "policy": "local_captures/wire",
+      "mode": "per_slug_with_ledger",
+      "images": 835,
+      "trusted_count": 1,
+      "untrusted_count": 22,
+      "trusted_classes": "wire"
     },
     {
       "policy": "negatives",

@@ -32,12 +32,23 @@ import logging
 from collections.abc import Mapping
 
 from src.dataset.annotation.base import AnnotationError, BackendConfig
+from src.dataset.completeness_policies import (
+    CompletenessError,
+    SlugIndex,
+    slug_for_merged_filename,
+)
 from src.dataset.manifest import MergedManifest
 
 logger = logging.getLogger(__name__)
 
 #: Policy modes whose images are targetable by L2 auto-annotation.
-TARGETABLE_MODES = ("trusted_list", "trusted_list_with_ledger")
+#: ``per_slug_with_ledger`` resolves trust per image via its slug (ADR-P5-15);
+#: the other two share one trusted set across the whole source.
+TARGETABLE_MODES = ("trusted_list", "trusted_list_with_ledger", "per_slug_with_ledger")
+
+#: Modes whose trust cannot be read from ``label_completeness`` — it is
+#: per-image, and a :class:`SlugIndex` must be supplied for the source.
+PER_SLUG_MODES = ("per_slug_with_ledger",)
 
 #: Policy modes whose images are skipped, with the reason recorded.
 SKIP_MODES: dict[str, str] = {
@@ -73,6 +84,7 @@ def build_targets(
     promptable: tuple[int, ...],
     ids_by_name: Mapping[str, int],
     verified_cells: Mapping[str, frozenset[int]] | None = None,
+    slug_indexes: Mapping[str, SlugIndex] | None = None,
 ) -> dict[str, tuple[int, ...]]:
     """Compute filename → sorted targeted class ids (empty sets omitted).
 
@@ -86,15 +98,30 @@ def build_targets(
         ids_by_name:     Taxonomy class name → id.
         verified_cells:  Filename → class ids already human-verified in the
                          ledger (those cells are supervised; never re-target).
+        slug_indexes:    Source → :class:`SlugIndex` for sources on a
+                         ``per_slug_*`` mode. Required for those sources: their
+                         trust is per image, and ``label_completeness`` records
+                         only the union.
 
     Raises:
-        AnnotationError: On an image without provenance policy coverage or an
-                         untranslatable trusted-class name.
+        AnnotationError: On an image without provenance policy coverage, an
+                         untranslatable trusted-class name, or a per-slug source
+                         with no supplied index.
+
+    Note:
+        Reading trust from ``label_completeness`` alone is what suppressed
+        candidate generation across 69.5% of the ``dataset-v0.6.0`` build: the
+        union declared every local-capture cell already trusted, so none was ever
+        targeted (ADR-P5-15). Trust here must resolve exactly as it does in
+        ``src.dataset.completeness_policies`` — if the two disagree, training
+        masks and annotation targets describe different datasets.
     """
     verified = verified_cells or {}
     promptable_set = frozenset(promptable)
+    indexes = slug_indexes or {}
 
     trusted_ids_by_source: dict[str, frozenset[int]] = {}
+    per_slug_sources: dict[str, SlugIndex] = {}
     skipped_sources: dict[str, str] = {}
     for source, trusted_names in merged_manifest.label_completeness.items():
         mode = policies.get(source)
@@ -118,6 +145,17 @@ def build_targets(
                 f"Source '{source}': merged-manifest trusted classes not in the "
                 f"taxonomy: {unknown} — re-run the merge stage or fix configs/data.yaml."
             )
+        if mode in PER_SLUG_MODES:
+            index = indexes.get(source)
+            if index is None:
+                raise AnnotationError(
+                    f"Source '{source}' uses policy mode '{mode}', whose trust is "
+                    f"per-slug, but no slug index was supplied. Reading its "
+                    f"label_completeness union instead would mark every image "
+                    f"fully trusted and target nothing — the ADR-P5-15 defect."
+                )
+            per_slug_sources[source] = index
+            continue
         trusted_ids_by_source[source] = frozenset(ids_by_name[n] for n in trusted_names)
 
     for source, reason in skipped_sources.items():
@@ -127,15 +165,22 @@ def build_targets(
     for filename, source in merged_manifest.image_provenance.items():
         if source in skipped_sources:
             continue
-        if source not in trusted_ids_by_source:
+        index = per_slug_sources.get(source)
+        if index is not None:
+            try:
+                slug = slug_for_merged_filename(index, source, filename)
+            except CompletenessError as exc:  # unresolvable slug is never a default
+                raise AnnotationError(str(exc)) from exc
+            trusted_here = frozenset(ids_by_name[n] for n in index.trusted_by_slug[slug])
+        elif source in trusted_ids_by_source:
+            trusted_here = trusted_ids_by_source[source]
+        else:
             raise AnnotationError(
                 f"Image '{filename}' is attributed to source '{source}' which has no "
                 f"resolved trusted-class set — provenance and label_completeness "
                 f"disagree; re-run the merge stage."
             )
-        remaining = (
-            promptable_set - trusted_ids_by_source[source] - verified.get(filename, frozenset())
-        )
+        remaining = promptable_set - trusted_here - verified.get(filename, frozenset())
         if remaining:
             targets[filename] = tuple(sorted(remaining))
     return targets

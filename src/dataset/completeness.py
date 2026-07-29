@@ -206,6 +206,20 @@ def _hash_input(path: Path, extra_keys: tuple[str, ...] = ()) -> dict[str, Any]:
     return record
 
 
+def _source_raw_root(raw_root: Path | None, source_cfg: Mapping[str, Any]) -> Path | None:
+    """Resolve a source's raw directory under ``raw_root``.
+
+    Takes only the basename of the configured ``output_dir`` so the caller's
+    ``raw_root`` stays authoritative — a config that says ``data/raw/foo`` must
+    not escape a ``raw_root`` pointing somewhere else (a test fixture, a
+    container checkout).
+    """
+    output_dir = source_cfg.get("output_dir")
+    if raw_root is None or not output_dir:
+        return None
+    return raw_root / Path(str(output_dir)).name
+
+
 def build_completeness(
     merged_manifest_path: Path,
     processed_images_root: Path,
@@ -213,6 +227,7 @@ def build_completeness(
     data_yaml_path: Path,
     sources_yaml_path: Path,
     capture_manifests_dir: Path | None,
+    raw_root: Path | None = None,
 ) -> dict[str, Any]:
     """Build the per-image completeness artifact from pipeline outputs.
 
@@ -224,6 +239,10 @@ def build_completeness(
         sources_yaml_path:     configs/dataset_sources.yaml (must contain the
                                top-level ``completeness:`` policy section).
         capture_manifests_dir: data/raw/custom_captures/manifests, or None.
+        raw_root:              data/raw, or None. Per-slug policies read their
+                               trusted sets from
+                               ``raw_root/<sources.<source>.output_dir basename>``
+                               (ADR-P5-15); sources on other policy modes ignore it.
 
     Returns:
         The artifact dict (see module docstring / ADR-P4-03 for the schema).
@@ -343,6 +362,7 @@ def build_completeness(
             nc=nc,
             capture_manifests_dir=capture_manifests_dir,
             verification_ledger=ledger_view,
+            source_raw_root=_source_raw_root(raw_root, source_cfg),
         )
         provider = get_policy_provider(policy_modes[source])
         resolved = provider.resolve_policies(ctx)
