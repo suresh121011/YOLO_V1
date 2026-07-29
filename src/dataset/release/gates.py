@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -382,6 +383,13 @@ def git_tags_at_head(repo_root: str = ".") -> list[str]:
 
 # ─── RG6: dvc push executed + dvc status -c clean ─────────────────────────────
 
+#: Prefix marking "the check could not run", as opposed to "the check ran and
+#: found pending objects". Both are FAIL; they need different remediation.
+DVC_STATUS_UNAVAILABLE = "<dvc status unavailable"
+#: `python -m <missing module>` exits 1, same as a dirty `dvc status -c`, so the
+#: stderr text is what distinguishes them.
+NO_MODULE_EXIT_CODE = 1
+
 
 def rg6_dvc_push_verified(dvc_status_cache_output: str, exit_code: int = 0) -> GateResult:
     """Cache and remote are in sync — judged by BOTH output and exit code.
@@ -400,6 +408,17 @@ def rg6_dvc_push_verified(dvc_status_cache_output: str, exit_code: int = 0) -> G
     """
     if exit_code != 0:
         detail = dvc_status_cache_output.strip()[:200] or f"exit code {exit_code}"
+        # Still a FAIL — a gate that cannot run must never read as green — but
+        # say which failure it is. "run `dvc push`" sends an operator to push a
+        # cache that is already in sync when the real fault is a missing dvc.
+        if dvc_status_cache_output.startswith(DVC_STATUS_UNAVAILABLE):
+            return GateResult(
+                "RG6",
+                "dvc-push-verified",
+                GATE_STATUS_FAIL,
+                f"could not run `dvc status -c`, so push state is unknown "
+                f"— gate fails closed: {detail}",
+            )
         return GateResult(
             "RG6",
             "dvc-push-verified",
@@ -424,18 +443,30 @@ def dvc_status_cache(repo_root: str = ".") -> tuple[str, int]:
     A failure to invoke dvc at all returns a non-zero code so the gate fails
     closed rather than reading an empty string as "in sync".
     """
-    try:
-        out = subprocess.run(
-            ["dvc", "status", "-c", "--quiet"],
-            capture_output=True,
-            text=True,
-            timeout=60,
-            check=False,
-            cwd=repo_root,
-        )
+    # `-m dvc` under the *running* interpreter first: `python .venv/…/python.exe
+    # script.py` does not put the venv's Scripts/ on PATH, so a bare "dvc" is
+    # not found and the gate failed closed citing "pending objects" when the
+    # cache was in fact in sync. Bare "dvc" stays as the fallback for installs
+    # where the module entry point is unavailable.
+    errors: list[str] = []
+    for argv in ([sys.executable, "-m", "dvc"], ["dvc"]):
+        try:
+            out = subprocess.run(
+                [*argv, "status", "-c", "--quiet"],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                check=False,
+                cwd=repo_root,
+            )
+        except (OSError, subprocess.SubprocessError) as e:
+            errors.append(f"{argv[0]}: {e}")
+            continue
+        if out.returncode == NO_MODULE_EXIT_CODE and "No module named" in out.stderr:
+            errors.append(f"{argv[0]}: {out.stderr.strip()[:80]}")
+            continue
         return out.stdout, out.returncode
-    except (OSError, subprocess.SubprocessError) as e:
-        return f"<dvc status unavailable: {e}>", 1
+    return f"{DVC_STATUS_UNAVAILABLE}: {'; '.join(errors)}>", 1
 
 
 # ─── RG7: license gate ─────────────────────────────────────────────────────────
