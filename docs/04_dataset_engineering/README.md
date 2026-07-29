@@ -160,10 +160,17 @@ The taxonomy includes direct PII/health signals: `passport` (ID document),
   | `storage` | `s3://elderly-assistant-mlops-329117470647-ap-south-1-an/datasets/yolo_v1` (`ap-south-1`) | Off-site copy. Explicit: `dvc push -r storage`. |
 
   **Activated 2026-07-27 — risk C-1 (single-copy dataset) is CLOSED.** The first
-  `dvc push -r storage` uploaded **46,337 objects / 6.21 GB**; `dvc status -c -r storage`
-  reports *"Cache and remote are in sync"*. The bucket is `ap-south-1` with SSE-AES256
-  default encryption and **versioning enabled**, so an accidental `dvc gc` or overwrite
-  stays recoverable.
+  `dvc push -r storage` uploaded **46,337 objects / 6.21 GB**. After the full-mode
+  rebuild (Phase E, 24,352 images) the bucket holds **68,301 objects / 7.82 GB**
+  (measured 2026-07-29), and `dvc status -c` exits **0** against both remotes.
+  The bucket is `ap-south-1` with SSE-AES256 default encryption, **versioning
+  enabled**, and all four public-access blocks on, so an accidental `dvc gc` or
+  overwrite stays recoverable.
+
+  Judge that check by its **exit code**, never its stdout: `dvc status -c --quiet`
+  is documented to write nothing to stdout and signal via exit status, and reading
+  stdout alone is what made RG6 unfalsifiable — it certified "in sync" over 21,964
+  un-pushed objects.
 
   To use the remotes from a fresh clone:
   1. `pip install "dvc[s3]"` — the S3 extra is already in the project dependencies.
@@ -176,13 +183,21 @@ The taxonomy includes direct PII/health signals: `passport` (ID document),
      dataset release (definition of done).
   4. Gate check: on any clean machine, `dvc pull && dvc repro qa_check` must succeed —
      see `reproduction_log.md` in this directory for executed reproduction tests.
+     **Executed 2026-07-29 (Phase F2/F3)** in a clean Linux container: 67,734 files
+     fetched from S3, `qa_check` rc=0, regenerated report identical to the
+     Windows-built one. Known caveat recorded there: `dvc pull` itself exits **1**
+     because `record_release` and `evaluate_yolo11n` are declared in `dvc.yaml` but
+     have never run, so `dvc pull` tries to check out outs that do not exist. All
+     data transfers correctly; do not paper over the exit code.
 
   For S3-compatible providers (R2/B2/MinIO), point the URL elsewhere with
   `dvc remote modify storage url s3://<bucket>/<prefix>` and set `endpointurl`.
 
-  Note the cache holds more objects than S3 (67,578 vs 46,337): `dvc push` uploads only
-  what the current `dvc.lock` references, while the cache also retains orphans from
-  superseded builds. `dvc gc` reclaims them — it is destructive, so run it deliberately.
+  The cache holds more objects than any one build needs: `dvc push` uploads only what
+  the current `dvc.lock` references (**67,734** objects, verified by
+  `scripts/qa/verify_lock_objects.py`), while the cache also retains orphans from
+  superseded builds. `dvc gc` reclaims them — it is destructive and the superseded
+  objects are still referenced by earlier commits, so run it deliberately.
 - **Custom captures and the eval set enter DVC as `frozen: true` stages**
   (`ingest_custom_captures`, `ingest_eval_set` in `dvc.yaml`), not as normal
   stages with the capture inbox as a dependency. A normal stage was rejected:

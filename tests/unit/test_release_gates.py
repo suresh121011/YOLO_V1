@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+from unittest import mock
 
 import pytest
 import yaml
 
+from src.dataset.release import gates
 from src.dataset.release.gates import (
     ALL_GATE_IDS,
     GATE_STATUS_FAIL,
@@ -191,8 +195,67 @@ class TestRg6DvcPushVerified:
         result = rg6_dvc_push_verified("<dvc status unavailable: boom>", exit_code=1)
         assert result.status == GATE_STATUS_FAIL
 
+    def test_unavailable_dvc_is_not_reported_as_pending_objects(self) -> None:
+        """Fail closed, but for the right reason.
+
+        Running the release check as ``.venv/Scripts/python.exe 18_make_release.py``
+        leaves the venv's ``Scripts/`` off PATH, so a bare ``dvc`` is not found.
+        RG6 then failed citing "reports pending objects — run `dvc push`" over a
+        cache that was fully in sync, which is remediation advice for a fault
+        that does not exist.
+        """
+        result = rg6_dvc_push_verified("<dvc status unavailable: boom>", exit_code=1)
+        assert "push state is unknown" in result.details
+        assert "run `dvc push`" not in result.details
+
+    def test_real_pending_objects_still_say_dvc_push(self) -> None:
+        """The opposite direction — don't lose the advice that is correct."""
+        assert "run `dvc push`" in rg6_dvc_push_verified("", exit_code=1).details
+
     def test_clean_exit_with_empty_output_still_passes(self) -> None:
         assert rg6_dvc_push_verified("", exit_code=0).status == GATE_STATUS_PASS
+
+
+class TestDvcStatusCacheInvocation:
+    """``dvc_status_cache`` must find dvc in the running interpreter's env."""
+
+    def test_prefers_module_invocation_under_current_interpreter(self) -> None:
+        """`-m dvc` works when PATH does not carry the venv's Scripts/."""
+        calls: list[list[str]] = []
+
+        def fake_run(argv: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+            calls.append(argv)
+            return subprocess.CompletedProcess(argv, 0, "", "")
+
+        with mock.patch.object(gates.subprocess, "run", fake_run):
+            out, code = gates.dvc_status_cache(".")
+
+        assert (out, code) == ("", 0)
+        assert calls[0][:3] == [sys.executable, "-m", "dvc"]
+
+    def test_falls_back_to_path_dvc_when_module_is_absent(self) -> None:
+        calls: list[list[str]] = []
+
+        def fake_run(argv: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+            calls.append(argv)
+            if argv[0] == sys.executable:
+                return subprocess.CompletedProcess(argv, 1, "", "No module named dvc")
+            return subprocess.CompletedProcess(argv, 0, "", "")
+
+        with mock.patch.object(gates.subprocess, "run", fake_run):
+            _, code = gates.dvc_status_cache(".")
+
+        assert code == 0
+        assert [c[0] for c in calls] == [sys.executable, "dvc"]
+
+    def test_both_invocations_failing_reports_unavailable(self) -> None:
+        with mock.patch.object(gates.subprocess, "run", side_effect=OSError("nope")):
+            out, code = gates.dvc_status_cache(".")
+
+        assert code == 1
+        assert out.startswith(gates.DVC_STATUS_UNAVAILABLE)
+        # And that string is exactly what RG6 keys off to phrase its advice.
+        assert "push state is unknown" in rg6_dvc_push_verified(out, code).details
 
 
 # ─── RG7 ───────────────────────────────────────────────────────────────────────

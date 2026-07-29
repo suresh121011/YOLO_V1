@@ -233,7 +233,7 @@ def main(argv: list[str] | None = None) -> int:
     skip = set() if args.include_uncached else uncached_outs(args.dvc_yaml)
     result = sweep(args.lock, cache, args.remote, deep=not args.no_deep, skip_paths=skip)
 
-    print(f"dvc.lock object sweep — {args.lock}")
+    print(f"dvc.lock object sweep - {args.lock}")
     print(f"  cache : {cache}")
     print(f"  remote: {args.remote or '(not checked)'}")
     print(f"  objects checked: {result.checked}")
@@ -262,7 +262,11 @@ def main(argv: list[str] | None = None) -> int:
             encoding="utf-8",
             newline="\n",
         )
-        print(f"\n  report → {args.json}")
+        # ASCII only: this runs on a Windows console whose stdout encoding is
+        # cp1252, which has no mapping for U+2192. The traceback landed *after*
+        # the report was written, so a caller judging by exit code read a
+        # successful sweep as a failure.
+        print(f"\n  report -> {args.json}")
 
     if result.ok:
         print("\nPASS: every dvc.lock hash resolves to a real object.")
