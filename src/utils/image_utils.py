@@ -67,7 +67,11 @@ def validate_image(path: Path) -> tuple[bool, str]:
                 w, h = img.size
                 if w < MIN_IMAGE_DIM or h < MIN_IMAGE_DIM:
                     return False, f"Image too small ({w}×{h}) — minimum {MIN_IMAGE_DIM}px"
-            return True, ""
+            # PIL reading it is NOT sufficient. PIL supports formats OpenCV does
+            # not, and every consumer of this dataset — ultralytics training and
+            # L2 auto-annotation — decodes through OpenCV. A PIL-only check
+            # therefore certifies images the pipeline cannot open.
+            return _decodable_by_opencv(path)
         except UnidentifiedImageError:
             return False, f"PIL cannot identify image format: {path.name}"
         except Exception as e:
@@ -79,6 +83,43 @@ def validate_image(path: Path) -> tuple[bool, str]:
 
     # OpenCV fallback
     return _validate_with_opencv(path)
+
+
+def _decodable_by_opencv(path: Path) -> tuple[bool, str]:
+    """Confirm OpenCV can actually decode the bytes, the way consumers do.
+
+    Decodes from an in-memory buffer rather than calling ``cv2.imread``, which
+    goes through the Windows ANSI file APIs and returns None for any path
+    containing non-ASCII characters. This dataset has 88 such images (Thai and
+    French filenames in the local_captures person/stove slugs); they are
+    perfectly valid, and ``cv2.imread`` would condemn all of them. Ultralytics
+    decodes from bytes too, so this mirrors what training really does.
+
+    What it does catch: a file whose *content* OpenCV cannot decode at all. The
+    dataset carries one — an AVIF image saved with a ``.jpg`` extension, which
+    PIL opens happily and OpenCV cannot read in either mode. It crashed the L2
+    auto-annotation run 10,000 images in, while `corrupted_images` read 0.
+    """
+    try:
+        import cv2
+        import numpy as np
+    except ImportError:
+        logger.debug("OpenCV/numpy unavailable — skipping the decodability check")
+        return True, ""
+
+    try:
+        buf = np.fromfile(path, dtype=np.uint8)
+    except OSError as e:
+        return False, f"Cannot read bytes of {path.name}: {e}"
+    if buf.size == 0:
+        return False, f"File is empty (0 bytes): {path.name}"
+    if cv2.imdecode(buf, cv2.IMREAD_COLOR) is None:
+        return False, (
+            f"OpenCV cannot decode {path.name} — PIL reads it, so the file is not "
+            f"truncated, but its encoding is unsupported by the decoder every "
+            f"consumer uses (check for AVIF/HEIF content saved with a .jpg name)."
+        )
+    return True, ""
 
 
 def _validate_with_opencv(path: Path) -> tuple[bool, str]:

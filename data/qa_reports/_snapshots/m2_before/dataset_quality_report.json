@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-29T14:48:21Z",
+  "generated_at": "2026-07-29T11:23:22Z",
   "generator": {
     "script": "scripts/dataset/17_dataset_quality_report.py"
   },
@@ -53,11 +53,11 @@
     "masked_cell_fraction": 0.846
   },
   "coverage_summary": {
-    "residual_missing_total": 5221.65,
-    "unknown_objects_total": 14919,
-    "mean_completeness": 0.9107,
-    "p10_completeness": 0.7407,
-    "images_below_0_5": 679
+    "residual_missing_total": 2370.55,
+    "unknown_objects_total": 6773,
+    "mean_completeness": 0.9677,
+    "p10_completeness": 0.8955,
+    "images_below_0_5": 331
   },
   "per_class_risk": {
     "person": {
@@ -70,11 +70,11 @@
     },
     "face": {
       "annotated_instances": 4110,
-      "unverified_candidates": 4815,
+      "unverified_candidates": 915,
       "verified_present": 0,
       "verified_absent": 0,
-      "residual_missing_estimate": 1685.25,
-      "coverage_score": 0.7092
+      "residual_missing_estimate": 320.25,
+      "coverage_score": 0.9277
     },
     "medicine_strip": {
       "annotated_instances": 2741,
@@ -86,11 +86,11 @@
     },
     "medicine_bottle": {
       "annotated_instances": 786,
-      "unverified_candidates": 634,
+      "unverified_candidates": 163,
       "verified_present": 0,
       "verified_absent": 0,
-      "residual_missing_estimate": 221.9,
-      "coverage_score": 0.7798
+      "residual_missing_estimate": 57.05,
+      "coverage_score": 0.9323
     },
     "water_bottle": {
       "annotated_instances": 1313,
@@ -142,19 +142,19 @@
     },
     "charger": {
       "annotated_instances": 110,
-      "unverified_candidates": 2304,
+      "unverified_candidates": 1719,
       "verified_present": 0,
       "verified_absent": 0,
-      "residual_missing_estimate": 806.4,
-      "coverage_score": 0.12
+      "residual_missing_estimate": 601.65,
+      "coverage_score": 0.1546
     },
     "wire": {
       "annotated_instances": 835,
-      "unverified_candidates": 15,
+      "unverified_candidates": 0,
       "verified_present": 0,
       "verified_absent": 0,
-      "residual_missing_estimate": 5.25,
-      "coverage_score": 0.9938
+      "residual_missing_estimate": 0.0,
+      "coverage_score": 1.0
     },
     "laptop": {
       "annotated_instances": 1370,
@@ -174,11 +174,11 @@
     },
     "cupboard": {
       "annotated_instances": 4306,
-      "unverified_candidates": 7151,
+      "unverified_candidates": 3976,
       "verified_present": 0,
       "verified_absent": 0,
-      "residual_missing_estimate": 2502.85,
-      "coverage_score": 0.6324
+      "residual_missing_estimate": 1391.6,
+      "coverage_score": 0.7558
     },
     "door": {
       "annotated_instances": 2770,

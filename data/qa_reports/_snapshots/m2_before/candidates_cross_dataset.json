@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-28T05:59:33Z",
+  "generator": {
+    "script": "scripts/dataset/12_auto_annotate.py",
+    "git_commit": "844618b"
+  },
+  "run_id": "cross_dataset_844618b_a9bb6237",
+  "backend": "cross_dataset",
+  "model": {
+    "backend": "cross_dataset",
+    "weights_path": "",
+    "weights_sha256": "",
+    "library_versions": {},
+    "device": "",
+    "prompt_fingerprint": "sha256:a9bb623776f443843666207a1a32b4d8ef6df40c0fa925967d59967212bcf2b4"
+  },
+  "taxonomy_fingerprint": "sha256:a831924bb82e23ffbc6cc1d56647a78cc72ff5e329920569b05bd5ae99c2f125",
+  "inputs": {
+    "images_root": "data\\merged\\images",
+    "merged_manifest_sha256": "a8dd487e573c6bc1b24f482ea78b37108746431da7d911013f2d3f2ecf2c6a2c",
+    "ledger_sha256": "f5d143eb962c513127bec505af241b3e2e7113d0711f738ca2519fec6abaef61"
+  },
+  "determinism": {
+    "seed": 0,
+    "deterministic_algorithms": true,
+    "image_order": "sorted"
+  },
+  "stats": {
+    "images_processed": 6929,
+    "detections_total": 5,
+    "per_class": {
+      "cupboard": 5
+    },
+    "runtime_s": 3.447
+  }
+}

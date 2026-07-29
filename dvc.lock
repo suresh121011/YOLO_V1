@@ -735,15 +735,24 @@ stages:
       md5: 910ee3304260f5370af8699cd071bf9f.dir
       size: 5606363091
       nfiles: 48706
+    - path: data/raw/local_captures
+      hash: md5
+      md5: f88ecc80c2375d81543bae123a20bade.dir
+      size: 6772740321
+      nfiles: 52748
     - path: scripts/dataset/12_auto_annotate.py
       hash: md5
-      md5: 8a1e703c809adf845edcaf1686796841
-      size: 14270
+      md5: 8f65185aa3d09b0a5f72ac3632284273
+      size: 15441
     - path: src/dataset/annotation
       hash: md5
-      md5: 992be08e682ad2c0ffb084360969654a.dir
-      size: 175992
+      md5: fe50244f6186c488c5569b0999fa8670.dir
+      size: 181089
       nfiles: 22
+    - path: src/dataset/completeness_policies.py
+      hash: md5
+      md5: e670acd7ab2b3bf0edbb5f5379e17157
+      size: 28994
     params:
       configs/annotation.yaml:
         auto_annotation:
@@ -878,11 +887,22 @@ stages:
             - medicine_bottle
             - cupboard
             - face
+      configs/dataset_sources.yaml:
+        completeness:
+          ledger_path: data/annotation/verification_ledger.json
+          policies:
+            coco: trusted_list_with_ledger
+            openimages: trusted_list_with_ledger
+            roboflow: trusted_list_with_ledger
+            wider_face: trusted_list_with_ledger
+            negatives: verified_absence_all
+            custom_captures: per_session
+            local_captures: per_slug_with_ledger
     outs:
     - path: data/annotation/candidates
       hash: md5
-      md5: f4922cb1e44c675ac606e45634459556.dir
-      size: 4148415
+      md5: d285f52298d0e17066933f90705f1b82.dir
+      size: 13592083
       nfiles: 2
   build_verification_batches:
     cmd: python scripts/dataset/13_build_verification_batches.py
@@ -944,8 +964,8 @@ stages:
       size: 2254
     - path: data/annotation/candidates
       hash: md5
-      md5: f4922cb1e44c675ac606e45634459556.dir
-      size: 4148415
+      md5: d285f52298d0e17066933f90705f1b82.dir
+      size: 13592083
       nfiles: 2
     - path: data/annotation/verification_ledger.json
       hash: md5
@@ -1109,8 +1129,8 @@ stages:
     outs:
     - path: data/qa_reports/coverage_report.json
       hash: md5
-      md5: 6e120a15ce80e19905b4a3835e8fd3db
-      size: 3615965
+      md5: f82f83c62bc7beec57e9fdab1bc7285a
+      size: 3635574
   dataset_quality_report:
     cmd: python scripts/dataset/17_dataset_quality_report.py
     deps:
@@ -1137,8 +1157,8 @@ stages:
       size: 3319237
     - path: data/qa_reports/coverage_report.json
       hash: md5
-      md5: 6e120a15ce80e19905b4a3835e8fd3db
-      size: 3615965
+      md5: f82f83c62bc7beec57e9fdab1bc7285a
+      size: 3635574
     - path: data/raw/custom_captures/manifests
       hash: md5
       md5: d751713988987e9331980363e24189ce.dir
@@ -1155,8 +1175,8 @@ stages:
     outs:
     - path: data/qa_reports/dataset_quality_report.json
       hash: md5
-      md5: 3635a37dea8c7c7d97af706db119a248
-      size: 7134
+      md5: 38308d73960c435336b68a9758e7c04c
+      size: 7140
   ingest_local_zips:
     cmd: python scripts/dataset/20_ingest_local_zips.py --validate
     deps:

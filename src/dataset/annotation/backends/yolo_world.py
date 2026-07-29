@@ -138,6 +138,47 @@ class YoloWorldBackend(AutoAnnotator):
             f"yolo_world loaded: {weights.name} ({len(prompt_strings)} prompts, device={device})"
         )
 
+    def _predict(self, source: Any) -> Any:
+        """One deterministic prediction over a path or a decoded BGR array."""
+        if self._model is None or self._config is None:
+            raise RuntimeError("YoloWorldBackend.load() must be called before annotate()")
+        return self._model.predict(
+            source=source,
+            imgsz=self._config.imgsz,
+            conf=self._config.conf_floor,
+            iou=self._config.iou,
+            agnostic_nms=self._config.agnostic_nms,
+            max_det=self._config.max_det,
+            device=self._device,
+            verbose=False,
+        )
+
+    @staticmethod
+    def _decode_fallback(image_path: Path) -> Any:
+        """Decode via PIL and return a BGR array for OpenCV-undecodable files.
+
+        Determinism is preserved: this is a pure decode of the same bytes, and
+        prediction runs with the identical settings — only the decoder differs.
+
+        Raises:
+            AnnotationError: If PIL cannot decode it either.
+        """
+        try:
+            import numpy as np
+            from PIL import Image
+
+            with Image.open(image_path) as img:
+                rgb = np.asarray(img.convert("RGB"))
+        except Exception as e:  # noqa: BLE001 — any decode failure is terminal here
+            raise AnnotationError(
+                f"Neither OpenCV nor PIL can decode {image_path.name}: {e}"
+            ) from e
+        logger.warning(
+            f"{image_path.name}: OpenCV could not decode it; annotated via a PIL "
+            f"fallback. Re-encode this file at its source — QA flags it as corrupt."
+        )
+        return rgb[:, :, ::-1]  # RGB -> BGR, the layout ultralytics expects
+
     def annotate(self, image_path: Path, target_class_ids: tuple[int, ...]) -> list[Detection]:
         """Run one deterministic prediction and map/filter detections.
 
@@ -151,16 +192,27 @@ class YoloWorldBackend(AutoAnnotator):
         if self._model is None or self._config is None or not self._prompt_class_ids:
             raise RuntimeError("YoloWorldBackend.load() must be called before annotate()")
 
-        results = self._model.predict(
-            source=str(image_path),
-            imgsz=self._config.imgsz,
-            conf=self._config.conf_floor,
-            iou=self._config.iou,
-            agnostic_nms=self._config.agnostic_nms,
-            max_det=self._config.max_det,
-            device=self._device,
-            verbose=False,
-        )
+        results = self._predict(str(image_path))
+        if not results:
+            # Ultralytics returns an EMPTY LIST — not an empty result — when its
+            # OpenCV decoder cannot read the file, after logging "Image Read
+            # Error". Indexing it raised IndexError and killed a 23,855-image
+            # run at image 10,000, ~50 GPU-minutes in, writing no artifact.
+            #
+            # Returning [] here would be worse than crashing: "no detections" is
+            # indistinguishable from "looked and found nothing", so an unreadable
+            # image would silently register as fully covered. Instead decode it
+            # ourselves — PIL supports formats OpenCV does not (the dataset has
+            # one AVIF image saved as .jpg) — and re-predict on the array, so the
+            # image is genuinely annotated rather than skipped.
+            results = self._predict(self._decode_fallback(image_path))
+            if not results:
+                raise AnnotationError(
+                    f"Backend '{self._config.name}' got no result for "
+                    f"{image_path.name} even after decoding it directly. The file "
+                    f"is unusable by this pipeline — re-encode or remove it; "
+                    f"`python scripts/qa/check_annotations.py` lists every such image."
+                )
         targets = set(target_class_ids)
         detections: list[Detection] = []
         boxes = results[0].boxes
