@@ -3,15 +3,53 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
+from unittest import mock
 
 import pytest
 import yaml
 
+from src.dataset.release import manifest as manifest_module
 from src.dataset.release.gates import GateResult, ReleaseReport
 from src.dataset.release.manifest import ReleaseManifest, build_release_manifest
 
 pytestmark = pytest.mark.unit
+
+
+class TestDvcVersionCapture:
+    """`reproducibility.dvc` records the tool that defines the pipeline."""
+
+    def test_prefers_module_invocation_under_current_interpreter(self) -> None:
+        """`.venv/Scripts/python.exe script.py` leaves a bare `dvc` off PATH.
+
+        The first dataset-v0.6.0 manifest was written with `"dvc": "unknown"`
+        for exactly this reason — in the block whose only job is reproducibility
+        metadata.
+        """
+        calls: list[list[str]] = []
+
+        def fake_run(argv: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+            calls.append(argv)
+            return subprocess.CompletedProcess(argv, 0, "DVC version: 3.67.1\n", "")
+
+        with mock.patch.object(manifest_module.subprocess, "run", fake_run):
+            assert manifest_module._dvc_version() == "DVC version: 3.67.1"
+        assert calls[0][:3] == [sys.executable, "-m", "dvc"]
+
+    def test_falls_back_to_path_dvc(self) -> None:
+        def fake_run(argv: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+            if argv[0] == sys.executable:
+                return subprocess.CompletedProcess(argv, 1, "", "No module named dvc")
+            return subprocess.CompletedProcess(argv, 0, "DVC version: 3.67.1\n", "")
+
+        with mock.patch.object(manifest_module.subprocess, "run", fake_run):
+            assert manifest_module._dvc_version() == "DVC version: 3.67.1"
+
+    def test_reports_unknown_only_when_nothing_works(self) -> None:
+        with mock.patch.object(manifest_module.subprocess, "run", side_effect=OSError("nope")):
+            assert manifest_module._dvc_version() == "unknown"
 
 
 def _write(path: Path, content: str) -> Path:

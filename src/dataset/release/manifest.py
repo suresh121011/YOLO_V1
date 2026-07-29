@@ -31,14 +31,28 @@ RELEASE_MANIFEST_FILENAME = "release_manifest.json"
 
 
 def _dvc_version() -> str:
-    """Best-effort ``dvc --version`` output (never raises)."""
-    try:
-        out = subprocess.run(
-            ["dvc", "--version"], capture_output=True, text=True, timeout=15, check=True
-        )
-        return out.stdout.strip()
-    except (OSError, subprocess.SubprocessError):
-        return "unknown"
+    """Best-effort ``dvc --version``, via the running interpreter first.
+
+    A bare ``dvc`` is not on PATH when the release script is invoked as
+    ``.venv/Scripts/python.exe 18_make_release.py`` — the venv's ``Scripts/``
+    is only added by activation. The first ``dataset-v0.6.0`` manifest was
+    written recording ``"dvc": "unknown"`` for the tool that defines the whole
+    pipeline, in the block whose entire purpose is reproducibility metadata.
+    Same root cause as the RG6 misattribution; this is the other site.
+
+    Still never raises — but it exhausts the invocations that can work before
+    giving up.
+    """
+    for argv in ([sys.executable, "-m", "dvc"], ["dvc"]):
+        try:
+            out = subprocess.run(
+                [*argv, "--version"], capture_output=True, text=True, timeout=15, check=False
+            )
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if out.returncode == 0 and out.stdout.strip():
+            return out.stdout.strip()
+    return "unknown"
 
 
 def _hash_if_exists(path: Path) -> str:
