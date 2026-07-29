@@ -156,6 +156,12 @@ addopts = [
     "--tb=short",
     "--strict-markers",
     "--color=yes",
+    # Report skip/xfail reasons in the summary. Several guards are data-dependent
+    # — test_completeness_policy_granularity.py reads data/raw/local_captures,
+    # which is DVC-tracked, not in git — so they skip in CI while a green run
+    # reads as "everything checked". A skipped guard is an unchecked guard; make
+    # CI say which ones did not run and why.
+    "-ra",
 ]
 markers = [
     "unit: Unit tests (fast, no I/O)",
