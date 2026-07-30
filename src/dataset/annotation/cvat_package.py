@@ -43,11 +43,16 @@ def build_cvat_labels_spec(class_names_by_id: Mapping[int, str]) -> list[dict[st
     array"``. That client-side failure is what surfaces as the opaque
     ``labels: [object Object]`` task-creation error and the ``POST /api/tasks``
     ``400`` — a bare ``{"name": ...}`` object is NOT a valid Raw-editor label.
-    ``name`` is the only server-required field, but the browser never lets a
-    bare-name list reach the server. ``color``/``type`` stay unset so CVAT
-    assigns its defaults (auto colour, ``type: "any"`` = all draw tools).
+    ``type`` is set to ``"rectangle"`` explicitly: CVAT 2.5.14's Raw editor
+    surfaces a missing ``type`` field as ``"unknown label type 'undefined'"``
+    in the UI, which causes task creation to silently fail even though
+    ``attributes`` is present. Pinning ``rectangle`` is safe — all verification
+    boxes are axis-aligned bounding boxes.
     """
-    return [{"name": class_names_by_id[i], "attributes": []} for i in sorted(class_names_by_id)]
+    return [
+        {"name": class_names_by_id[i], "type": "rectangle", "attributes": []}
+        for i in sorted(class_names_by_id)
+    ]
 
 
 def build_preannotation_labels(
