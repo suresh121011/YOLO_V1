@@ -8,7 +8,7 @@ Imports one verification batch's CVAT "YOLO 1.1" export (M2, D4). Reuses
 Phase-3 capture sessions use, not a second implementation.
 
 Per batch:
-  (a) hard-fails if any NON-target-class line differs (byte-wise) from the
+  (a) hard-fails if any NON-target-class line differs (beyond float rounding) from the
       base merged label — the one check that catches accidental edits to
       already-trusted labels a reviewer was never supposed to touch;
   (b) deltas = exported boxes whose class is in the batch's target_classes;
@@ -50,6 +50,36 @@ class ImportResult:
     problems: list[str] = field(default_factory=list)
 
 
+# Maximum per-coordinate absolute difference tolerated when comparing
+# non-target labels.  CVAT exports at 6 decimal places; the base merged
+# labels store full Python float precision.  The same physical box
+# therefore looks byte-different even when no reviewer touched it.
+# 1e-4 (= 0.0001 in normalised coords) is ~0.1 px on a 1000-px image —
+# well below any meaningful edit, and far above the ≤5e-7 rounding error
+# introduced by CVAT's 6-decimal truncation.
+_COORD_TOLERANCE: float = 1e-4
+
+
+def _annotations_equivalent(a_line: str, b_line: str) -> bool:
+    """Return True when two YOLO label lines describe the same box within
+    ``_COORD_TOLERANCE``, regardless of floating-point precision."""
+    a = parse_yolo_line(a_line)
+    b = parse_yolo_line(b_line)
+    if a is None or b is None:
+        return a_line.strip() == b_line.strip()
+    if a.class_id != b.class_id:
+        return False
+    return all(
+        abs(av - bv) <= _COORD_TOLERANCE
+        for av, bv in [
+            (a.cx, b.cx),
+            (a.cy, b.cy),
+            (a.w, b.w),
+            (a.h, b.h),
+        ]
+    )
+
+
 def check_non_target_labels_unchanged(
     filename: str,
     export_lines: list[str],
@@ -58,10 +88,13 @@ def check_non_target_labels_unchanged(
 ) -> list[str]:
     """Compare non-target-class lines between the export and the base label.
 
-    Order-independent (CVAT's exporter does not promise line order), but
-    byte-exact per line — catches a reviewer editing a box outside the
-    batch's target classes, which must never happen (those boxes are
-    already trusted; the reviewer's mandate is the target classes only).
+    Order-independent (CVAT's exporter does not promise line order).
+    Coordinate values are compared within ``_COORD_TOLERANCE`` rather than
+    byte-exactly, because CVAT exports at 6 decimal places while the base
+    merged labels store full Python float precision — the same physical box
+    would otherwise always fail the check even when no reviewer touched it.
+    A genuine edit (moved/resized box) changes coordinates by far more than
+    the tolerance and is still caught.
 
     Args:
         filename:          Image filename (for the problem message).
@@ -82,11 +115,29 @@ def check_non_target_labels_unchanged(
             ann = parse_yolo_line(line)
             if ann is not None and ann.class_id not in target_class_ids:
                 kept.append(line)
-        return sorted(kept)
+        return kept
 
     base_non_target = _non_target(base_lines)
     export_non_target = _non_target(export_lines)
-    if base_non_target != export_non_target:
+
+    if len(base_non_target) != len(export_non_target):
+        return [
+            f"{filename}: non-target-class labels differ from the base merged label — a "
+            f"reviewer edited a trusted box outside this batch's target classes "
+            f"({len(base_non_target)} base non-target line(s) vs {len(export_non_target)} "
+            f"in the export). Revert the accidental edit before re-importing."
+        ]
+
+    # Sort both lists by class_id then raw text so order-independent matching
+    # works even when CVAT reorders lines.
+    base_sorted = sorted(base_non_target, key=lambda l: (parse_yolo_line(l).class_id if parse_yolo_line(l) else -1, l))
+    export_sorted = sorted(export_non_target, key=lambda l: (parse_yolo_line(l).class_id if parse_yolo_line(l) else -1, l))
+
+    mismatches = [
+        (b, e) for b, e in zip(base_sorted, export_sorted)
+        if not _annotations_equivalent(b, e)
+    ]
+    if mismatches:
         return [
             f"{filename}: non-target-class labels differ from the base merged label — a "
             f"reviewer edited a trusted box outside this batch's target classes "

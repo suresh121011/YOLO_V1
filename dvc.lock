@@ -917,13 +917,13 @@ stages:
     outs:
     - path: data/annotation/verification_ledger.json
       hash: md5
-      md5: 7db92f1d0ace8eacfe1e528454ae331c
-      size: 173
+      md5: 969a6d18ca0b57f953befb06b8edba70
+      size: 6780
     - path: data/annotation/verified_labels
       hash: md5
-      md5: d751713988987e9331980363e24189ce.dir
-      size: 0
-      nfiles: 0
+      md5: fc6073c1fd22be26247f21a8b91795ce.dir
+      size: 195
+      nfiles: 2
   apply_verified_labels:
     cmd: python scripts/dataset/15_apply_verified_labels.py
     deps:

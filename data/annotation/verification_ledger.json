@@ -1,11 +1,244 @@
 {
   "schema_version": 1,
-  "taxonomy_fingerprint": "",
-  "updated_at": "",
-  "entries": {},
+  "taxonomy_fingerprint": "sha256:a831924bb82e23ffbc6cc1d56647a78cc72ff5e329920569b05bd5ae99c2f125",
+  "updated_at": "2026-07-30T19:44:48+00:00",
+  "entries": {
+    "coco_000000210809.jpg": {
+      "source": "coco",
+      "classes": {
+        "medicine_bottle": {
+          "status": "verified_absent",
+          "boxes": []
+        },
+        "wire": {
+          "status": "verified_absent",
+          "boxes": []
+        },
+        "cupboard": {
+          "status": "present_labeled",
+          "boxes": [
+            [
+              0.336719,
+              0.791765,
+              0.145313,
+              0.237647
+            ],
+            [
+              0.625,
+              0.875294,
+              0.1875,
+              0.249412
+            ]
+          ]
+        }
+      },
+      "batch_id": "vb002_cross_dataset",
+      "verifier": "anno_1",
+      "method": "cvat",
+      "cvat_task_ref": "",
+      "verified_at": "2026-07-30T19:44:48+00:00",
+      "candidate_run": {
+        "backend": "cross_dataset",
+        "run_id": "cross_dataset_0b65fbd_a9bb6237",
+        "candidates_sha256": "b8acbefadb35d1805947e7466c7777d9c5b58cc3c8a066d7436291f0e10afd59"
+      },
+      "supersedes": null
+    },
+    "coco_000000253492.jpg": {
+      "source": "coco",
+      "classes": {
+        "medicine_bottle": {
+          "status": "verified_absent",
+          "boxes": []
+        },
+        "wire": {
+          "status": "verified_absent",
+          "boxes": []
+        },
+        "cupboard": {
+          "status": "present_labeled",
+          "boxes": [
+            [
+              0.269792,
+              0.814844,
+              0.539583,
+              0.370312
+            ],
+            [
+              0.89375,
+              0.392969,
+              0.2125,
+              0.785937
+            ],
+            [
+              0.89375,
+              0.39375,
+              0.2125,
+              0.7875
+            ]
+          ]
+        }
+      },
+      "batch_id": "vb002_cross_dataset",
+      "verifier": "anno_1",
+      "method": "cvat",
+      "cvat_task_ref": "",
+      "verified_at": "2026-07-30T19:44:48+00:00",
+      "candidate_run": {
+        "backend": "cross_dataset",
+        "run_id": "cross_dataset_0b65fbd_a9bb6237",
+        "candidates_sha256": "b8acbefadb35d1805947e7466c7777d9c5b58cc3c8a066d7436291f0e10afd59"
+      },
+      "supersedes": null
+    },
+    "local_captures_gas_cylinder__000035_jpg.rf.Y5UXQwGueW2OmevC8Ikp.jpg": {
+      "source": "local_captures",
+      "classes": {
+        "medicine_bottle": {
+          "status": "verified_absent",
+          "boxes": []
+        },
+        "wire": {
+          "status": "verified_absent",
+          "boxes": []
+        },
+        "cupboard": {
+          "status": "verified_absent",
+          "boxes": []
+        }
+      },
+      "batch_id": "vb002_cross_dataset",
+      "verifier": "anno_1",
+      "method": "cvat",
+      "cvat_task_ref": "",
+      "verified_at": "2026-07-30T19:44:48+00:00",
+      "candidate_run": {
+        "backend": "cross_dataset",
+        "run_id": "cross_dataset_0b65fbd_a9bb6237",
+        "candidates_sha256": "b8acbefadb35d1805947e7466c7777d9c5b58cc3c8a066d7436291f0e10afd59"
+      },
+      "supersedes": null
+    },
+    "local_captures_gas_cylinder__bharat_391_jpg.rf.KQiVwxAdJmhpOW5h0odR.jpg": {
+      "source": "local_captures",
+      "classes": {
+        "medicine_bottle": {
+          "status": "verified_absent",
+          "boxes": []
+        },
+        "wire": {
+          "status": "verified_absent",
+          "boxes": []
+        },
+        "cupboard": {
+          "status": "verified_absent",
+          "boxes": []
+        }
+      },
+      "batch_id": "vb002_cross_dataset",
+      "verifier": "anno_1",
+      "method": "cvat",
+      "cvat_task_ref": "",
+      "verified_at": "2026-07-30T19:44:48+00:00",
+      "candidate_run": {
+        "backend": "cross_dataset",
+        "run_id": "cross_dataset_0b65fbd_a9bb6237",
+        "candidates_sha256": "b8acbefadb35d1805947e7466c7777d9c5b58cc3c8a066d7436291f0e10afd59"
+      },
+      "supersedes": null
+    },
+    "local_captures_gas_cylinder__indane_0075_jpeg.rf.Xn9AS7T0IpAAR2esAxjQ.jpeg": {
+      "source": "local_captures",
+      "classes": {
+        "medicine_bottle": {
+          "status": "verified_absent",
+          "boxes": []
+        },
+        "wire": {
+          "status": "verified_absent",
+          "boxes": []
+        },
+        "cupboard": {
+          "status": "verified_absent",
+          "boxes": []
+        }
+      },
+      "batch_id": "vb002_cross_dataset",
+      "verifier": "anno_1",
+      "method": "cvat",
+      "cvat_task_ref": "",
+      "verified_at": "2026-07-30T19:44:48+00:00",
+      "candidate_run": {
+        "backend": "cross_dataset",
+        "run_id": "cross_dataset_0b65fbd_a9bb6237",
+        "candidates_sha256": "b8acbefadb35d1805947e7466c7777d9c5b58cc3c8a066d7436291f0e10afd59"
+      },
+      "supersedes": null
+    },
+    "local_captures_gas_cylinder__indane_0084_jpeg.rf.8LcVwarSOtGxPHvlg9vn.jpeg": {
+      "source": "local_captures",
+      "classes": {
+        "medicine_bottle": {
+          "status": "verified_absent",
+          "boxes": []
+        },
+        "wire": {
+          "status": "verified_absent",
+          "boxes": []
+        },
+        "cupboard": {
+          "status": "verified_absent",
+          "boxes": []
+        }
+      },
+      "batch_id": "vb002_cross_dataset",
+      "verifier": "anno_1",
+      "method": "cvat",
+      "cvat_task_ref": "",
+      "verified_at": "2026-07-30T19:44:48+00:00",
+      "candidate_run": {
+        "backend": "cross_dataset",
+        "run_id": "cross_dataset_0b65fbd_a9bb6237",
+        "candidates_sha256": "b8acbefadb35d1805947e7466c7777d9c5b58cc3c8a066d7436291f0e10afd59"
+      },
+      "supersedes": null
+    },
+    "local_captures_walking_stick__0000002238_jpg.rf.pqK4hsQxFZ0HR5f5ywAq.jpg": {
+      "source": "local_captures",
+      "classes": {
+        "medicine_bottle": {
+          "status": "verified_absent",
+          "boxes": []
+        },
+        "wire": {
+          "status": "verified_absent",
+          "boxes": []
+        },
+        "cupboard": {
+          "status": "verified_absent",
+          "boxes": []
+        }
+      },
+      "batch_id": "vb002_cross_dataset",
+      "verifier": "anno_1",
+      "method": "cvat",
+      "cvat_task_ref": "",
+      "verified_at": "2026-07-30T19:44:48+00:00",
+      "candidate_run": {
+        "backend": "cross_dataset",
+        "run_id": "cross_dataset_0b65fbd_a9bb6237",
+        "candidates_sha256": "b8acbefadb35d1805947e7466c7777d9c5b58cc3c8a066d7436291f0e10afd59"
+      },
+      "supersedes": null
+    }
+  },
   "stats": {
-    "images": 0,
-    "cells_verified": 0,
-    "per_class": {}
+    "images": 7,
+    "cells_verified": 21,
+    "per_class": {
+      "cupboard": 7,
+      "medicine_bottle": 7,
+      "wire": 7
+    }
   }
 }
