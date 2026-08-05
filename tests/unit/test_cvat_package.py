@@ -22,10 +22,10 @@ class TestBuildCvatLabelsSpec:
     def test_taxonomy_id_order(self) -> None:
         spec = build_cvat_labels_spec(_NAMES_BY_ID)
         assert spec == [
-            {"name": "person", "attributes": []},
-            {"name": "face", "attributes": []},
-            {"name": "charger", "attributes": []},
-            {"name": "wire", "attributes": []},
+            {"name": "person", "type": "rectangle", "attributes": []},
+            {"name": "face", "type": "rectangle", "attributes": []},
+            {"name": "charger", "type": "rectangle", "attributes": []},
+            {"name": "wire", "type": "rectangle", "attributes": []},
         ]
 
     def test_unordered_input_still_sorted_by_id(self) -> None:

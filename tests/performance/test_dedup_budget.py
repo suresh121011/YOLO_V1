@@ -35,7 +35,7 @@ _SCALE = 30_000
 def test_vectorized_dedup_scales_to_30k_within_budget(monkeypatch: pytest.MonkeyPatch) -> None:
     rng = random.Random(0)  # noqa: S311 — deterministic perf test, not crypto
 
-    def _fake_hashes(path: Path, check_flip: bool = True) -> ImageHashes:
+    def _fake_hashes(path: Path, check_flip: bool = True, hash_size: int = 8) -> ImageHashes:
         # Random-but-deterministic 64-bit hash — near-zero real collision
         # rate, so almost every call falls through to the "kept" branch,
         # exercising the worst-case O(n) scan on every single insertion.

@@ -172,8 +172,11 @@ class TestValidate:
 
 
 class TestLedgerBootstrap:
-    def test_committed_empty_ledger_is_valid_minimal_json(self) -> None:
+    def test_committed_ledger_is_valid_schema(self) -> None:
+        """Ledger grows as verification batches import (H-C) — this checks
+        shape, not emptiness, which was only ever true pre-campaign."""
         ledger_path = Path("data/annotation/verification_ledger.json")
         raw = json.loads(ledger_path.read_text(encoding="utf-8"))
         assert raw["schema_version"] == 1
-        assert raw["entries"] == {}
+        assert isinstance(raw["entries"], dict)
+        assert "taxonomy_fingerprint" in raw
