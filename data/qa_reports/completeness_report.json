@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-29T11:00:44Z",
+  "generated_at": "2026-08-05T18:58:30Z",
   "artifact_path": "data/processed/completeness.json",
   "taxonomy_fingerprint": "sha256:a831924bb82e23ffbc6cc1d56647a78cc72ff5e329920569b05bd5ae99c2f125",
   "stats": {
@@ -10,7 +10,8 @@
       "val": 1882
     },
     "by_policy": {
-      "coco": 4951,
+      "coco": 4949,
+      "coco/ledger/045f4665": 2,
       "local_captures/bed": 199,
       "local_captures/book": 1321,
       "local_captures/bottel": 153,
@@ -19,7 +20,8 @@
       "local_captures/cupboard": 324,
       "local_captures/door": 915,
       "local_captures/face": 887,
-      "local_captures/gas_cylinder": 888,
+      "local_captures/gas_cylinder": 884,
+      "local_captures/gas_cylinder/ledger/eeec2e75": 4,
       "local_captures/knife": 2128,
       "local_captures/laptop": 362,
       "local_captures/medicine_bottle": 466,
@@ -31,7 +33,8 @@
       "local_captures/stove": 151,
       "local_captures/support_handle": 800,
       "local_captures/toilet": 455,
-      "local_captures/walking_stick": 2130,
+      "local_captures/walking_stick": 2129,
+      "local_captures/walking_stick/ledger/466629bb": 1,
       "local_captures/wet_floor": 1871,
       "local_captures/wire": 835,
       "negatives": 497,
@@ -43,13 +46,13 @@
       "book": 7235,
       "chair": 6386,
       "charger": 595,
-      "cupboard": 2702,
+      "cupboard": 2709,
       "door": 3617,
       "face": 1481,
       "gas_cylinder": 1385,
       "knife": 7576,
       "laptop": 5810,
-      "medicine_bottle": 963,
+      "medicine_bottle": 970,
       "medicine_strip": 1273,
       "monitor": 5560,
       "passport": 725,
@@ -61,18 +64,34 @@
       "walking_stick": 2627,
       "water_bottle": 5601,
       "wet_floor": 2368,
-      "wire": 1332
+      "wire": 1339
     },
-    "mean_trusted_classes_per_image": 3.542
+    "mean_trusted_classes_per_image": 3.543
   },
   "policies": [
     {
       "policy": "coco",
       "mode": "trusted_list_with_ledger",
-      "images": 4951,
+      "images": 4949,
       "trusted_count": 10,
       "untrusted_count": 13,
       "trusted_classes": "person water_bottle knife book laptop monitor chair bed toilet sink"
+    },
+    {
+      "policy": "coco/ledger/045f4665",
+      "mode": "trusted_list_with_ledger",
+      "images": 2,
+      "trusted_count": 13,
+      "untrusted_count": 10,
+      "trusted_classes": "person medicine_bottle water_bottle knife book wire laptop monitor cupboard chair bed toilet sink"
+    },
+    {
+      "policy": "coco/ledger/9e88aeca",
+      "mode": "trusted_list_with_ledger",
+      "images": 0,
+      "trusted_count": 14,
+      "untrusted_count": 9,
+      "trusted_classes": "person face medicine_bottle water_bottle knife book charger laptop monitor cupboard chair bed toilet sink"
     },
     {
       "policy": "local_captures/bed",
@@ -141,10 +160,18 @@
     {
       "policy": "local_captures/gas_cylinder",
       "mode": "per_slug_with_ledger",
-      "images": 888,
+      "images": 884,
       "trusted_count": 1,
       "untrusted_count": 22,
       "trusted_classes": "gas_cylinder"
+    },
+    {
+      "policy": "local_captures/gas_cylinder/ledger/eeec2e75",
+      "mode": "per_slug_with_ledger",
+      "images": 4,
+      "trusted_count": 4,
+      "untrusted_count": 19,
+      "trusted_classes": "medicine_bottle gas_cylinder wire cupboard"
     },
     {
       "policy": "local_captures/knife",
@@ -237,10 +264,18 @@
     {
       "policy": "local_captures/walking_stick",
       "mode": "per_slug_with_ledger",
-      "images": 2130,
+      "images": 2129,
       "trusted_count": 1,
       "untrusted_count": 22,
       "trusted_classes": "walking_stick"
+    },
+    {
+      "policy": "local_captures/walking_stick/ledger/466629bb",
+      "mode": "per_slug_with_ledger",
+      "images": 1,
+      "trusted_count": 4,
+      "untrusted_count": 19,
+      "trusted_classes": "medicine_bottle wire cupboard walking_stick"
     },
     {
       "policy": "local_captures/wet_floor",
@@ -275,13 +310,33 @@
       "trusted_classes": "stove cupboard door"
     },
     {
+      "policy": "openimages/ledger/b0ba262e",
+      "mode": "trusted_list_with_ledger",
+      "images": 0,
+      "trusted_count": 6,
+      "untrusted_count": 17,
+      "trusted_classes": "face medicine_bottle stove charger cupboard door"
+    },
+    {
       "policy": "wider_face",
       "mode": "trusted_list_with_ledger",
       "images": 97,
       "trusted_count": 1,
       "untrusted_count": 22,
       "trusted_classes": "face"
+    },
+    {
+      "policy": "wider_face/ledger/635a270a",
+      "mode": "trusted_list_with_ledger",
+      "images": 0,
+      "trusted_count": 4,
+      "untrusted_count": 19,
+      "trusted_classes": "face medicine_bottle charger cupboard"
     }
   ],
-  "unused_policies": []
+  "unused_policies": [
+    "coco/ledger/9e88aeca",
+    "openimages/ledger/b0ba262e",
+    "wider_face/ledger/635a270a"
+  ]
 }
