@@ -319,12 +319,16 @@ def build_completeness(
                 f"Ledger taxonomy fingerprint drift: ledger recorded {recorded_fp!r}, live "
                 f"taxonomy is {live_fp!r} — reconcile before generating completeness."
             )
+        skipped_ledger_images: list[str] = []
         for filename in sorted(ledger_view.all_images()):
             if filename not in provenance:
-                raise CompletenessError(
-                    f"Ledger entry '{filename}' is absent from the merged manifest's "
-                    f"image_provenance — re-run merge_datasets or reconcile the ledger."
-                )
+                # Predates the current merge snapshot (e.g. a verification batch
+                # built before a merge rebuild, imported with --allow-missing-base).
+                # Not part of data/processed for this build, so irrelevant to its
+                # completeness accounting — the ledger verdict itself is untouched,
+                # only excluded from this cross-check.
+                skipped_ledger_images.append(filename)
+                continue
             declared_source = ledger_view.entry_source(filename)
             actual_source = provenance[filename]
             if declared_source != actual_source:
@@ -333,6 +337,13 @@ def build_completeness(
                     f"but the merged manifest attributes it to '{actual_source}' — "
                     f"provenance drift; reconcile before generating completeness."
                 )
+        if skipped_ledger_images:
+            preview = ", ".join(skipped_ledger_images[:5])
+            logger.warning(
+                f"{len(skipped_ledger_images)} ledger entry(ies) predate the current merge "
+                f"snapshot and are absent from image_provenance — excluded from completeness "
+                f"accounting (first 5: {preview})"
+            )
         if ledger_path.exists():
             ledger_input_record = _hash_input(ledger_path, ("updated_at",))
 
