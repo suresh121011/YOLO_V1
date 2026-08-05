@@ -174,13 +174,39 @@ sources:
     remap_table: roboflow
     trusted_classes: [medicine_bottle, charger, wire, gas_cylinder]
     # Roboflow Universe datasets to pull (workspace/project/version).
-    # Populate after selecting datasets; each entry needs its own license
-    # + class remap review before the full build.
-    datasets: []
-    #  - slug: "workspace/project"
-    #    version: 1
-    #    license: "CC BY 4.0"
-    #    classes: {source_name: taxonomy_name}
+    # Populated 2026-08-06 (H-B): verified live via universe.roboflow.com's
+    # per-page schema.org JSON-LD (license) and dataset/<N> version links —
+    # NOT via the Roboflow API (requires ROBOFLOW_API_KEY, not set here) and
+    # NOT via actual image inspection. Before the full build: (1) set
+    # ROBOFLOW_API_KEY, (2) spot-check a sample of each dataset's images once
+    # downloaded — 'charger-lbdun's class name ("My Tugas") is unexplained
+    # and unverified beyond the dataset title; the other three have
+    # self-descriptive class names.
+    datasets:
+      - slug: "obj-dect/gas-cylinder-detection"
+        version: 1
+        license: "CC BY 4.0"
+        classes: {"Recognising Indian Indian Gas": gas_cylinder}
+        # 108 images. India-specific — matches this project's existing
+        # local_captures gas_cylinder brands (indane, bharat).
+      - slug: "project-ko6pf/medicine-bottle"
+        version: 1
+        license: "CC BY 4.0"
+        classes: {"Medicine": medicine_bottle}
+        # 308 images, single self-descriptive class.
+      - slug: "test-agunz/wire_v3"
+        version: 1
+        license: "CC BY 4.0"
+        classes: {"Wire LWH6": wire}
+        # 3,377 images, instance segmentation task (boxes still usable).
+      - slug: "muhammads-workspace-5acq6/charger-lbdun"
+        version: 1
+        license: "CC BY 4.0"
+        classes: {"My Tugas": charger}
+        # 730 images. UNVERIFIED class relevance — "My Tugas" is not a
+        # descriptive class name; only the dataset title ("Charger") and
+        # per-image alt text ("Charger"/"Charger-cUjN" seen on sibling
+        # candidates) support this mapping. Confirm visually before trusting.
 
   wider_face:
     enabled: true

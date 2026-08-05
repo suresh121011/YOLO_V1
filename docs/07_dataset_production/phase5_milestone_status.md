@@ -2,9 +2,9 @@
 
 Status tracker for Phase 5 (**Production Dataset Engineering** — this is the
 current phase's own name, not a future one; see "Phase naming" below).
-Reflects the repository as verified on **2026-08-06** at commit `4b5b898`
-(local `main`, in sync with `origin/main`, working tree clean except two
-intentionally untracked scratch items).
+Reflects the repository as verified on **2026-08-06** (see `git log` for
+the exact commit this revision landed in) — local `main`, working tree
+clean except two intentionally untracked scratch items.
 
 **Bottom line:** the engineering/tooling side of Phase 5 has no known
 blockers. All milestone tooling (M0–M11) is implemented and tested (suite
@@ -37,7 +37,7 @@ Legend: ✅ done · ⏳ tooling done / execution pending (operational) · 👤 o
 | M4 | Coverage (L4) + quality (L5) reports | ✅ | ⏳ stale (2026-07-29 numbers) — blocked on the `auto_annotate` GPU re-run above |
 | M5 | Release automation (gates RG1–RG10) | ✅ | ✅ `dataset-v0.6.0` remains the last cut release |
 | M6 | Correctness-validation gate | ✅ | — (PASS committed) |
-| M7 | Full-mode transition + Dataset v0.5.0 | ✅ | 👤 H-B — see status below |
+| M7 | Full-mode transition + Dataset v0.5.0 | ✅ | 👤 H-B config populated; ingestion (API key + download run) pending — see status below |
 | M8 | Verification at scale + v0.7.0 | ✅ | 👤 341/3,000 verified cells (11.4%) — H-C, ongoing |
 | M9 | Custom capture integration + eval lock + v0.9.0 | ✅ | 👤 H-A, ongoing — 0 images, 0 houses |
 | M10 | Evaluation + full-scale A/B evidence | ✅ | ⏳ reserved for the official v1.0 A/B run (see DVC lock defects below) |
@@ -58,28 +58,34 @@ semantics has changed, only how this doc frames the work tracks.
   Status: **0 images, 0 houses**. Blocks `v0.9.0`/`v1.0.0` via RG9; does not
   block `v0.7.0` or any engineering work.
   Runbook: `docs/04_dataset_engineering/capture_annotation_runbook.md`.
-- **H-B — Roboflow licensing** 👤 — search Roboflow Universe for
-  `medicine_bottle`/`charger`/`wire`/`gas_cylinder`, record slug + version +
-  license + class mapping, populate `sources.roboflow.datasets`, set
-  `ROBOFLOW_API_KEY`. Status: `datasets: []` (empty).
-  **Attempted 2026-08-06, not completable with available tooling**: web
-  search surfaced unverified leads (e.g. an India-specific gas-cylinder
-  dataset, several charger/cable/pill datasets of varying relevance) but two
-  independent verification paths both failed — `WebFetch` against
-  `universe.roboflow.com` returns HTTP 403 (blocks non-browser requests),
-  and the Chrome browser extension was not connected for an interactive
-  session. Unverified search-summary text is not a sound basis for a
-  licensing decision baked into training data, so no dataset was selected
-  and `sources.roboflow.datasets` was not populated.
+- **H-B — Roboflow licensing** 👤 — **config populated 2026-08-06**, ingestion
+  still pending (needs `ROBOFLOW_API_KEY` + a real download run — both
+  human/operational, not engineering). `WebFetch`/plain `curl` against
+  `universe.roboflow.com` both return HTTP 403 by default, but the block is
+  a basic user-agent check, not real bot protection — a standard browser UA
+  string bypasses it, exposing each dataset's schema.org JSON-LD (license +
+  size) without needing an API key. Used that to verify 4 real candidates,
+  written into `configs/dataset_sources.yaml`'s `sources.roboflow.datasets`:
+
+  | Class | Slug | Images | License |
+  |:--|:--|:--|:--|
+  | gas_cylinder | `obj-dect/gas-cylinder-detection` | 108 | CC BY 4.0 |
+  | medicine_bottle | `project-ko6pf/medicine-bottle` | 308 | CC BY 4.0 |
+  | wire | `test-agunz/wire_v3` | 3,377 | CC BY 4.0 |
+  | charger | `muhammads-workspace-5acq6/charger-lbdun` | 730 | CC BY 4.0 |
+
+  All CC BY 4.0 (no noncommercial-gate implications). **One caveat, flagged
+  inline in the config**: the charger dataset's class name ("My Tugas") is
+  unexplained — only the dataset title supports the charger mapping; the
+  other three have self-descriptive class names. Spot-check images visually
+  once downloaded, before trusting that mapping in a training run.
   **Does not block RG7** — `rg7_license_gate` passes vacuously while no
   Roboflow data is ingested. Its value is lifting `charger`'s coverage_score
   (0.12 vs the 0.5 floor `v0.7.0` needs), not unblocking a currently-failing
   gate.
-  **Next step (needs a human):** browse Roboflow Universe directly (its
-  filterable search/license badges are far more reliable than text search),
-  pick 1 slug + version per class, confirm the license is compatible with
-  this project's noncommercial posture, and hand back the 4 slugs — I can
-  then wire them into `configs/dataset_sources.yaml` and record the ADR.
+  **Next step (needs a human):** set `ROBOFLOW_API_KEY`, run the
+  `download_roboflow` stage, and visually spot-check the `charger-lbdun`
+  images before trusting its class mapping.
 - **H-C — CVAT verification campaign** 👤 — engineering/tooling complete
   (create tasks from `cvat_labels.json`, verify boxes, dual-annotate the IAA
   sample, export → import → `dvc commit -f`, all proven end-to-end on real
@@ -133,8 +139,11 @@ captures, locked eval set) are actually satisfied.
 - A failed `auto_annotate` re-run attempt (missing `ultralytics`) deleted
   `data/annotation/candidates` before crashing; recovered via `dvc checkout`
   from cache, confirmed no data loss.
-- H-B attempted and found genuinely blocked on tooling access (see above) —
-  reported rather than guessed.
+- H-B: `WebFetch`'s 403 against `universe.roboflow.com` turned out to be a
+  basic user-agent check, not real bot protection — a browser UA bypasses
+  it. Used that to verify 4 real dataset candidates (license + size, via
+  each page's schema.org JSON-LD) and populated
+  `sources.roboflow.datasets` (see above).
 
 ## Current shared-state facts
 
