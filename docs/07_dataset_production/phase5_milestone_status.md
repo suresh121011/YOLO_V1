@@ -1,18 +1,28 @@
 # Phase-5 Milestone Status
 
-Status tracker for Phase 5 (Production Dataset Engineering / Dataset v1.0).
-Reflects the repository as verified on **2026-07-29** at `dataset-v0.6.0`
-(`699b9ba`); the previous revision described the pre-Phase-E state of
-2026-07-21 and had drifted substantially.
+Status tracker for Phase 5 (**Production Dataset Engineering** — this is the
+current phase's own name, not a future one; see "Phase naming" below).
+Reflects the repository as verified on **2026-08-06** at commit `fea0d2a`
+(local `main`, 4 commits ahead of `origin/main`, not yet pushed).
 
-**Bottom line:** the full-mode build is done and **`dataset-v0.6.0` is
-released**. Milestone tooling (M0–M11) is implemented and tested (suite **1188**
-passing). What remains is mostly operational or human-only — real captures,
-human verification, Roboflow licensing, the GPU A/B run, and the remaining
-releases — **with one code gap now known**: per-slug trust resolution in
-`completeness_policies.py` *and* `targeting.py`
-([ADR-P5-15](adr/ADR-P5-15-per-slug-trust-resolution-and-targeting.md)). The
-earlier claim "no Phase-5 code gaps remain" did not survive measurement.
+**Bottom line:** all milestone tooling (M0–M11) remains implemented and
+tested (suite **1207** passing, 1 skipped, 0 failed — 3 pre-existing
+test/prod drifts found and fixed this pass). The CVAT verification campaign
+(H-C) is now genuinely underway — 2 of 44 batches imported — but that is
+11% of the batch count and the ledger sits at 341/3000 cells (11.4%) against
+the `dataset-v0.7.0` gate. **Phase 5 is not complete.** See the full
+release-readiness assessment for the session that produced this revision.
+
+## Phase naming (correction)
+
+"Production Dataset Engineering" is Phase 5 **itself** — see
+`docs/01_executive_implementation_plan/implementation_phases.md`'s
+executed-phase table. It is not a phase that follows the current one. The
+next phase is **Phase 6 — Model Training & Integration**, which three
+independent docs (`implementation_phases.md`, ADR-P5-10,
+`docs/07_dataset_production/README.md`) agree does not start until
+**Dataset v1.0.0** ships (RG1–RG10 all pass). That is a materially higher
+bar than `v0.7.0` — see the release ladder below.
 
 Legend: ✅ done · ⏳ tooling done / execution pending (operational) · 👤 human track
 
@@ -21,84 +31,101 @@ Legend: ✅ done · ⏳ tooling done / execution pending (operational) · 👤 h
 | # | Scope | Tooling | Remaining (operational/human) |
 |:--|:--|:--|:--|
 | M0 | Scaffolding, DVC remote, first push | ✅ | — |
-| M1 | Auto-annotation core (L2) | ✅ | ⏳ real GPU candidate generation at scale |
-| M2 | CVAT verification round-trip | ✅ | 👤 stand up self-hosted CVAT + real batches (H-C) |
-| M3 | Completeness expansion + label overlay | ✅ | — (activates as the ledger fills) |
-| M4 | Coverage (L4) + quality (L5) reports | ✅ | — |
-| M5 | Release automation (gates RG1–RG10) | ✅ | ✅ **first real release cut 2026-07-29 — `dataset-v0.6.0`**, gates MODE+RG1–RG8 all PASS; remaining tracks v0.7.0 → v1.0.0 |
+| M1 | Auto-annotation core (L2) | ✅ | ⏳ this session's `.venv` has no `ultralytics` — a fresh GPU env is needed before `auto_annotate` can re-run against the current (post-vb001/vb002) ledger |
+| M2 | CVAT verification round-trip | ✅ | 👤 continue batches (H-C) — 2/44 imported |
+| M3 | Completeness expansion + label overlay | ✅ | ✅ activated — `completeness.json` regenerated against the 87-image ledger 2026-08-06 |
+| M4 | Coverage (L4) + quality (L5) reports | ✅ | ⏳ **stale** (2026-07-29 numbers) — blocked on the `auto_annotate` GPU re-run above; `completeness.json` itself is current but `coverage_report`/`dataset_quality_report` haven't re-run since |
+| M5 | Release automation (gates RG1–RG10) | ✅ | ✅ `dataset-v0.6.0` remains the last cut release; ladder tracks v0.7.0 → v1.0.0 |
 | M6 | Correctness-validation gate | ✅ | — (PASS committed) |
-| M7 | Full-mode transition + Dataset v0.5.0 | ✅ | ✅ `mode: full` + real download done (Phase E, 24,352 images); released as **`dataset-v0.6.0`** (ADR-P5-13) rather than v0.5.0, which under-describes the local-capture content; 👤 Roboflow slugs (H-B) still open |
-| M8 | Verification at scale + v0.7.0 | ✅ | 👤 ≥3,000 verified cells (H-C); ⏳ v0.7.0 |
-| M9 | Custom capture integration + eval lock + v0.9.0 | ✅ | 👤 captures (H-A), wet_floor pilot, eval lock; ⏳ v0.9.0 |
-| M10 | Evaluation + full-scale A/B evidence | ✅ | ⏳ real GPU A/B run (2 arms) |
-| M11 | Dataset v1.0.0 + Phase-6 readiness | ✅ | ⏳ full release ladder + unfreeze `train_yolo11n` |
+| M7 | Full-mode transition + Dataset v0.5.0 | ✅ | 👤 Roboflow slugs (H-B) still open — see note below, not currently gate-blocking |
+| M8 | Verification at scale + v0.7.0 | ✅ | 👤 **341/3000 verified cells (11.4%)**; per-class `coverage_score`: charger 0.12 (fails 0.5 floor — binding constraint), wire 0.99, medicine_bottle 0.78, cupboard 0.63 (all three already pass — **note: coverage numbers are the stale 07-29 snapshot**, re-verify once `coverage_report` regenerates) |
+| M9 | Custom capture integration + eval lock + v0.9.0 | ✅ | 👤 captures (H-A) — **0 images, 0 houses**; wet_floor pilot; eval lock — `data/eval/indian_home_v0` is empty |
+| M10 | Evaluation + full-scale A/B evidence | ✅ | ⏳ real GPU A/B run — **two** full training runs per ADR-P5-10 (mitigation on/off), not one; blocked on locked eval set (M9) |
+| M11 | Dataset v1.0.0 + Phase-6 readiness | ✅ | ⏳ full release ladder + unfreeze `train_yolo11n`/`evaluate_yolo11n` |
 
 ## Human tracks
 
 - **H-A — Custom capture campaign** 👤 — signed consent per household,
   capture toward ≥3 houses / ≥2,000 images / ≥200 instances per custom class,
   ingest → dual-annotator CVAT → IAA → finalize, then enable `custom_captures`.
-  Status: 0 images captured. Runbook: `docs/04_dataset_engineering/capture_annotation_runbook.md`.
+  Status: **0 images, 0 houses** (confirmed by direct file count 2026-08-06).
+  Blocks `v0.9.0` (≥1,000 images/≥2 houses) and `v1.0.0` (≥2,000/≥3) via RG9.
+  **Does not block `v0.7.0`** — RG9 is not in that track's gate list.
+  Runbook: `docs/04_dataset_engineering/capture_annotation_runbook.md`.
 - **H-B — Roboflow licensing** 👤 — search Roboflow Universe for
   `medicine_bottle`/`charger`/`wire`/`gas_cylinder`, record slug + version +
   license + class mapping, populate `sources.roboflow.datasets`, set
-  `ROBOFLOW_API_KEY`. Status: `datasets: []` (empty) — blocks RG7.
-- **H-C — CVAT verification campaign** 👤 — create tasks from `cvat_labels.json`,
-  verify candidate boxes, dual-annotate the 10 % IAA sample, export → import →
-  `dvc commit -f`. **Self-hosted CVAT is UP** (12 containers: `cvat_server`,
-  `cvat_db`, `cvat_ui`, 9 workers — verified 2026-07-29); the "stand it up" step
-  is done. Status: ledger empty (0 cells) — **this is the sole binding blocker on
-  `dataset-v0.7.0`**, alongside `charger` coverage 0.1546 vs the 0.5 floor.
-  Do not start batches until ADR-P5-15's candidate regeneration lands: today's
-  6,773 candidates were selected under the wrong trust model.
+  `ROBOFLOW_API_KEY`. Status: `datasets: []` (empty).
+  **Correction from the prior revision of this doc:** RG7 (`rg7_license_gate`
+  in `src/dataset/release/gates.py`) passes vacuously when no Roboflow data
+  has been ingested — it does not currently fail any release. The real value
+  of H-B right now is lifting `charger`'s coverage_score (currently 0.12,
+  well under the 0.5 floor `v0.7.0` requires) — Roboflow charger images would
+  help this directly. Framed as an RG3 accelerant, not an RG7 blocker.
+- **H-C — CVAT verification campaign** 👤 — create tasks from `cvat_labels.json`
+  (now includes `"type": "rectangle"` per entry — the earlier CVAT
+  label-type bug is fixed at the source, commit `38c4b7c`), verify candidate
+  boxes, dual-annotate the 10% IAA sample where present, export → import →
+  `dvc commit -f`.
+  **Status: 2 of 44 batches imported** (`vb002_cross_dataset`: 7 images, 21
+  cells, IAA 1.00; `vb001_yolo_world`: 80 images, 320 cells, no IAA sample
+  for this batch, imported with `--allow-missing-base` since it predates the
+  merge rebuild — see `feat(annotation)` commit `aa1ed07`).
+  **Ledger: 87 images, 341 cells verified** — 11.4% of the 3,000-cell
+  `v0.7.0` floor. **42 batches / ~8,137 images remain.**
   Runbook: `verification_runbook.md`.
 
-## Group C — ready, waiting only on execution (no code needed)
+## Release ladder (`configs/release.yaml`)
 
-**Done since:** all five download stages have run in full mode, `auto_annotate`
-has run on GPU, and `record_release` produced `dataset-v0.6.0`.
+| Track | Gates | Binding blockers today |
+|:--|:--|:--|
+| `dataset-v0.5.0` | RG1–RG7 | shipped |
+| `dataset-v0.6.0` | RG1–RG8 | **shipped** (current HEAD tag) |
+| `dataset-v0.7.0` | RG1–RG7 | RG3: 341/3,000 cells; charger coverage_score 0.12 < 0.5 (stale number — coverage_report needs the blocked `auto_annotate` re-run to confirm current value) |
+| `dataset-v0.9.0` | RG1–RG8 | RG9: 0 custom images/houses (H-A untouched); RG3 as above at higher bar implicitly via continued verification |
+| `dataset-v1.0.0` | RG1–RG10 | RG9: ≥2,000 images/≥3 houses; RG10: locked eval set (0 images) + **two** full GPU training runs (ADR-P5-10) + `ab_benchmark/` + `eval_report.json`; RG3 at full scale |
 
-**Still waiting on execution:** `train_yolo11n`/`evaluate_yolo11n` (frozen, GPU)
-· `ingest_custom_captures`/`ingest_eval_set` (frozen, human data) · the
-verification-loop stages (human CVAT, now unblocked — see H-C).
+## Known gaps found and fixed this session (2026-08-06)
 
-Two frozen stages carry defects that must clear **before** RG10 training
-evidence is recorded:
-- `train_yolo11n`'s `dvc.lock` dep hashes match neither the LF nor the CRLF form
-  of HEAD, so the recorded run is unreproducible. `dvc status` hides it on every
-  platform because the stage is frozen. Clear it by **re-running training**, then
-  `dvc commit -f` — never by re-stamping hashes.
-- `evaluate_yolo11n` is declared in `dvc.yaml` but absent from `dvc.lock`, which
-  is why `dvc pull` exits 1 on a clean clone.
+- `src/dataset/completeness.py`: `generate_completeness` hard-failed on any
+  ledger entry whose image predates the current merge snapshot (vb001's 80
+  images, none of which are in `data/merged/merged_manifest.json`'s
+  `image_provenance` post mode:full rebuild). Now skipped with a warning,
+  mirroring `--allow-missing-base`. Commit `adf6106`.
+- Three pre-existing test/prod drifts (unrelated to this session's direct
+  work, found by a full-suite run): `test_cvat_package.py` and
+  `test_candidate_artifact.py` had stale expectations; `test_dedup_budget.py`'s
+  mock was missing a `hash_size` kwarg added during earlier P2 dedup tuning.
+  All three fixed and verified passing. Commit `55062b7`.
+- A failed `auto_annotate` re-run attempt (missing `ultralytics` in this
+  `.venv`) deleted `data/annotation/candidates` before crashing. Recovered
+  via `dvc checkout` from cache — confirmed no data loss.
 
 ## Current shared-state facts
 
-*Re-verified 2026-07-29 against the repository at `dataset-v0.6.0` (`699b9ba`).
-The list below previously described the pre-Phase-E state and had drifted on
-every line.*
+*Re-verified 2026-08-06.*
 
-- Build mode: **`full`** — 24,352 images / 104,289 boxes (Phase E).
-- **`dataset-v0.6.0` is cut and pushed** (annotated tag → `699b9ba`);
-  `data/releases/dataset-v0.6.0/release_manifest.json` is git-tracked, 9 gates
-  recorded, all `pass`. `v0.7.0`/`v0.9.0`/`v1.0.0` do not exist yet.
-- Ledger is **still empty (0 cells)** — this is the binding constraint on
-  `dataset-v0.7.0`, which requires `min_verified_cells: 3000`.
-  `custom_captures/` and `eval/indian_home_v0/` are also still empty.
-- `main` is pushed; HEAD = tag = `origin/main` = `699b9ba`. CI green.
-- DVC: cache `C:\dvc_cache`, `localstore` → `C:\dvc_remote` (default),
-  `storage` → S3 (**68,301 objects / 7.82 GB**, versioning + SSE-AES256 + all
-  four public-access blocks on). `dvc status -c` exits 0 for both remotes;
-  `verify_lock_objects.py --deep` resolves all 67,734 objects.
-- Cross-platform reproducibility **proven** 2026-07-29 in a clean Linux
-  container (`docs/04_dataset_engineering/reproduction_log.md`).
-
-### Known-wrong artifact shipped with `dataset-v0.6.0`
-
-`completeness.json` over-claims trusted classes for **69.5%** of images, and the
-same union suppressed candidate generation for those images
-([ADR-P5-15](adr/ADR-P5-15-per-slug-trust-resolution-and-targeting.md)).
-**Do not train on `dataset-v0.6.0` with `missing_annotation_mitigation`
-enabled.** Fix scheduled for `v0.7.0`.
+- Build mode: **`full`** — 24,352 images / re-split 2026-08-06 (group-aware,
+  seed 42): 20,588 train / 1,882 val / 1,882 test. Leakage verification: PASS.
+- `dataset-v0.6.0` remains the last cut release. `v0.7.0`/`v0.9.0`/`v1.0.0`
+  do not exist yet.
+- Ledger: **87 images, 341 cells verified** (see H-C above).
+- `custom_captures/` and `eval/indian_home_v0/` are still empty (0 files each).
+- `main` is **4 commits ahead of `origin/main`**, not pushed (awaiting
+  explicit confirmation — standing project rule).
+- DVC object-integrity sweep (`scripts/qa/verify_lock_objects.py`): **PASS**,
+  67,810/67,810 hashes resolve, 6 correctly skipped (`cache: false`).
+- `dvc status -c` unchecked this pass (remote push out of scope without
+  confirmation); local cache/workspace consistency confirmed via the sweep
+  above and targeted `dvc status`/`dvc checkout`.
+- Full test suite: **1207 passed, 1 skipped, 0 failed** (after this
+  session's 3 fixes).
+- Two pre-existing frozen-stage defects remain **unresolved and blocked on
+  human/GPU work**, not on anything fixable in-repo right now:
+  `train_yolo11n`'s `dvc.lock` hashes are unreproducible (fix: real re-run,
+  premature before the dataset nears v1.0 readiness); `evaluate_yolo11n` is
+  declared in `dvc.yaml` but absent from `dvc.lock` and depends on the
+  currently-empty locked eval set.
 
 See [`../../CHANGELOG.md`](../../CHANGELOG.md) `[Unreleased]` for the full
 Phase-5 change list and [`adr/`](adr/README.md) for the design decisions.
