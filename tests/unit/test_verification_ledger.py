@@ -305,6 +305,15 @@ class TestLedgerView:
         assert view.entry_source("a.jpg") == "coco"
         assert view.entry_source("missing.jpg") is None
 
+    def test_entry_batch_id(self) -> None:
+        ledger = new_ledger()
+        record_verdict(
+            ledger, "a.jpg", "coco", "charger", "verified_absent", [], "vb1", "v", "m", ""
+        )
+        view = LedgerView(raw=ledger)
+        assert view.entry_batch_id("a.jpg") == "vb1"
+        assert view.entry_batch_id("missing.jpg") is None
+
     def test_all_images(self) -> None:
         ledger = new_ledger()
         record_verdict(

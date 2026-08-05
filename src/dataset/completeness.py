@@ -320,14 +320,19 @@ def build_completeness(
                 f"taxonomy is {live_fp!r} — reconcile before generating completeness."
             )
         skipped_ledger_images: list[str] = []
+        skipped_batch_ids: set[str] = set()
         for filename in sorted(ledger_view.all_images()):
             if filename not in provenance:
                 # Predates the current merge snapshot (e.g. a verification batch
                 # built before a merge rebuild, imported with --allow-missing-base).
                 # Not part of data/processed for this build, so irrelevant to its
                 # completeness accounting — the ledger verdict itself is untouched,
-                # only excluded from this cross-check.
+                # only excluded from this cross-check (historical record, not a
+                # fatal inconsistency).
                 skipped_ledger_images.append(filename)
+                batch_id = ledger_view.entry_batch_id(filename)
+                if batch_id:
+                    skipped_batch_ids.add(batch_id)
                 continue
             declared_source = ledger_view.entry_source(filename)
             actual_source = provenance[filename]
@@ -339,10 +344,12 @@ def build_completeness(
                 )
         if skipped_ledger_images:
             preview = ", ".join(skipped_ledger_images[:5])
+            batches_preview = ", ".join(sorted(skipped_batch_ids)) or "unknown"
             logger.warning(
-                f"{len(skipped_ledger_images)} ledger entry(ies) predate the current merge "
-                f"snapshot and are absent from image_provenance — excluded from completeness "
-                f"accounting (first 5: {preview})"
+                f"{len(skipped_ledger_images)} ledger entry(ies) from batch(es) "
+                f"[{batches_preview}] predate the current merge snapshot and are absent "
+                f"from image_provenance — excluded from completeness accounting as "
+                f"historical records (first 5 images: {preview})"
             )
         if ledger_path.exists():
             ledger_input_record = _hash_input(ledger_path, ("updated_at",))

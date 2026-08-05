@@ -426,7 +426,12 @@ class TestLedgerIntegration:
         assert artifact["images"]["coco_0001.jpg"]["policy"] == ledger_keys[0]
         assert artifact["images"]["coco_0002.jpg"]["policy"] == "coco"  # untouched
 
-    def test_ledger_image_absent_from_provenance_is_error(self, tmp_path: Path) -> None:
+    def test_ledger_image_absent_from_provenance_is_skipped_with_warning(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A ledger entry whose image predates the current merge (e.g. a batch
+        imported with --allow-missing-base) is a historical record, not a
+        fatal error: excluded from accounting, logged, build succeeds."""
         env = self._env_with_ledger_policy(tmp_path)
         ledger = new_ledger()
         record_verdict(
@@ -436,14 +441,68 @@ class TestLedgerIntegration:
             "face",
             "verified_absent",
             [],
-            "vb001",
+            "vb001_yolo_world",
+            "anno_1",
+            "cvat",
+            "",
+        )
+        # A real, currently-provenanced image verified in a different batch —
+        # proves the skip doesn't collaterally break accounting for entries
+        # that ARE valid.
+        record_verdict(
+            ledger,
+            "coco_0001.jpg",
+            "coco",
+            "face",
+            "present_labeled",
+            [(0.5, 0.5, 0.1, 0.1)],
+            "vb002_cross_dataset",
             "anno_1",
             "cvat",
             "",
         )
         save_ledger(ledger, env.ledger_path)
-        with pytest.raises(CompletenessError, match="absent from the merged manifest"):
-            env.build()
+
+        with caplog.at_level("WARNING"):
+            artifact = env.build()  # must not raise
+
+        assert "coco_9999_ghost.jpg" not in artifact["images"]
+        ledger_keys = [k for k in artifact["policies"] if k.startswith("coco/ledger/")]
+        assert len(ledger_keys) == 1
+        assert artifact["policies"][ledger_keys[0]]["trusted_class_ids"] == [0, 1, 2]  # +face
+        assert artifact["images"]["coco_0001.jpg"]["policy"] == ledger_keys[0]
+        assert artifact["images"]["coco_0002.jpg"]["policy"] == "coco"  # untouched
+
+        [record] = [r for r in caplog.records if "predate the current merge" in r.message]
+        assert record.levelname == "WARNING"
+        assert "1 ledger entry" in record.message
+        assert "vb001_yolo_world" in record.message
+        assert "coco_9999_ghost.jpg" in record.message
+        assert "vb002_cross_dataset" not in record.message  # only the skipped batch listed
+
+    def test_multiple_skipped_batches_are_all_named_in_the_warning(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        env = self._env_with_ledger_policy(tmp_path)
+        ledger = new_ledger()
+        for filename, batch_id in (
+            ("coco_9001_ghost.jpg", "vb001_yolo_world"),
+            ("coco_9002_ghost.jpg", "vb003_yolo_world"),
+        ):
+            record_verdict(
+                ledger, filename, "coco", "face", "verified_absent", [], batch_id, "anno_1", "cvat", ""
+            )
+        save_ledger(ledger, env.ledger_path)
+
+        with caplog.at_level("WARNING"):
+            artifact = env.build()
+
+        assert "coco_9001_ghost.jpg" not in artifact["images"]
+        assert "coco_9002_ghost.jpg" not in artifact["images"]
+        [record] = [r for r in caplog.records if "predate the current merge" in r.message]
+        assert "2 ledger entry" in record.message
+        assert "vb001_yolo_world" in record.message
+        assert "vb003_yolo_world" in record.message
 
     def test_ledger_source_mismatch_is_error(self, tmp_path: Path) -> None:
         env = self._env_with_ledger_policy(tmp_path)

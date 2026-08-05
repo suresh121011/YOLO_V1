@@ -337,6 +337,11 @@ class LedgerView:
         entry = self.raw.get("entries", {}).get(filename)
         return entry.get("source") if entry else None
 
+    def entry_batch_id(self, filename: str) -> str | None:
+        """The verification batch a ledger entry came from, if any."""
+        entry = self.raw.get("entries", {}).get(filename)
+        return entry.get("batch_id") if entry else None
+
     def all_images(self) -> frozenset[str]:
         """Every filename with at least one verified cell."""
         return frozenset(self.raw.get("entries", {}).keys())
