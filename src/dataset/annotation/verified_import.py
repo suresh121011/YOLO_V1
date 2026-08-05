@@ -168,6 +168,7 @@ def import_verified_batch(
     source_by_image: Mapping[str, str],
     verifier: str,
     supersedes: str | None = None,
+    allow_missing_base: bool = False,
 ) -> ImportResult:
     """Import one batch's CVAT export: verdicts into ``ledger``, deltas to disk.
 
@@ -191,7 +192,9 @@ def import_verified_batch(
         AnnotationError: On a class-order mismatch, any non-target label
                          edit (checked for every image before any verdict is
                          recorded — all-or-nothing per batch), or a missing
-                         provenance source.
+                         provenance source (unless ``allow_missing_base`` is
+                         True, which skips the non-target check for images
+                         whose base label file does not exist).
     """
     class_order_problems = verify_class_order(export.names, dict(class_names_by_id))
     if class_order_problems:
@@ -207,12 +210,22 @@ def import_verified_batch(
     )
 
     non_target_problems: list[str] = []
+    skipped_missing_base = 0
     for filename in exported_images:
         stem = Path(filename).stem
+        base_path = merged_labels_dir / f"{stem}.txt"
+        if allow_missing_base and not base_path.exists():
+            skipped_missing_base += 1
+            continue
         non_target_problems.extend(
             check_non_target_labels_unchanged(
-                filename, export.labels[stem], merged_labels_dir / f"{stem}.txt", target_ids
+                filename, export.labels[stem], base_path, target_ids
             )
+        )
+    if skipped_missing_base:
+        logger.info(
+            f"Skipped non-target check for {skipped_missing_base} image(s) with no base "
+            f"label (--allow-missing-base)."
         )
     if non_target_problems:
         raise AnnotationError(
@@ -227,10 +240,26 @@ def import_verified_batch(
         stem = Path(filename).stem
         source = source_by_image.get(filename)
         if source is None:
-            raise AnnotationError(
-                f"{filename}: no provenance source found in the merged manifest — "
-                f"re-run the merge stage before importing."
-            )
+            if allow_missing_base:
+                # Infer source from filename prefix when not in the manifest.
+                if filename.startswith("coco_"):
+                    source = "coco"
+                elif filename.startswith("openimages_"):
+                    source = "openimages"
+                elif filename.startswith("wider_face_"):
+                    source = "wider_face"
+                elif filename.startswith("local_captures_"):
+                    source = "local_captures"
+                else:
+                    source = "unknown"
+                logger.info(
+                    f"{filename}: provenance inferred as '{source}' (--allow-missing-base)."
+                )
+            else:
+                raise AnnotationError(
+                    f"{filename}: no provenance source found in the merged manifest — "
+                    f"re-run the merge stage before importing."
+                )
 
         deltas = extract_deltas(export.labels[stem], target_ids)
         for class_id in sorted(target_ids):

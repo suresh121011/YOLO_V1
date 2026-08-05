@@ -86,6 +86,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data-config", type=Path, default=Path("configs/data.yaml"))
     parser.add_argument("--merged-dir", type=Path, default=Path("data/merged"))
     parser.add_argument("--batches-root", type=Path, default=Path("data/annotation/batches"))
+    parser.add_argument(
+        "--allow-missing-base",
+        action="store_true",
+        default=False,
+        help="Skip the non-target-class check for images whose base merged label "
+        "file does not exist (e.g. images not in data/merged/ due to a pipeline "
+        "resync). Provenance is inferred from the filename prefix.",
+    )
     return parser.parse_args()
 
 
@@ -176,6 +184,7 @@ def main() -> int:
             source_by_image=manifest.image_provenance,
             verifier=args.verifier,
             supersedes=args.supersedes,
+            allow_missing_base=args.allow_missing_base,
         )
     except AnnotationError as exc:
         logger.error(f"Batch '{batch.batch_id}' import failed — staying at '{batch.status}': {exc}")
