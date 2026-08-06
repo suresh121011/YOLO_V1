@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from src.dataset.sources_config import load_sources_config
+from src.utils.config_helpers import get_class_names_from_data_yaml, load_data_config
 
 MINIMAL_CONFIG = """
 mode: smoke
@@ -78,6 +79,61 @@ class TestLoadSourcesConfig:
         assert config.mode in ("smoke", "full")
         for expected in ("coco", "openimages", "roboflow", "wider_face", "negatives"):
             assert expected in config.sources, f"missing source '{expected}'"
+
+
+@pytest.mark.unit
+class TestRepoRoboflowDatasets:
+    """The repo config's `sources.roboflow.datasets` entries (H-B).
+
+    These are consumed by the downloader (slug/version), RG7's license
+    recording (license), and 05_remap_classes.build_table (classes). A typo
+    in any of them surfaces only after a multi-GB download or, worse, as a
+    silently dropped class at remap time — so validate them statically.
+    """
+
+    def _entries(self) -> list[dict]:
+        repo_root = Path(__file__).resolve().parents[2]
+        config = load_sources_config(repo_root / "configs" / "dataset_sources.yaml")
+        return list(config.sources["roboflow"].options.get("datasets") or [])
+
+    def test_every_entry_is_well_formed(self) -> None:
+        for entry in self._entries():
+            slug = entry.get("slug", "")
+            assert slug.count("/") == 1 and all(
+                slug.split("/")
+            ), f"slug must be 'workspace/project', got {slug!r}"
+            assert int(entry.get("version", 0)) >= 1, f"{slug}: version must be >= 1"
+            # RG7 (rg7_license_gate) fails a release when Roboflow contributed
+            # images but no per-slug license is recorded.
+            assert str(entry.get("license", "")).strip(), f"{slug}: license must be recorded"
+            assert entry.get("classes"), f"{slug}: needs a class alias map"
+
+    def test_class_aliases_resolve_to_real_taxonomy_names(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        names = get_class_names_from_data_yaml(
+            load_data_config(repo_root / "configs" / "data.yaml")
+        )
+        taxonomy = set(names.values())
+        for entry in self._entries():
+            for alias, taxonomy_name in entry["classes"].items():
+                assert taxonomy_name in taxonomy, (
+                    f"{entry['slug']}: alias {alias!r} maps to {taxonomy_name!r}, "
+                    f"which is not a class in configs/data.yaml"
+                )
+
+    def test_declared_trusted_classes_all_have_a_source_dataset(self) -> None:
+        """Every class roboflow claims to label exhaustively must actually be
+        covered by a configured dataset — otherwise `trusted_classes` promises
+        supervision the source cannot deliver."""
+        repo_root = Path(__file__).resolve().parents[2]
+        config = load_sources_config(repo_root / "configs" / "dataset_sources.yaml")
+        covered = {
+            taxonomy_name
+            for entry in self._entries()
+            for taxonomy_name in entry["classes"].values()
+        }
+        missing = sorted(set(config.sources["roboflow"].trusted_classes) - covered)
+        assert not missing, f"trusted classes with no configured dataset: {missing}"
 
 
 @pytest.mark.unit
