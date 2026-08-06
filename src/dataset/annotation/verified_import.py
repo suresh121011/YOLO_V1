@@ -130,11 +130,18 @@ def check_non_target_labels_unchanged(
 
     # Sort both lists by class_id then raw text so order-independent matching
     # works even when CVAT reorders lines.
-    base_sorted = sorted(base_non_target, key=lambda l: (parse_yolo_line(l).class_id if parse_yolo_line(l) else -1, l))
-    export_sorted = sorted(export_non_target, key=lambda l: (parse_yolo_line(l).class_id if parse_yolo_line(l) else -1, l))
+    def _sort_key(line: str) -> tuple[int, str]:
+        ann = parse_yolo_line(line)
+        return (ann.class_id if ann else -1, line)
 
+    base_sorted = sorted(base_non_target, key=_sort_key)
+    export_sorted = sorted(export_non_target, key=_sort_key)
+
+    # strict=True is redundant given the length check above, but keeps the
+    # pairing honest if that guard is ever moved or removed.
     mismatches = [
-        (b, e) for b, e in zip(base_sorted, export_sorted)
+        (b, e)
+        for b, e in zip(base_sorted, export_sorted, strict=True)
         if not _annotations_equivalent(b, e)
     ]
     if mismatches:
@@ -218,9 +225,7 @@ def import_verified_batch(
             skipped_missing_base += 1
             continue
         non_target_problems.extend(
-            check_non_target_labels_unchanged(
-                filename, export.labels[stem], base_path, target_ids
-            )
+            check_non_target_labels_unchanged(filename, export.labels[stem], base_path, target_ids)
         )
     if skipped_missing_base:
         logger.info(

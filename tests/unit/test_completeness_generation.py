@@ -490,7 +490,16 @@ class TestLedgerIntegration:
             ("coco_9002_ghost.jpg", "vb003_yolo_world"),
         ):
             record_verdict(
-                ledger, filename, "coco", "face", "verified_absent", [], batch_id, "anno_1", "cvat", ""
+                ledger,
+                filename,
+                "coco",
+                "face",
+                "verified_absent",
+                [],
+                batch_id,
+                "anno_1",
+                "cvat",
+                "",
             )
         save_ledger(ledger, env.ledger_path)
 
