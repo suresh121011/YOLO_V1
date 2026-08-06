@@ -37,7 +37,7 @@ Legend: ✅ done · ⏳ tooling done / execution pending (operational) · 👤 o
 | M4 | Coverage (L4) + quality (L5) reports | ✅ | ⏳ stale (2026-07-29 numbers) — blocked on the `auto_annotate` GPU re-run above |
 | M5 | Release automation (gates RG1–RG10) | ✅ | ✅ `dataset-v0.6.0` remains the last cut release |
 | M6 | Correctness-validation gate | ✅ | — (PASS committed) |
-| M7 | Full-mode transition + Dataset v0.5.0 | ✅ | 👤 H-B config populated; ingestion (API key + download run) pending — see status below |
+| M7 | Full-mode transition + Dataset v0.5.0 | ✅ | ✅ H-B acquisition done (1,846 img / 1,939 boxes, DVC-committed); merge into `data/merged` deferred — see below |
 | M8 | Verification at scale + v0.7.0 | ✅ | 👤 341/3,000 verified cells (11.4%) — H-C, ongoing |
 | M9 | Custom capture integration + eval lock + v0.9.0 | ✅ | 👤 H-A, ongoing — 0 images, 0 houses |
 | M10 | Evaluation + full-scale A/B evidence | ✅ | ⏳ reserved for the official v1.0 A/B run (see DVC lock defects below) |
@@ -58,34 +58,49 @@ semantics has changed, only how this doc frames the work tracks.
   Status: **0 images, 0 houses**. Blocks `v0.9.0`/`v1.0.0` via RG9; does not
   block `v0.7.0` or any engineering work.
   Runbook: `docs/04_dataset_engineering/capture_annotation_runbook.md`.
-- **H-B — Roboflow licensing** 👤 — **config populated 2026-08-06**, ingestion
-  still pending (needs `ROBOFLOW_API_KEY` + a real download run — both
-  human/operational, not engineering). `WebFetch`/plain `curl` against
-  `universe.roboflow.com` both return HTTP 403 by default, but the block is
-  a basic user-agent check, not real bot protection — a standard browser UA
-  string bypasses it, exposing each dataset's schema.org JSON-LD (license +
-  size) without needing an API key. Used that to verify 4 real candidates,
-  written into `configs/dataset_sources.yaml`'s `sources.roboflow.datasets`:
+- **H-B — Roboflow ingestion** ✅ **acquisition done 2026-08-06** (merge into
+  `data/merged` deliberately deferred — see below). Ran with a real
+  `ROBOFLOW_API_KEY`; downloaded and remapped:
 
-  | Class | Slug | Images | License |
-  |:--|:--|:--|:--|
-  | gas_cylinder | `obj-dect/gas-cylinder-detection` | 108 | CC BY 4.0 |
-  | medicine_bottle | `project-ko6pf/medicine-bottle` | 308 | CC BY 4.0 |
-  | wire | `test-agunz/wire_v3` | 3,377 | CC BY 4.0 |
-  | charger | `muhammads-workspace-5acq6/charger-lbdun` | 730 | CC BY 4.0 |
+  | Class | Slug (v1) | Images | Boxes | License |
+  |:--|:--|--:|--:|:--|
+  | wire | `test-agunz/wire_v3` | 1,335 | 1,332 | CC BY 4.0 |
+  | medicine_bottle | `project-ko6pf/medicine-bottle` | 308 | 343 | CC BY 4.0 |
+  | gas_cylinder | `obj-dect/gas-cylinder-detection` | 108 | 158 | CC BY 4.0 |
+  | charger | `computervision-hylal/charger-jgtm6` | 99 | 106 | CC BY 4.0 |
+  | **total** | | **1,846** | **1,939** | |
 
-  All CC BY 4.0 (no noncommercial-gate implications). **One caveat, flagged
-  inline in the config**: the charger dataset's class name ("My Tugas") is
-  unexplained — only the dataset title supports the charger mapping; the
-  other three have self-descriptive class names. Spot-check images visually
-  once downloaded, before trusting that mapping in a training run.
-  **Does not block RG7** — `rg7_license_gate` passes vacuously while no
-  Roboflow data is ingested. Its value is lifting `charger`'s coverage_score
-  (0.12 vs the 0.5 floor `v0.7.0` needs), not unblocking a currently-failing
-  gate.
-  **Next step (needs a human):** set `ROBOFLOW_API_KEY`, run the
-  `download_roboflow` stage, and visually spot-check the `charger-lbdun`
-  images before trusting its class mapping.
+  Remap result: **1,939 kept / 0 dropped**. All four per-slug licenses are
+  recorded in the acquisition manifest (what `rg7_license_gate` reads).
+
+  **The first config pass (`125ab40`) was wrong in three ways, and only real
+  data exposed it** — worth remembering when adding a fifth dataset:
+  1. *Every* class alias was derived from the Universe page's prose rather
+     than the exported class string (`"Wire LWH6"` vs the actual
+     `"wire-lWH6"`, `"Medicine"` vs `"0"`). Remap lookup is exact-string, so
+     this would have dropped all 1,939 boxes **silently, with exit code 0**,
+     leaving four `trusted_classes` backed by nothing.
+  2. The charger dataset chosen on image count (730) had **zero generated
+     versions** and could not be downloaded at all. Replaced with a 99-image
+     project that actually exports.
+  3. Advertised image counts ≠ export counts (wire: 3,377 vs 1,335).
+
+  Take aliases from `api.roboflow.com/<ws>/<project>` → `project.classes`
+  (confirmed to match each export's own `data.yaml`), never from page prose.
+  `TestRepoRoboflowDatasets::test_aliases_match_the_real_export_when_one_is_present`
+  now enforces this whenever an export cache is present.
+
+  **Still open on this track:**
+  - `medicine-bottle`'s single class is literally named `"0"`; the mapping
+    rests on the project title. Wants a visual spot-check before it is
+    trusted as exhaustive supervision.
+  - `charger` gained only 99 images — it remains the weakest-covered class,
+    and **RG3's `coverage_score >= 0.5` still depends on H-C verification**,
+    not on this ingest.
+  - Data is in `data/raw/roboflow_imports` + `data/interim` and DVC-committed,
+    but **not merged** into `data/merged`. `merge → split → completeness →
+    qa_check` is a deliberate rebuild; `coverage_report` additionally sits
+    behind `auto_annotate`, which needs a GPU box with `ultralytics`.
 - **H-C — CVAT verification campaign** 👤 — engineering/tooling complete
   (create tasks from `cvat_labels.json`, verify boxes, dual-annotate the IAA
   sample, export → import → `dvc commit -f`, all proven end-to-end on real

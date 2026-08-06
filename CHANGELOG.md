@@ -195,6 +195,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `TestRepoRoboflowDatasets` validates the entries statically (well-formed
   slug/version/license/classes, aliases resolve against `configs/data.yaml`,
   and every declared `trusted_classes` entry has a backing dataset).
+- H-B acquisition executed: **1,846 images / 1,939 boxes** ingested
+  (wire 1,332 · medicine_bottle 343 · gas_cylinder 158 · charger 106),
+  remapped 1,939 kept / 0 dropped, DVC-committed. Corrected the config
+  against the real exports first — every alias had been taken from page
+  prose rather than the exported class string, and the originally-chosen
+  charger project had zero downloadable versions (see Fixed). Data is in
+  `data/raw/roboflow_imports` + `data/interim`; the merge into
+  `data/merged` is a separate deliberate rebuild.
+- `roboflow` declared as an optional extra in `pyproject.toml`
+  (`pip install -e ".[roboflow]"`) — `roboflow_dl.py` imported the SDK but
+  the only reference in the repo was a mypy override.
 
 ### Fixed
 - CVAT label paste failed with `unknown label type "undefined"` on the
