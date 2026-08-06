@@ -146,13 +146,33 @@ stages:
           - charger
           - wire
           - gas_cylinder
-          datasets: []
+          datasets:
+          - slug: obj-dect/gas-cylinder-detection
+            version: 1
+            license: CC BY 4.0
+            classes:
+              Recognising-Indian-Indian-gas: gas_cylinder
+          - slug: project-ko6pf/medicine-bottle
+            version: 1
+            license: CC BY 4.0
+            classes:
+              '0': medicine_bottle
+          - slug: test-agunz/wire_v3
+            version: 1
+            license: CC BY 4.0
+            classes:
+              wire-lWH6: wire
+          - slug: computervision-hylal/charger-jgtm6
+            version: 1
+            license: CC BY 4.0
+            classes:
+              Charger: charger
     outs:
     - path: data/raw/roboflow_imports
       hash: md5
-      md5: d751713988987e9331980363e24189ce.dir
-      size: 0
-      nfiles: 0
+      md5: b6962dc7c74f0f0852bfe17fbff732b1.dir
+      size: 67026157
+      nfiles: 3694
   download_wider_face:
     cmd: python scripts/dataset/04_download_wider_face.py
     deps:
@@ -263,9 +283,9 @@ stages:
       nfiles: 4044
     - path: data/raw/roboflow_imports
       hash: md5
-      md5: d751713988987e9331980363e24189ce.dir
-      size: 0
-      nfiles: 0
+      md5: b6962dc7c74f0f0852bfe17fbff732b1.dir
+      size: 67026157
+      nfiles: 3694
     - path: data/raw/wider_face
       hash: md5
       md5: 452554896d5deab2aef860adf77fd4bd.dir
@@ -357,7 +377,27 @@ stages:
             - charger
             - wire
             - gas_cylinder
-            datasets: []
+            datasets:
+            - slug: obj-dect/gas-cylinder-detection
+              version: 1
+              license: CC BY 4.0
+              classes:
+                Recognising-Indian-Indian-gas: gas_cylinder
+            - slug: project-ko6pf/medicine-bottle
+              version: 1
+              license: CC BY 4.0
+              classes:
+                '0': medicine_bottle
+            - slug: test-agunz/wire_v3
+              version: 1
+              license: CC BY 4.0
+              classes:
+                wire-lWH6: wire
+            - slug: computervision-hylal/charger-jgtm6
+              version: 1
+              license: CC BY 4.0
+              classes:
+                Charger: charger
           wider_face:
             enabled: true
             output_dir: data/raw/wider_face
@@ -419,9 +459,9 @@ stages:
     outs:
     - path: data/interim
       hash: md5
-      md5: f26f9195b20e547e2e2e0a246a7805b9.dir
-      size: 689946
-      nfiles: 7418
+      md5: 51ac37fefc5f730f8a2a1bb916d22140.dir
+      size: 1881140
+      nfiles: 9264
   merge_datasets:
     cmd: python scripts/dataset/07_merge_datasets.py
     deps:
