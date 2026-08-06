@@ -126,6 +126,25 @@ captures, locked eval set) are actually satisfied.
 | `dataset-v0.9.0` | RG1–RG8 | RG9: 0/1,000 custom images, 0/2 houses (H-A) |
 | `dataset-v1.0.0` | RG1–RG10 | RG9: 2,000/3 houses; RG10: locked eval set + two full GPU A/B runs (ADR-P5-10) |
 
+## Known-wrong artifact shipped with `dataset-v0.6.0`
+
+*(Restored 2026-08-06 — this warning was dropped by mistake in the earlier
+revision of this doc. It still applies: a git tag is immutable, so anyone
+checking out `dataset-v0.6.0` gets the bad artifact regardless of what the
+workspace looks like now.)*
+
+The `completeness.json` **shipped at the `dataset-v0.6.0` tag** over-claims
+trusted classes for **69.5%** of images, and the same union suppressed
+candidate generation for those images
+([ADR-P5-15](adr/ADR-P5-15-per-slug-trust-resolution-and-targeting.md)).
+**Do not train from the `dataset-v0.6.0` tag with
+`missing_annotation_mitigation` enabled.**
+
+The **working tree** artifact is fixed: `completeness.json` was regenerated
+2026-08-06 under the corrected per-slug model (visible as
+`local_captures/<slug>` policy keys rather than one union entry). That fix
+ships with `v0.7.0`; it does not retroactively change the released tag.
+
 ## Known gaps found and fixed this session (2026-08-06)
 
 - `src/dataset/completeness.py`: `generate_completeness` hard-failed on any
@@ -144,6 +163,30 @@ captures, locked eval set) are actually satisfied.
   it. Used that to verify 4 real dataset candidates (license + size, via
   each page's schema.org JSON-LD) and populated
   `sources.roboflow.datasets` (see above).
+
+### Found by the closeout audit (2026-08-06, second pass)
+
+- **CI was red on `main` and had been since 2026-07-31.** `black --check`
+  failed on two files and `ruff` reported 6 errors (`E741` ambiguous `l`,
+  `E501` over-length, `B905` non-strict `zip`), introduced by `3032779` and
+  compounded by this session's `4b5b898`. Nobody ran the lint gate locally —
+  the pipeline work was validated with `pytest` only. Now green on all three
+  CI gates (`black`, `ruff`, `mypy`).
+- **RG5 could never have passed once a batch was reviewed.** `exports/` —
+  the directory `verification_runbook.md` §5 instructs reviewers to create —
+  was not git-ignored, and `rg5_working_tree_tagged` fails on *any*
+  `git status --porcelain` output, untracked included. `.gitignore` now
+  covers `/exports/` and `*.lnk`, matching the intent already documented in
+  its own "Local scratch" section.
+- **No test covered the production `sources.roboflow.datasets` entries.**
+  A typo'd taxonomy name or a missing per-slug license would have surfaced
+  only after a multi-GB download (or as a silently dropped class at remap
+  time, or an RG7 failure at release). `TestRepoRoboflowDatasets` now
+  validates them statically.
+- **This doc had lost the `dataset-v0.6.0` known-wrong-artifact warning** —
+  dropped by mistake in `b9f6263`. Restored above.
+- `CHANGELOG.md` had no `[Unreleased]` entries for any of this session's
+  engineering work. Added.
 
 ## Current shared-state facts
 

@@ -184,8 +184,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     parsers, negatives selection, Roboflow skip contract, CLI exit codes);
     downloader package coverage 0% → ~93%, overall 43% → 65%
   - `.env.example` documenting `ROBOFLOW_API_KEY` (graceful-skip semantics)
+- H-B: `sources.roboflow.datasets` populated with one verified Roboflow
+  Universe dataset per specialty class — `obj-dect/gas-cylinder-detection`
+  (gas_cylinder, 108 img, India-specific), `project-ko6pf/medicine-bottle`
+  (medicine_bottle, 308), `test-agunz/wire_v3` (wire, 3,377) and
+  `muhammads-workspace-5acq6/charger-lbdun` (charger, 730). All CC BY 4.0,
+  each verified from its Universe page's schema.org JSON-LD. Ingestion still
+  needs `ROBOFLOW_API_KEY` + a download run; the `charger-lbdun` alias
+  (`"My Tugas"`) is flagged in-config as needing a visual spot-check.
+  `TestRepoRoboflowDatasets` validates the entries statically (well-formed
+  slug/version/license/classes, aliases resolve against `configs/data.yaml`,
+  and every declared `trusted_classes` entry has a backing dataset).
 
 ### Fixed
+- CVAT label paste failed with `unknown label type "undefined"` on the
+  deployed CVAT: `build_cvat_labels_spec` omitted `type`, assuming CVAT
+  defaults it to `"any"`. It now emits `{"name": ..., "type": "rectangle",
+  "attributes": []}` per class — all verification boxes are axis-aligned.
+  (Follow-on to the `attributes: []` fix below; both are required.)
+- `14_import_verified_batch.py` could not import a batch built before a
+  merge rebuild: every non-target byte-equality check and provenance lookup
+  compared against `data/merged/labels/`, where none of the batch's images
+  exist any more. Added `--allow-missing-base`, which skips the non-target
+  check for images with no base label (there is nothing to diff against) and
+  infers provenance from the filename prefix. Scoped to genuinely missing
+  images — present-base images still get the full check.
+- `generate_completeness` hard-failed on any verification-ledger entry whose
+  image predates the current merge snapshot, blocking `coverage_report` and
+  `dataset_quality_report` behind it. Such entries are historical records,
+  not inconsistencies: they are now skipped with a warning naming the count,
+  the affected batch ids and example filenames. The ledger is unchanged.
+- Non-target label comparison in `verified_import.py` used ambiguous `l`
+  lambdas over 100 columns and a non-`strict` `zip()`, failing `ruff`/`black`
+  in CI. Extracted a named `_sort_key` and made the pairing `strict=True`
+  (redundant behind the existing length guard, but keeps it honest if that
+  guard ever moves).
+- `exports/` — where `verification_runbook.md` §5 tells reviewers to put CVAT
+  exports — was not git-ignored, so RG5's clean-tree gate
+  (`rg5_working_tree_tagged`, which fails on *any* porcelain output including
+  untracked paths) could never pass once a batch had been reviewed.
 - CVAT task creation failed with `Could not create the task` / `labels:
   [object Object]` and `POST /api/tasks 400` on CVAT 2.5.14:
   `build_cvat_labels_spec` (`cvat_package.py`) emitted bare `{"name": ...}`
