@@ -122,3 +122,27 @@ class TestRemapLabelDir:
         result = remap_label_dir(source_dir, REMAP_TABLES["coco"])
         assert result.annotations_remapped == 1
         assert result.annotations_dropped == 1
+
+    def test_segmentation_polygon_lines_are_dropped(self, tmp_path: Path) -> None:
+        """A YOLO *segmentation* export carries polygons, not boxes.
+
+        remap used to check only that field 0 was an int and then write
+        ``[new_id, *parts[1:]]`` verbatim, so polygon lines passed straight
+        through into data/merged/labels and corrupted the detection set —
+        silently, because every downstream counter uses parse_yolo_line,
+        which ignores non-5-field lines. A real Roboflow segmentation
+        dataset put 502 such lines into a merge before it was reverted.
+        """
+        polygon = "0 " + " ".join(f"0.{i:03d}" for i in range(60))  # 61 fields
+        source_dir = _make_source(
+            tmp_path,
+            classes={"0": "person"},
+            labels={"seg.txt": f"{polygon}\n0 0.5 0.5 0.2 0.2\n"},
+        )
+        result = remap_label_dir(source_dir, REMAP_TABLES["coco"])
+
+        assert result.annotations_remapped == 1, "the real box must survive"
+        assert result.annotations_dropped == 1, "the polygon must be dropped"
+        written = (source_dir / "labels" / "seg.txt").read_text(encoding="utf-8")
+        assert written.strip() == "0 0.5 0.5 0.2 0.2"
+        assert "0.059" not in written, "no polygon coordinates may survive"

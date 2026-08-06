@@ -36,6 +36,10 @@ NUM_CLASSES = 23
 SOURCE_CLASSES_FILENAME = "source_classes.json"
 REMAP_SENTINEL_FILENAME = ".remap_done.json"
 
+#: A YOLO *detection* label line is exactly ``class cx cy w h``. Segmentation
+#: exports use the same extension but carry polygons (tens of fields).
+_YOLO_DETECTION_FIELDS = 5
+
 # Source class name → taxonomy class ID.
 # COCO names correspond to docs' numeric table {1:0, 44:4, 49:5, 73:12,
 # 72:13, 62:16, 65:17, 70:18, 81:19, 84:9}.
@@ -129,6 +133,18 @@ def remap_label_file(
     rewrites ``path`` in place. Lines whose class maps to None (unmapped
     source class) are dropped and counted; malformed lines are dropped with
     a warning.
+
+    "Malformed" includes any line that is not exactly ``class cx cy w h``.
+    This matters because an instance-SEGMENTATION export in YOLO format is
+    polygons (``class x1 y1 x2 y2 ...``, tens of fields), and this function
+    used to check only that field 0 parsed as an int before writing
+    ``[new_id, *parts[1:]]`` verbatim — so polygons flowed through remap and
+    merge untouched into ``data/merged/labels``. That happened with a
+    Roboflow segmentation dataset (502 polygon lines reached the merged set
+    before the merge was reverted) and was invisible in the summary counts,
+    because every downstream counter uses ``parse_yolo_line``, which
+    correctly ignores non-5-field lines. Rejecting them here makes the drop
+    loud and keeps the corruption out of the dataset.
     """
     out_lines: list[str] = []
     for raw in path.read_text(encoding="utf-8").splitlines():
@@ -136,6 +152,14 @@ def remap_label_file(
         if not line or line.startswith("#"):
             continue
         parts = line.split()
+        if len(parts) != _YOLO_DETECTION_FIELDS:
+            logger.warning(
+                f"Non-detection label line dropped in {path.name}: expected "
+                f"{_YOLO_DETECTION_FIELDS} fields (class cx cy w h), got {len(parts)} — "
+                f"is this an instance-segmentation export? '{line[:60]}...'"
+            )
+            result.annotations_dropped += 1
+            continue
         try:
             local_id = int(parts[0])
         except (ValueError, IndexError):
