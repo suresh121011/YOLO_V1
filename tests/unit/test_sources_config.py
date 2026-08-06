@@ -121,6 +121,40 @@ class TestRepoRoboflowDatasets:
                     f"which is not a class in configs/data.yaml"
                 )
 
+    def test_aliases_match_the_real_export_when_one_is_present(self) -> None:
+        """The alias must equal the class string the export actually uses.
+
+        Remap lookup is exact-string, so a near-miss alias silently drops
+        every annotation instead of failing. This happened: aliases were
+        first derived from each Universe page's prose ("Wire LWH6") rather
+        than the export's own `names:` ("wire-lWH6"), and the remap stage
+        would have reported "0 kept, 1939 dropped" without erroring.
+
+        Skips when the export cache is absent (CI, fresh clone) — this is a
+        consistency check against real downloaded data, not a network test.
+        """
+        yaml = pytest.importorskip("yaml")
+        repo_root = Path(__file__).resolve().parents[2]
+        cache = repo_root / "data" / "downloads_cache" / "roboflow"
+        if not cache.is_dir():
+            pytest.skip("no roboflow export cache on this machine")
+
+        checked = 0
+        for entry in self._entries():
+            export_dir = cache / f"{entry['slug'].replace('/', '_')}_v{entry['version']}"
+            data_yaml = export_dir / "data.yaml"
+            if not data_yaml.is_file():
+                continue
+            exported = set(yaml.safe_load(data_yaml.read_text(encoding="utf-8"))["names"])
+            for alias in entry["classes"]:
+                assert alias in exported, (
+                    f"{entry['slug']}: configured alias {alias!r} is not a class in the "
+                    f"export ({sorted(exported)}) — remap would drop every annotation"
+                )
+                checked += 1
+        if checked == 0:
+            pytest.skip("no matching exports found in the cache")
+
     def test_declared_trusted_classes_all_have_a_source_dataset(self) -> None:
         """Every class roboflow claims to label exhaustively must actually be
         covered by a configured dataset — otherwise `trusted_classes` promises

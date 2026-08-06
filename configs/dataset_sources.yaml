@@ -174,39 +174,60 @@ sources:
     remap_table: roboflow
     trusted_classes: [medicine_bottle, charger, wire, gas_cylinder]
     # Roboflow Universe datasets to pull (workspace/project/version).
-    # Populated 2026-08-06 (H-B): verified live via universe.roboflow.com's
-    # per-page schema.org JSON-LD (license) and dataset/<N> version links —
-    # NOT via the Roboflow API (requires ROBOFLOW_API_KEY, not set here) and
-    # NOT via actual image inspection. Before the full build: (1) set
-    # ROBOFLOW_API_KEY, (2) spot-check a sample of each dataset's images once
-    # downloaded — 'charger-lbdun's class name ("My Tugas") is unexplained
-    # and unverified beyond the dataset title; the other three have
-    # self-descriptive class names.
+    #
+    # Corrected 2026-08-06 against the REAL export + Roboflow API. The first
+    # pass derived alias names from each Universe page's schema.org JSON-LD
+    # *prose*, which does not match the exported class strings — every alias
+    # was wrong ("Recognising Indian Indian Gas" vs the actual
+    # "Recognising-Indian-Indian-gas", "Medicine" vs "0", "Wire LWH6" vs
+    # "wire-lWH6"). Remap lookup is exact-string, so all annotations would
+    # have been silently dropped. Aliases below are copied verbatim from
+    # `GET api.roboflow.com/<ws>/<project>` -> project.classes, which was
+    # confirmed to match each export's own data.yaml `names:` list.
+    #
+    # Rule for adding a dataset: take the alias from the API/export, never
+    # from page prose, and confirm the version exists (a Universe project can
+    # have ZERO generated versions and is then undownloadable — see below).
     datasets:
       - slug: "obj-dect/gas-cylinder-detection"
         version: 1
         license: "CC BY 4.0"
-        classes: {"Recognising Indian Indian Gas": gas_cylinder}
-        # 108 images. India-specific — matches this project's existing
-        # local_captures gas_cylinder brands (indane, bharat).
+        classes: {"Recognising-Indian-Indian-gas": gas_cylinder}
+        # 108 images / 158 boxes. India-specific — matches this project's
+        # existing local_captures gas_cylinder brands (indane, bharat).
+        # The project also carries a 'gas cylinder head' class (65 boxes),
+        # deliberately NOT mapped: it labels the valve//regulator area, not
+        # the whole cylinder, so mapping it to gas_cylinder would inject
+        # part-of-object boxes. It is absent from the v1 export anyway.
       - slug: "project-ko6pf/medicine-bottle"
         version: 1
         license: "CC BY 4.0"
-        classes: {"Medicine": medicine_bottle}
-        # 308 images, single self-descriptive class.
+        classes: {"0": medicine_bottle}
+        # 308 images / 343 boxes. The single class is literally named "0" —
+        # the uploader never renamed it. Mapping rests on the project title
+        # ("Medicine Bottle"), so this one still wants a visual spot-check
+        # before it is trusted as exhaustive supervision.
       - slug: "test-agunz/wire_v3"
         version: 1
         license: "CC BY 4.0"
-        classes: {"Wire LWH6": wire}
-        # 3,377 images, instance segmentation task (boxes still usable).
-      - slug: "muhammads-workspace-5acq6/charger-lbdun"
+        classes: {"wire-lWH6": wire}
+        # 1,335 images in the v1 export / 1,332 boxes consolidated — by far
+        # the largest contributor here. (The Universe page advertises 3,377
+        # images; that is the project-level/augmented count, not what v1
+        # exports. Counts below are measured from the real export.)
+      - slug: "computervision-hylal/charger-jgtm6"
         version: 1
         license: "CC BY 4.0"
-        classes: {"My Tugas": charger}
-        # 730 images. UNVERIFIED class relevance — "My Tugas" is not a
-        # descriptive class name; only the dataset title ("Charger") and
-        # per-image alt text ("Charger"/"Charger-cUjN" seen on sibling
-        # candidates) support this mapping. Confirm visually before trusting.
+        classes: {"Charger": charger}
+        # 99 images / 106 boxes. Replaces muhammads-workspace-5acq6/
+        # charger-lbdun (730 images), which the first pass selected on image
+        # count alone: that project has ZERO generated versions, so the
+        # download fails with "Version number 1 is not found" and there is
+        # nothing to fetch. Of the reachable charger projects (all 99 images,
+        # all CC BY 4.0) this one has the cleanest class name; the others
+        # export "Charger-cUjN". charger remains the weakest-covered class —
+        # RG3 needs coverage_score >= 0.5 and 99 images will not get there
+        # alone, so H-C verification stays the primary lever.
 
   wider_face:
     enabled: true
