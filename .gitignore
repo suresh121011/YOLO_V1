@@ -167,6 +167,16 @@ temp/
 # CVAT, Label Studio exports — managed externally
 *.cvat.zip
 *.labelstudio.json
+# verification_runbook.md §5 tells reviewers to drop CVAT "YOLO 1.1" exports at
+# exports/<batch>_review*.zip and pass them to 14_import_verified_batch.py.
+# Those exports are transient review inputs — the ledger + verified_labels/ are
+# the tracked artifacts of record — so the directory must not count against
+# RG5's clean-tree gate (rg5_working_tree_tagged fails on ANY porcelain output,
+# untracked included).
+/exports/
+
+# Windows shortcuts to data/ directories (convenience only, never source).
+*.lnk
 
 # ─── Local scratch / experiments ──────────────────────────────────────────────
 # Ad-hoc local test scripts and sample images kept out of the tree so they
