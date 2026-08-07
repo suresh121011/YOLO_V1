@@ -10,6 +10,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Phase-6 M0: Scenario & Rule Engine design record (`docs/08_scenario_engineering/`).
+  The knowledge layer that turns detections over the 23-class taxonomy into
+  elderly-care scenarios (risk level → patient prompt → next best action →
+  caregiver alert). **This phase is spec-drift reconciliation plus the missing
+  governed knowledge dataset, not a new engine** — `src/pipeline/` already ships
+  a rule evaluator, event memory, an alert queue, a TTS sink and six live rules,
+  and `near(class_a, class_b, pixel_dist)` has been documented as a V1 condition
+  at `docs/02_technical_architecture_specification/rule_engine.md:34` since
+  Phase 2 without ever being implemented.
+  - `architecture_review.md` — runtime as built vs. as documented, including
+    **ten defects verified against the code**: every feature flag is inert
+    (`orchestrator.py:49` reads a `feature_flags:` root key that does not exist,
+    so `passport: false  # privacy` is a false claim); the only CRITICAL rule
+    cannot fire cold (`event_memory.py:114` returns the 150-frame window for
+    never-seen ⇒ 10.0 s, against a 30 s threshold); recall-tuned per-class
+    thresholds are structurally unreachable (`detector.py:133` filters at the
+    global 0.25 first, and `class_thresholds.yaml` is never loaded at runtime);
+    `any_of([...])` silently discards the rest of its condition; AND/OR
+    precedence is inverted; one bad severity string zeroes all alerts silently
+    and the rule engine has **zero tests**; `save_csv_report` writes CRLF while
+    its JSON sibling documents why LF is mandatory; and the `AnalysisPlugin`
+    seam has three mutually incompatible contracts with no registration
+    mechanism. These are the content of M1.
+  - `requirements_specification.md` — Scenario/Rule/Predicate/Event definitions,
+    the eight validity conditions, mandatory vs optional fields, and the
+    forbidden assumptions (absence of `person` ≠ absence of a person;
+    single-resident homes; a working system; repetition as escalation).
+  - `domain_research_report.md` — CDC STEADI, WHO falls guidance, Katz ADL /
+    Lawton–Brody IADL, alarm-fatigue evidence, DPDP Act 2023 posture, and the
+    `evidence` field contract (`supports: hazard` never licenses
+    `detectability: direct`).
+  - `negative_register.md` — scenarios permanently out of scope with these 23
+    static-object classes (fall detection, "stove is on", gas leaks, medication
+    adherence, hydration, wandering), plus the three live rules being **deleted
+    rather than migrated** (`knife_near_person`, `medicine_reminder`,
+    `gas_cylinder_check`; projected day-one volume ~370 alerts, ~0 actionable).
+  - `adr/ADR-P6-01…09` — per-scenario YAML master in `configs/scenarios/` ·
+    CSV is an export-only view · structured AST over the string DSL ·
+    `BaseRuleEngine` injection over the plugin seam · class capability map (the
+    taxonomy fingerprint provably cannot catch the scheduled `wet_floor`
+    demotion, since class ID 20 stays reserved) · `rule_hash` semantic
+    versioning with a derived-semver gate · `near()` units and room-vs-zone ·
+    rejected-scenario negative register · additive extension of the LOCKED
+    `Alert` contract.
 - Phase-5: Production Dataset Engineering, Missing-Annotation Resolution &
   Dataset v1.0 — makes dataset quality the primary solution and demotes
   Phase-4 masking to a safety net. Core invariant: auto-generated labels never
