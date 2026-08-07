@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -38,6 +39,18 @@ UNCERTAINTY_UPPER = 0.55
 
 # Classes whose bboxes must not be stored (privacy)
 BBOX_REDACT_CLASSES = frozenset({"face", "person"})
+
+# Matches an explanation key that names a redacted class as a whole word, so
+# "person_center" and "face_bbox" are caught but "persistence" is not.
+_REDACT_KEY_RE = re.compile(
+    r"(?:^|_)(?:" + "|".join(sorted(BBOX_REDACT_CLASSES)) + r")(?:$|_)",
+    re.IGNORECASE,
+)
+
+
+def _names_redacted_class(key: str) -> bool:
+    """Does this explanation key refer to a privacy-redacted class?"""
+    return _REDACT_KEY_RE.search(key) is not None
 
 
 class StructuredLogger:
@@ -157,8 +170,34 @@ class StructuredLogger:
                 },
             )
 
+    @staticmethod
+    def redact_explanation(explanation: Any) -> Any:
+        """Strip geometry for privacy-sensitive classes from an explanation dict.
+
+        ``log_frame`` has always redacted ``person``/``face`` bounding boxes, but
+        ``log_alert`` wrote ``alert.explanation`` verbatim. That was harmless
+        while explanations held only class names — and becomes a privacy
+        regression the moment spatial predicates start recording coordinates
+        such as ``{"person_center": [0.41, 0.62]}`` for debuggability.
+
+        Any key naming a redacted class is dropped, at any nesting depth. Keys
+        are matched on word boundaries so ``person_center`` and ``face_bbox`` are
+        caught while an unrelated key such as ``persistence`` is not.
+
+        See docs/08_scenario_engineering/adr/ADR-P6-09-alert-contract-extension.md.
+        """
+        if isinstance(explanation, dict):
+            return {
+                key: StructuredLogger.redact_explanation(value)
+                for key, value in explanation.items()
+                if not _names_redacted_class(str(key))
+            }
+        if isinstance(explanation, list):
+            return [StructuredLogger.redact_explanation(item) for item in explanation]
+        return explanation
+
     def log_alert(self, alert: Any) -> None:
-        """Log a fired alert with full explanation for debugging."""
+        """Log a fired alert with its explanation, geometry redacted."""
         self._alert_count += 1
         self._write(
             self._events_path,
@@ -169,7 +208,7 @@ class StructuredLogger:
                 "severity": alert.severity.name,
                 "message": alert.message,
                 "frame_id": alert.frame_id,
-                "explanation": alert.explanation,
+                "explanation": self.redact_explanation(alert.explanation),
             },
         )
 

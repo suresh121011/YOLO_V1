@@ -58,6 +58,7 @@ class YOLODetector:
         class_thresholds: dict[str, float] | None = None,
         expected_hash: str | None = None,
         device: str = "cpu",
+        disabled_classes: set[str] | frozenset[str] | None = None,
     ) -> None:
         """
         Args:
@@ -66,11 +67,26 @@ class YOLODetector:
             class_thresholds: Per-class overrides (safety classes use lower values).
             expected_hash: Optional SHA-256 hash to verify model integrity on load.
             device: Inference device ('cpu', 'cuda', 'mps').
+            disabled_classes: Class names to suppress entirely. Suppression happens
+                here, so a disabled class never becomes a Detection and therefore
+                never reaches a rule, a log, or an alert. This is what makes
+                ``passport: false  # privacy`` in configs/feature_flags.yaml a real
+                guarantee rather than a comment.
         """
         self.model_path = Path(model_path)
         self.conf_threshold = conf_threshold
         self.class_thresholds = {**DEFAULT_CLASS_THRESHOLDS, **(class_thresholds or {})}
         self.device = device
+        self.disabled_classes = frozenset(disabled_classes or ())
+
+        # Ultralytics filters by `conf` BEFORE our per-class pass runs, so
+        # handing it the global threshold made every per-class value that is
+        # LOWER than the global unreachable — silently defeating the
+        # recall-preferring safety thresholds documented in
+        # configs/class_thresholds.yaml. Predict at the loosest threshold any
+        # class asks for; the per-class filter in detect() then applies the
+        # real, stricter-or-equal cut.
+        self._predict_conf = min([conf_threshold, *self.class_thresholds.values()])
 
         if not self.model_path.exists():
             raise FileNotFoundError(f"YOLO model not found: {self.model_path}")
@@ -130,7 +146,7 @@ class YOLODetector:
 
         results = self.model.predict(
             frame,
-            conf=self.conf_threshold,
+            conf=self._predict_conf,
             iou=self.DEFAULT_IOU,
             verbose=False,
         )
@@ -141,6 +157,10 @@ class YOLODetector:
                 class_id = int(box.cls.item())
                 class_name = self.model.names[class_id]
                 conf = float(box.conf.item())
+
+                # Privacy/noise suppression — drop before anything else observes it.
+                if class_name in self.disabled_classes:
+                    continue
 
                 # Apply per-class threshold (may be stricter or more lenient than default)
                 min_conf = self.class_thresholds.get(class_name, self.conf_threshold)

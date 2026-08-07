@@ -23,11 +23,9 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from pathlib import Path
 from typing import Any
 
-import yaml
-
+from ..config.config_loader import SystemConfig
 from ..logging.structured_logger import StructuredLogger
 from . import PipelineMetrics, Severity
 from .confidence_fusion import ConfidenceFusion
@@ -38,16 +36,6 @@ from .scene_analyzer import SmolVLM2Analyzer
 from .tts_engine import PiperTTS
 
 logger = logging.getLogger(__name__)
-
-
-def _load_flags(path: str = "configs/feature_flags.yaml") -> dict[str, Any]:
-    """Load feature flags from YAML. Returns empty dict if file missing."""
-    p = Path(path)
-    if not p.exists():
-        logger.warning(f"Feature flags file not found: {path}. Using defaults.")
-        return {}
-    result = yaml.safe_load(p.read_text(encoding="utf-8")).get("feature_flags", {})
-    return result if isinstance(result, dict) else {}
 
 
 class ElderlyAssistantPipeline:
@@ -74,35 +62,61 @@ class ElderlyAssistantPipeline:
         tts_model_path: str = "models/tts/en_IN-medium.onnx",
         tts_config_path: str = "models/tts/en_IN-medium.onnx.json",
         flags_path: str = "configs/feature_flags.yaml",
+        thresholds_path: str = "configs/class_thresholds.yaml",
         vlm_model: str = "HuggingFaceTB/SmolVLM2-256M-Video-Instruct",
         log_dir: str = "logs",
-        target_fps: float = 15.0,
+        target_fps: float | None = None,
     ) -> None:
-        self._flags = _load_flags(flags_path)
-        self._target_fps = target_fps
+        # Every component is configured from this one object — no component
+        # reads YAML directly (SystemConfig's own documented contract). Until
+        # Phase 6 the orchestrator hand-rolled a loader that read a
+        # `feature_flags:` root key which does not exist in the file, so every
+        # flag silently evaluated to its default and SystemConfig was reachable
+        # only from tests.
+        self._config = SystemConfig.load(flags_path, thresholds_path)
+        self._target_fps = (
+            target_fps
+            if target_fps is not None
+            else float(self._config.get_runtime("target_fps", 15))
+        )
+        self._measured_fps = self._target_fps
+        self._last_frame_ts: float | None = None
         self._frame_count = 0
         self._mode = "initialising"
 
         # ── YOLO Detector (required) ─────────────────────────────────────
-        self._detector = YOLODetector(model_path=model_path)
+        # Per-class thresholds come from configs/class_thresholds.yaml, which
+        # was previously never loaded at runtime.
+        self._detector = YOLODetector(
+            model_path=model_path,
+            class_thresholds=dict(self._config.class_thresholds),
+            disabled_classes={
+                name for name, enabled in self._config.classes.items() if not enabled
+            },
+        )
         self._detector.warmup()
 
         # ── Event Memory ─────────────────────────────────────────────────
-        self._memory = EventMemory(window_size=150)
+        self._memory = EventMemory(
+            window_size=int(self._config.get_runtime("memory_window_frames", 150))
+        )
 
         # ── Confidence Fusion ────────────────────────────────────────────
         self._fusion = ConfidenceFusion(alpha=0.7, beta=0.3)
 
         # ── SmolVLM2 Analyzer (optional) ─────────────────────────────────
-        vlm_enabled = self._flags.get("vlm_enabled", True)
-        if vlm_enabled:
+        if self._config.is_component_enabled("smolvlm_analysis"):
             self._analyzer: SmolVLM2Analyzer | None = SmolVLM2Analyzer(vlm_model)
         else:
             self._analyzer = None
             logger.info("SmolVLM2 disabled via feature flag")
 
         # ── Rule Engine ──────────────────────────────────────────────────
-        self._rule_engine = RuleEngine(rules_path=rules_path, fps=target_fps)
+        self._rule_engine = RuleEngine(
+            rules_path=rules_path,
+            fps=self._target_fps,
+            rule_enabled=self._config.is_rule_enabled,
+        )
 
         # ── Piper TTS (non-blocking) ─────────────────────────────────────
         self._tts: PiperTTS | None = None
@@ -148,6 +162,16 @@ class ElderlyAssistantPipeline:
         frame_id = self._frame_count
         context = None
 
+        # Track the REAL loop rate. Temporal rules convert Event Memory frame
+        # counts into seconds, so feeding them the nominal target while the
+        # device is throttling silently rescales every threshold — a 30s
+        # "unattended" rule becomes 225s at 2 FPS.
+        if self._last_frame_ts is not None:
+            interval = t0 - self._last_frame_ts
+            if interval > 0:
+                self._measured_fps = 0.9 * self._measured_fps + 0.1 * (1.0 / interval)
+        self._last_frame_ts = t0
+
         # ── 1. YOLO detection ─────────────────────────────────────────
         t1 = time.perf_counter()
         try:
@@ -186,7 +210,9 @@ class ElderlyAssistantPipeline:
         # ── 5. Rule Engine ────────────────────────────────────────────
         t4 = time.perf_counter()
         try:
-            alerts = self._rule_engine.evaluate(detections, self._memory, context, self._target_fps)
+            alerts = self._rule_engine.evaluate(
+                detections, self._memory, context, self._measured_fps
+            )
         except Exception as e:
             self._logger.log_error(e, context="rule_engine")
             alerts = []
@@ -222,7 +248,7 @@ class ElderlyAssistantPipeline:
             ram_mb=self._get_ram_mb(),
         )
 
-        if self._flags.get("performance_logging", True):
+        if self._config.is_component_enabled("performance_logging"):
             self._logger.log_frame(frame_id, detections, alerts, metrics, self._mode)
 
         return {

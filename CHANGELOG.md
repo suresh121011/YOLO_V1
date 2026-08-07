@@ -54,6 +54,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     versioning with a derived-semver gate · `near()` units and room-vs-zone ·
     rejected-scenario negative register · additive extension of the LOCKED
     `Alert` contract.
+- Phase-6 M1: `src/scenario_engine/` package with `EvalContext` — the single
+  input type every scenario predicate will receive (detections **with bounding
+  boxes and multiplicity**, temporal memory via a `MemoryView` Protocol, the
+  measured FPS, frame id, and deployment room). This is why "extend the existing
+  DSL" was not an option: the legacy evaluator was handed a bare `set[str]`, so
+  geometry and multiplicity were destroyed before any predicate ran, making
+  `near`/`overlaps`/`count` unimplementable rather than merely awkward. A
+  half-done `near(person, stove, 0.2)` would have silently degraded into
+  `detected(person) AND detected(stove)` — the exact rule being deleted for
+  false positives — while looking implemented.
+  `tests/unit/scenario_engine/test_layering.py` statically enforces the ADR-P6-04
+  dependency direction (the scenario engine is a leaf; `src/pipeline` must never
+  import it), scanning the AST so lazy and conditional imports are caught too.
 - Phase-5: Production Dataset Engineering, Missing-Annotation Resolution &
   Dataset v1.0 — makes dataset quality the primary solution and demotes
   Phase-4 masking to a safety net. Core invariant: auto-generated labels never
@@ -252,6 +265,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the only reference in the repo was a mypy override.
 
 ### Fixed
+- Phase-6 M1: the nine runtime defects catalogued in
+  `docs/08_scenario_engineering/architecture_review.md` §3. Each fix ships with
+  the regression test that pins it; `src/pipeline/rule_engine.py`,
+  `event_memory.py` and `detector.py` had **no tests at all** beforehand.
+  - **Every feature flag was inert.** `orchestrator.py` read a `feature_flags:`
+    root key that does not exist in `configs/feature_flags.yaml`, so the flag
+    dict was permanently `{}` while the correct loader (`SystemConfig`) was
+    reachable only from tests. The orchestrator now loads `SystemConfig` and
+    routes every component through it, per that class's own documented
+    contract. This makes `passport: false  # privacy`, the per-rule toggles,
+    `memory_window_frames`, and `smolvlm_analysis: false` real for the first
+    time — the VLM previously loaded unconditionally because the orchestrator
+    consulted a `vlm_enabled` key that exists in no config file.
+  - **Class gating is now enforced in the detector**, so a disabled class never
+    becomes a `Detection` and therefore never reaches a rule, a log, or an
+    alert — a comment in a config file is not a privacy guarantee.
+  - **Recall-tuned thresholds were unreachable.** Ultralytics filters by `conf`
+    before the per-class pass runs, so passing the global 0.25 silently defeated
+    every lower safety threshold in `configs/class_thresholds.yaml` — which was
+    itself never loaded at runtime. Prediction now runs at the loosest threshold
+    any class asks for, with the per-class cut applied after.
+  - **`stove_unattended`, the only CRITICAL rule, could not fire cold.**
+    `frames_since_seen*` returned the 150-frame window for never-seen classes,
+    saturating at exactly 10.0 s at 15 FPS, so any `absent_for` threshold above
+    10 s was unreachable until the class had been seen once. Never-seen now
+    means "absent for the whole session".
+  - **Temporal rules used the nominal FPS.** The orchestrator now measures the
+    real loop rate, so a throttled device no longer silently rescales a 30 s
+    threshold to 225 s.
+  - **The condition DSL was replaced with a real parser**
+    (`src/pipeline/condition_parser.py`): tokenizer, recursive-descent parse to
+    an immutable AST, evaluated per frame. Fixes `any_of([...])` silently
+    discarding the rest of its condition, AND/OR precedence being inverted,
+    parentheses being unsupported, and `NOT` composing only with `detected`.
+    Conditions are parsed **once at load time**, so a malformed condition, an
+    unknown predicate, an invalid severity, a duplicate id, a negative cooldown,
+    or an empty rule set is now a loud failure instead of a rule that silently
+    never fires. A bad hot-reload leaves the previous rule set active, and
+    cooldown entries for removed rules are pruned rather than leaking forever.
+    Alerts are returned severity-ordered, as `rule_engine.md:37-43` has always
+    specified. Optionally validates class references against `configs/data.yaml`,
+    so `detected(knive)` fails at load.
+  - **`save_csv_report` wrote CRLF**, which permanently dirties the working tree
+    (failing release gate RG5) and gives one report two DVC hashes across the CI
+    matrix. Now writes LF, matching its JSON sibling's documented contract.
+  - **`log_alert` wrote `explanation` unredacted** while `log_frame` redacted the
+    same `person`/`face` geometry. Explanations are now redacted at any nesting
+    depth, on word boundaries, before they reach `logs/events.jsonl`.
+- Phase-6 M1: CI now runs `mypy src/` (whole tree, matching `Makefile:78`). The
+  `src/pipeline` exclusion rested on a "17 errors" note from 2026-07-14 that had
+  gone stale — it measures clean — and it was hiding the dataclasses that
+  `src/pipeline/__init__.py` declares LOCKED. Local dev had been stricter than CI.
 - CVAT label paste failed with `unknown label type "undefined"` on the
   deployed CVAT: `build_cvat_labels_spec` omitted `type`, assuming CVAT
   defaults it to `"any"`. It now emits `{"name": ..., "type": "rectangle",

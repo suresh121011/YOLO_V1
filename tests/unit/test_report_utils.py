@@ -86,6 +86,19 @@ class TestSaveCsvReport:
 
         assert header == "a,b"
 
+    def test_uses_lf_line_endings_on_every_platform(self, tmp_path: Path) -> None:
+        """csv defaults to CRLF, which permanently dirties the working tree.
+
+        The bytes must match save_json_report's LF contract so a committed CSV
+        hashes identically on the ubuntu and windows CI legs.
+        """
+        rows = [{"a": 1, "b": 2}, {"a": 3, "b": 4}]
+        path = save_csv_report(rows, tmp_path / "eol.csv", fieldnames=["a", "b"])
+
+        raw = path.read_bytes()
+        assert b"\r\n" not in raw
+        assert raw == b"a,b\n1,2\n3,4\n"
+
 
 @pytest.mark.unit
 class TestSaveMarkdownReport:

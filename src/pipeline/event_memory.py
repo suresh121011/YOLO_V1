@@ -94,24 +94,41 @@ class EventMemory:
                     return self.is_present(entry.class_id)
         return False
 
+    def has_ever_seen(self, class_name: str) -> bool:
+        """Has this class been detected at least once since start-up?"""
+        with self._lock:
+            return any(entry.class_name == class_name for entry in self._entries.values())
+
     def frames_since_seen(self, class_id: int) -> int:
         """How many frames ago was this class last detected?
 
-        Returns window_size if never seen (worst case).
+        A class that has **never** been seen returns the full frame count since
+        start-up — it has been absent for the entire session.
+
+        This previously returned ``window_size`` (150), which at the default
+        15 FPS saturates at exactly 10.0 seconds. Every ``absent_for`` threshold
+        above 10s was therefore unreachable until the class had been seen once,
+        which made ``stove_unattended`` — the only CRITICAL rule in the system —
+        structurally unfireable in a room nobody had yet walked into. See
+        docs/08_scenario_engineering/architecture_review.md §3 (D4).
         """
         with self._lock:
             entry = self._entries.get(class_id)
             if entry is None:
-                return self._window
+                return self._frame_counter
             return self._frame_counter - entry.last_seen_frame
 
     def frames_since_seen_by_name(self, class_name: str) -> int:
-        """Convenience: frames since seen by class name."""
+        """Convenience: frames since seen by class name.
+
+        Never-seen classes return the frames elapsed since start-up — see
+        :meth:`frames_since_seen`.
+        """
         with self._lock:
             for entry in self._entries.values():
                 if entry.class_name == class_name:
                     return self._frame_counter - entry.last_seen_frame
-        return self._window
+            return self._frame_counter
 
     def seconds_since_seen(self, class_id: int, fps: float = 15.0) -> float:
         """Elapsed seconds since this class was last detected."""

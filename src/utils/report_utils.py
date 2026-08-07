@@ -102,10 +102,19 @@ def save_csv_report(
 ) -> Path:
     """Write a list of dicts as a CSV file.
 
+    ``lineterminator="\\n"`` is mandatory for the same reason ``newline="\\n"`` is
+    in :func:`save_json_report`: Python's csv module defaults to CRLF on every
+    platform, while ``.gitattributes`` normalises to LF. A CRLF file is therefore
+    rewritten by git on checkout and re-dirtied by every regeneration, which
+    leaves the working tree permanently dirty (failing release gate RG5) and
+    gives the same report two different DVC hashes on the two CI matrix legs.
+
     Args:
         rows:       List of row dicts. All rows should have the same keys.
         path:       Output file path. Parent directories created automatically.
-        fieldnames: Column order. If None, keys from the first row are used.
+        fieldnames: Column order. If None, keys from the first row are used —
+                    pass it explicitly for any artifact that is committed or
+                    hashed, since row-key order is not a stable contract.
 
     Returns:
         The written file path.
@@ -120,7 +129,7 @@ def save_csv_report(
     headers = fieldnames or list(rows[0].keys())
 
     with open(path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=headers, extrasaction="ignore")
+        writer = csv.DictWriter(f, fieldnames=headers, extrasaction="ignore", lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 
