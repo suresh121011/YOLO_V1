@@ -27,5 +27,38 @@ See docs/08_scenario_engineering/ and its ADR-P6-01..09.
 from __future__ import annotations
 
 from .context import EvalContext, MemoryView
+from .predicates import (
+    PredicateError,
+    PredicateSpec,
+    available_predicates,
+    get_predicate,
+    register_predicate,
+)
+from .trigger import (
+    Trigger,
+    TriggerError,
+    evaluate_trigger,
+    is_static_only,
+    parse_trigger,
+    render_trigger,
+    trigger_classes,
+    trigger_kinds,
+)
 
-__all__ = ["EvalContext", "MemoryView"]
+__all__ = [
+    "EvalContext",
+    "MemoryView",
+    "PredicateError",
+    "PredicateSpec",
+    "Trigger",
+    "TriggerError",
+    "available_predicates",
+    "evaluate_trigger",
+    "get_predicate",
+    "is_static_only",
+    "parse_trigger",
+    "register_predicate",
+    "render_trigger",
+    "trigger_classes",
+    "trigger_kinds",
+]

@@ -67,6 +67,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tests/unit/scenario_engine/test_layering.py` statically enforces the ADR-P6-04
   dependency direction (the scenario engine is a leaf; `src/pipeline` must never
   import it), scanning the AST so lazy and conditional imports are caught too.
+- Phase-6 M2: predicate registry and structured trigger trees.
+  - `src/scenario_engine/predicates/` — the fourth instance of the house
+    registry pattern (`completeness_policies.py`, `splitting/registry.py`,
+    `annotation/registry.py`). A predicate is a pure function of `EvalContext`
+    plus declaratively-typed arguments, so one generic checker produces every
+    error message and each predicate gets a table-driven test with no YAML in
+    the loop. Twelve built-ins across five *kinds*: `detected`/`any_of`/`all_of`
+    (static) · `count` (counting) · `absent_for`/`present_for`/`ever_seen`
+    (temporal) · `near`/`overlaps`/`above`/`below` (spatial) · `in_room`
+    (context). An unknown predicate raises and enumerates the valid set, where
+    the legacy engine returned `False` and produced a rule that never fired.
+  - `src/scenario_engine/trigger.py` — triggers are authored as nested
+    `all`/`any`/`not`/`op` structures, validated at parse time, and compiled to
+    an immutable tree. Precedence is structural rather than implied, empty
+    `all`/`any` are rejected rather than silently constant, and `not` composes
+    with every predicate. Errors name the field path
+    (`trigger.all[1].args.max_dist`) instead of a character offset — the whole
+    reason for structured trees over condition strings. `render_trigger`
+    emits the one-line string for the CSV view and logs; it is never parsed back.
+  - `trigger_kinds`/`is_static_only` give the compiler the check that
+    disqualifies a trigger satisfiable by object presence alone. Tests assert it
+    rejects all three legacy rules being deleted (`knife_near_person`,
+    `medicine_reminder`, `gas_cylinder_check`) while accepting the same
+    conditions once a dwell or proximity term is added.
+  - `near` is pinned by test to be **false for two distant detections in the
+    same frame** — the failure that would silently reduce every spatial
+    predicate to co-presence — and to be true for adjacent boxes whose IoU is 0,
+    which is why `overlaps` cannot replace it.
 - Phase-5: Production Dataset Engineering, Missing-Annotation Resolution &
   Dataset v1.0 — makes dataset quality the primary solution and demotes
   Phase-4 masking to a safety net. Core invariant: auto-generated labels never
