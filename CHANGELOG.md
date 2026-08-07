@@ -95,6 +95,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     same frame** — the failure that would silently reduce every spatial
     predicate to co-presence — and to be true for adjacent boxes whose IoU is 0,
     which is why `overlaps` cannot replace it.
+  - `src/scenario_engine/schema.py` — the scenario row as frozen dataclasses
+    with a hand-rolled `_validate`, matching the house pattern (no pydantic; it
+    would be a new dependency and a convention break needing its own ADR).
+    The **trigger tree is the only authored condition**: `required_objects` is
+    derived from it so the CSV view cannot drift from the executable rule, and
+    negation stays inside the trigger rather than being split back out into a
+    flat `forbidden_objects` list.
+    `caregiver_channel` is an enum (`none`/`digest`/`push`/`push_and_call`) —
+    as a boolean it gets set true everywhere, fatiguing the caregiver whose
+    attention actually protects the resident.
+    Safety invariants enforced at construction: `status: active` requires
+    `reviewed_by`/`reviewed_on` (this project already demands two annotators at
+    IAA ≥ 0.75 to accept a bounding box); `detectability: inferred` requires a
+    `capability_disclaimer`; `detectability: rejected` requires a
+    `rejection_reason` naming the missing capability; `quiet_hours: always_speak`
+    is CRITICAL-only; `max_repeats` is capped at 3; escalation steps must be
+    ordered.
+  - `rule_hash` (ADR-P6-06) spans the trigger and the behavioural scalars only.
+    Tests pin both directions: a risk downgrade, a dwell change, a threshold
+    change or a trigger edit **moves** the hash; a reworded prompt, a note, a
+    renamed scenario or an evidence edit **does not**. Getting this backwards
+    either trains contributors to ignore staleness warnings or lets the clip
+    suite pass green against behaviour that no longer exists.
 - Phase-5: Production Dataset Engineering, Missing-Annotation Resolution &
   Dataset v1.0 — makes dataset quality the primary solution and demotes
   Phase-4 masking to a safety net. Core invariant: auto-generated labels never

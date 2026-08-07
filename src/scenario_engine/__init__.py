@@ -34,6 +34,16 @@ from .predicates import (
     get_predicate,
     register_predicate,
 )
+from .schema import (
+    CaregiverChannel,
+    ClaimClass,
+    Detectability,
+    Evidence,
+    Scenario,
+    ScenarioError,
+    Status,
+    sorted_scenarios,
+)
 from .trigger import (
     Trigger,
     TriggerError,
@@ -46,10 +56,17 @@ from .trigger import (
 )
 
 __all__ = [
+    "CaregiverChannel",
+    "ClaimClass",
+    "Detectability",
     "EvalContext",
+    "Evidence",
     "MemoryView",
     "PredicateError",
     "PredicateSpec",
+    "Scenario",
+    "ScenarioError",
+    "Status",
     "Trigger",
     "TriggerError",
     "available_predicates",
@@ -59,6 +76,7 @@ __all__ = [
     "parse_trigger",
     "register_predicate",
     "render_trigger",
+    "sorted_scenarios",
     "trigger_classes",
     "trigger_kinds",
 ]
