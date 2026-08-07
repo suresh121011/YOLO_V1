@@ -1,0 +1,58 @@
+# ─── SC-MED-001 — Medicine packaging left out ─────────────────────────────────
+# What replaces the deleted `medicine_reminder`.
+#
+# The legacy rule asked "Have you taken your medication today?" every 300s with
+# no schedule, no dose, no drug identity, and no way to hear the answer — a
+# plausible route to a second dose for someone resolving the uncertainty. The
+# only honest medication-adjacent output with these classes is a caregiver-side
+# observation about where packaging is, carrying its own disclaimer.
+# ──────────────────────────────────────────────────────────────────────────────
+scenario_id: SC-MED-001
+schema_version: 1
+scenario_name: Medicine packaging left out
+category: bedroom
+status: draft
+
+detectability: inferred
+claim_class: inference
+
+trigger:
+  any:
+    - op: present_for
+      args: {class_name: medicine_strip, seconds: 170}
+    - op: present_for
+      args: {class_name: medicine_bottle, seconds: 170}
+
+risk_level: INFO
+priority: 90
+
+min_confidence: 0.50
+min_dwell_seconds: 170
+clear_after_seconds: 300
+cooldown_seconds: 86400
+max_repeats: 0
+max_per_day: 1
+
+patient_facing: false        # never a patient prompt; see the negative register
+messages: {}
+
+next_best_action: Consider a pill organiser if packaging is often left out
+caregiver_channel: digest
+
+capability_disclaimer: >-
+  This is an observation of packaging position only. The system cannot tell
+  whether any medication was taken, which medication it is, or when it is due.
+
+evidence:
+  - source_id: LawtonBrody-1969-IADL
+    section: Responsibility for own medications
+    strength: expert_opinion
+    supports: hazard
+    note: >-
+      Medication management is an IADL to be PRESERVED. That framing is the
+      argument against a patient prompt here, not for one.
+
+notes: >-
+  Deliberately once per day. A strip on a table is a stable object, so anything
+  more frequent is a metronome.
+sample_video_needed: true

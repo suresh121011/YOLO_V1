@@ -2,7 +2,7 @@
   "artifact_schema_version": 1,
   "scenarios_version": "scenarios-v0.1.0",
   "taxonomy_fingerprint": "sha256:a831924bb82e23ffbc6cc1d56647a78cc72ff5e329920569b05bd5ae99c2f125",
-  "rule_count": 1,
+  "rule_count": 9,
   "classes": {
     "bed": {
       "id": 17,
@@ -122,14 +122,105 @@
     }
   },
   "inverted_index": {
+    "knife": [
+      "SC-KIT-002"
+    ],
+    "medicine_bottle": [
+      "SC-MED-001"
+    ],
+    "medicine_strip": [
+      "SC-MED-001"
+    ],
     "person": [
-      "SC-BTH-001"
+      "SC-BTH-001",
+      "SC-BTH-003",
+      "SC-KIT-001",
+      "SC-KIT-002",
+      "SC-MOB-001",
+      "SC-SYS-001"
+    ],
+    "stove": [
+      "SC-KIT-001"
+    ],
+    "support_handle": [
+      "SC-BTH-002"
+    ],
+    "toilet": [
+      "SC-BTH-002"
+    ],
+    "walking_stick": [
+      "SC-MOB-001"
     ],
     "wet_floor": [
       "SC-BTH-001"
+    ],
+    "wire": [
+      "SC-COR-001"
     ]
   },
   "scenarios": [
+    {
+      "scenario_id": "SC-KIT-001",
+      "schema_version": 1,
+      "scenario_name": "Cooking left unattended",
+      "category": "kitchen",
+      "status": "draft",
+      "detectability": "direct",
+      "claim_class": "observation",
+      "risk_level": "CRITICAL",
+      "priority": 5,
+      "condition": "(in_room(room='kitchen') AND present_for(class_name='stove', seconds=60) AND ever_seen(class_name='person') AND absent_for(class_name='person', seconds=900))",
+      "required_objects": [
+        "person",
+        "stove"
+      ],
+      "optional_objects": [
+        "knife",
+        "gas_cylinder"
+      ],
+      "suppress_during": [],
+      "room_context": "kitchen",
+      "min_confidence": 0.35,
+      "min_dwell_seconds": 120.0,
+      "clear_after_seconds": 120.0,
+      "cooldown_seconds": 1800,
+      "max_repeats": 1,
+      "max_per_day": 4,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "always_speak"
+      },
+      "patient_facing": true,
+      "messages": {
+        "en": "Nobody has been near the stove for a while.",
+        "hi": "काफ़ी देर से चूल्हे के पास कोई नहीं है।"
+      },
+      "next_best_action": "Ask someone to check the kitchen",
+      "caregiver_channel": "push",
+      "escalation": [
+        {
+          "after_seconds": 300.0,
+          "action": "notify_caregiver",
+          "messages": {}
+        }
+      ],
+      "evidence": [
+        {
+          "source_id": "NFPA-CookingSafety",
+          "section": "Unattended cooking",
+          "item": "Unattended cooking is the leading contributing factor in home cooking fires",
+          "strength": "guideline",
+          "supports": "hazard",
+          "note": "Backs the HAZARD only. We cannot see whether the stove is lit, which is why the message describes the absence of a person, not the state of the stove."
+        }
+      ],
+      "capability_disclaimer": "",
+      "rejection_reason": "",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:5f882c026393a7a2d36adcf7cca624d5257eb59dacb5eb8040a4c7131912a747"
+    },
     {
       "scenario_id": "SC-BTH-001",
       "schema_version": 1,
@@ -200,9 +291,812 @@
       "reviewed_by": "",
       "reviewed_on": "",
       "rule_hash": "sha256:67ac98118c0585ba527b7c35149f96cbf62658b76c048764620a662fb99f68af"
+    },
+    {
+      "scenario_id": "SC-BTH-003",
+      "schema_version": 1,
+      "scenario_name": "Prolonged time in the bathroom",
+      "category": "bathroom",
+      "status": "draft",
+      "detectability": "inferred",
+      "claim_class": "inference",
+      "risk_level": "MEDIUM",
+      "priority": 30,
+      "condition": "(in_room(room='bathroom') AND present_for(class_name='person', seconds=150))",
+      "required_objects": [
+        "person"
+      ],
+      "optional_objects": [
+        "toilet",
+        "sink",
+        "support_handle"
+      ],
+      "suppress_during": [],
+      "room_context": "bathroom",
+      "min_confidence": 0.5,
+      "min_dwell_seconds": 150.0,
+      "clear_after_seconds": 60.0,
+      "cooldown_seconds": 3600,
+      "max_repeats": 0,
+      "max_per_day": 3,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": false,
+      "messages": {},
+      "next_best_action": "Consider checking in by phone",
+      "caregiver_channel": "digest",
+      "escalation": [],
+      "evidence": [
+        {
+          "source_id": "WHO-StepSafely-2021",
+          "section": "Falls in the home",
+          "item": "",
+          "strength": "guideline",
+          "supports": "hazard",
+          "note": "Backs the underlying concern that time on the floor worsens outcomes. The inference from occupancy duration is ours, not the literature's."
+        }
+      ],
+      "capability_disclaimer": "This reports how long a person has been visible in the bathroom. It cannot tell bathing from illness from a fall, and it is not fall detection.",
+      "rejection_reason": "",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:0b476292de4a982c644bf37a948d7c729835575c899b4722d387d63d8ac5f88b"
+    },
+    {
+      "scenario_id": "SC-KIT-002",
+      "schema_version": 1,
+      "scenario_name": "Knife left out with nobody present",
+      "category": "kitchen",
+      "status": "draft",
+      "detectability": "direct",
+      "claim_class": "observation",
+      "risk_level": "LOW",
+      "priority": 60,
+      "condition": "(in_room(room='kitchen') AND present_for(class_name='knife', seconds=60) AND absent_for(class_name='person', seconds=600))",
+      "required_objects": [
+        "knife",
+        "person"
+      ],
+      "optional_objects": [],
+      "suppress_during": [],
+      "room_context": "kitchen",
+      "min_confidence": 0.5,
+      "min_dwell_seconds": 60.0,
+      "clear_after_seconds": 120.0,
+      "cooldown_seconds": 3600,
+      "max_repeats": 0,
+      "max_per_day": 3,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": false,
+      "messages": {},
+      "next_best_action": "Put the knife away when convenient",
+      "caregiver_channel": "digest",
+      "escalation": [],
+      "evidence": [
+        {
+          "source_id": "CDC-STEADI-CheckForSafety-2017",
+          "section": "Kitchen",
+          "item": "",
+          "strength": "guideline",
+          "supports": "hazard",
+          "note": "Backs kitchen hazard reduction generally, not this detection."
+        }
+      ],
+      "capability_disclaimer": "",
+      "rejection_reason": "",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:62765934c8ee7df7e11a73132fd56d9bce6367a3ae700bb18e041ad2690b96fa"
+    },
+    {
+      "scenario_id": "SC-MOB-001",
+      "schema_version": 1,
+      "scenario_name": "Walking aid left away from the person",
+      "category": "corridor",
+      "status": "draft",
+      "detectability": "inferred",
+      "claim_class": "inference",
+      "risk_level": "LOW",
+      "priority": 70,
+      "condition": "(present_for(class_name='walking_stick', seconds=60) AND absent_for(class_name='person', seconds=300))",
+      "required_objects": [
+        "person",
+        "walking_stick"
+      ],
+      "optional_objects": [],
+      "suppress_during": [],
+      "room_context": null,
+      "min_confidence": 0.5,
+      "min_dwell_seconds": 60.0,
+      "clear_after_seconds": 120.0,
+      "cooldown_seconds": 7200,
+      "max_repeats": 0,
+      "max_per_day": 2,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": false,
+      "messages": {},
+      "next_best_action": "Check the walking stick is within easy reach",
+      "caregiver_channel": "digest",
+      "escalation": [],
+      "evidence": [
+        {
+          "source_id": "WHO-StepSafely-2021",
+          "section": "Mobility aids",
+          "item": "",
+          "strength": "guideline",
+          "supports": "hazard",
+          "note": ""
+        }
+      ],
+      "capability_disclaimer": "The system sees where the walking stick is, not whether it is needed or being used. A stick resting in its usual place is not evidence of anything.",
+      "rejection_reason": "",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:c89478213db78868ef5c1fa7f788e561e8157b890fea18359077b2973387ebe7"
+    },
+    {
+      "scenario_id": "SC-BTH-002",
+      "schema_version": 1,
+      "scenario_name": "No grab bar seen near the toilet",
+      "category": "bathroom",
+      "status": "draft",
+      "detectability": "direct",
+      "claim_class": "observation",
+      "risk_level": "LOW",
+      "priority": 80,
+      "condition": "(in_room(room='bathroom') AND present_for(class_name='toilet', seconds=60) AND NOT ever_seen(class_name='support_handle'))",
+      "required_objects": [
+        "support_handle",
+        "toilet"
+      ],
+      "optional_objects": [
+        "sink",
+        "person"
+      ],
+      "suppress_during": [],
+      "room_context": "bathroom",
+      "min_confidence": 0.6,
+      "min_dwell_seconds": 60.0,
+      "clear_after_seconds": 300.0,
+      "cooldown_seconds": 86400,
+      "max_repeats": 0,
+      "max_per_day": 1,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": false,
+      "messages": {},
+      "next_best_action": "Consider fitting a grab bar beside the toilet and inside the tub or shower.",
+      "caregiver_channel": "digest",
+      "escalation": [],
+      "evidence": [
+        {
+          "source_id": "CDC-STEADI-CheckForSafety-2017",
+          "section": "Bathroom",
+          "item": "Have grab bars installed next to and inside the tub, and next to the toilet",
+          "strength": "guideline",
+          "supports": "intervention",
+          "note": "STEADI prescribes the modification directly, which is what makes this a caregiver action rather than a resident warning."
+        },
+        {
+          "source_id": "WHO-StepSafely-2021",
+          "section": "Environmental modification",
+          "item": "",
+          "strength": "guideline",
+          "supports": "hazard",
+          "note": ""
+        }
+      ],
+      "capability_disclaimer": "",
+      "rejection_reason": "",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:2315908ff6953b0731f94c782eb049cd9e8c2dca82e90b9c9407c13926b3eb5e"
+    },
+    {
+      "scenario_id": "SC-COR-001",
+      "schema_version": 1,
+      "scenario_name": "Cord seen on the floor in a walkway",
+      "category": "corridor",
+      "status": "draft",
+      "detectability": "inferred",
+      "claim_class": "inference",
+      "risk_level": "LOW",
+      "priority": 85,
+      "condition": "(in_room(room='corridor') AND present_for(class_name='wire', seconds=120))",
+      "required_objects": [
+        "wire"
+      ],
+      "optional_objects": [],
+      "suppress_during": [],
+      "room_context": "corridor",
+      "min_confidence": 0.6,
+      "min_dwell_seconds": 120.0,
+      "clear_after_seconds": 300.0,
+      "cooldown_seconds": 86400,
+      "max_repeats": 0,
+      "max_per_day": 1,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": false,
+      "messages": {},
+      "next_best_action": "Coil or tape loose cords along the wall",
+      "caregiver_channel": "digest",
+      "escalation": [],
+      "evidence": [
+        {
+          "source_id": "CDC-STEADI-CheckForSafety-2017",
+          "section": "Floors",
+          "item": "Coil or tape cords and wires next to the wall so you cannot trip over them",
+          "strength": "guideline",
+          "supports": "intervention",
+          "note": ""
+        }
+      ],
+      "capability_disclaimer": "The system cannot tell a cord lying across the walking path from one running along the skirting board: there is no floor plane and no path model. Treat this as a prompt to look, not a confirmed hazard.",
+      "rejection_reason": "",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:57abebe361d5e17ddb3dd62640b5f81e9ec426d11d3806e5c571e37c2b776fb4"
+    },
+    {
+      "scenario_id": "SC-MED-001",
+      "schema_version": 1,
+      "scenario_name": "Medicine packaging left out",
+      "category": "bedroom",
+      "status": "draft",
+      "detectability": "inferred",
+      "claim_class": "inference",
+      "risk_level": "INFO",
+      "priority": 90,
+      "condition": "(present_for(class_name='medicine_strip', seconds=170) OR present_for(class_name='medicine_bottle', seconds=170))",
+      "required_objects": [
+        "medicine_bottle",
+        "medicine_strip"
+      ],
+      "optional_objects": [],
+      "suppress_during": [],
+      "room_context": null,
+      "min_confidence": 0.5,
+      "min_dwell_seconds": 170.0,
+      "clear_after_seconds": 300.0,
+      "cooldown_seconds": 86400,
+      "max_repeats": 0,
+      "max_per_day": 1,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": false,
+      "messages": {},
+      "next_best_action": "Consider a pill organiser if packaging is often left out",
+      "caregiver_channel": "digest",
+      "escalation": [],
+      "evidence": [
+        {
+          "source_id": "LawtonBrody-1969-IADL",
+          "section": "Responsibility for own medications",
+          "item": "",
+          "strength": "expert_opinion",
+          "supports": "hazard",
+          "note": "Medication management is an IADL to be PRESERVED. That framing is the argument against a patient prompt here, not for one."
+        }
+      ],
+      "capability_disclaimer": "This is an observation of packaging position only. The system cannot tell whether any medication was taken, which medication it is, or when it is due.",
+      "rejection_reason": "",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:16bd74ed64b8a3f84e008ad35c2ea5eaae91bc443665454bfcb5bf73db904453"
+    },
+    {
+      "scenario_id": "SC-SYS-001",
+      "schema_version": 1,
+      "scenario_name": "Nobody seen for an unusually long time",
+      "category": "hall",
+      "status": "draft",
+      "detectability": "inferred",
+      "claim_class": "inference",
+      "risk_level": "INFO",
+      "priority": 95,
+      "condition": "(ever_seen(class_name='person') AND absent_for(class_name='person', seconds=28800))",
+      "required_objects": [
+        "person"
+      ],
+      "optional_objects": [],
+      "suppress_during": [],
+      "room_context": null,
+      "min_confidence": 0.3,
+      "min_dwell_seconds": 0.0,
+      "clear_after_seconds": 60.0,
+      "cooldown_seconds": 43200,
+      "max_repeats": 0,
+      "max_per_day": 2,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": false,
+      "messages": {},
+      "next_best_action": "Consider a check-in call",
+      "caregiver_channel": "digest",
+      "escalation": [],
+      "evidence": [
+        {
+          "source_id": "AAMI-AlarmFatigue-2012",
+          "section": "Non-actionable alarms",
+          "item": "",
+          "strength": "systematic_review",
+          "supports": "hazard",
+          "note": "Cited for the SUPPRESSION design rather than the hazard: an ambiguous signal escalated as an alarm is exactly what produces non-actionable alerts."
+        }
+      ],
+      "capability_disclaimer": "Not seeing a person is not the same as nobody being there. This can equally mean the camera view is blocked or the person is out of frame, and it is never evidence of an emergency.",
+      "rejection_reason": "",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:7b47d6cb7c10eaa929409b146e1ba478d0e767ff333fd80a3825bcbfa466c94e"
     }
   ],
   "deprecated": [],
-  "rejected": [],
-  "content_hash": "sha256:4ee215da837e9b3e99c800b1ef83e4c5bf2b6673901c1934400abd30c89c7c9f"
+  "rejected": [
+    {
+      "scenario_id": "SC-SAF-001",
+      "schema_version": 1,
+      "scenario_name": "Fall detection",
+      "category": "safety",
+      "status": "rejected",
+      "detectability": "rejected",
+      "claim_class": "inference",
+      "risk_level": "INFO",
+      "priority": 999,
+      "condition": "detected(class_name='person')",
+      "required_objects": [
+        "person"
+      ],
+      "optional_objects": [],
+      "suppress_during": [],
+      "room_context": null,
+      "min_confidence": 0.5,
+      "min_dwell_seconds": 0.0,
+      "clear_after_seconds": 30.0,
+      "cooldown_seconds": 60,
+      "max_repeats": 2,
+      "max_per_day": 6,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": false,
+      "messages": {},
+      "next_best_action": "",
+      "caregiver_channel": "none",
+      "escalation": [],
+      "evidence": [],
+      "capability_disclaimer": "",
+      "rejection_reason": "No pose estimation, no keypoints, no floor plane and no motion model. A person box that becomes wide and low is someone bending, sitting on the floor, praying or exercising. This is the first capability every family will assume the product has, so the exclusion must also appear in the product surface, not only here.",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:4ae690ccd86451742fa5ae1d2b4a4aeb16ff86a0168a8556c1cee72b93b48ab2"
+    },
+    {
+      "scenario_id": "SC-SAF-002",
+      "schema_version": 1,
+      "scenario_name": "Stove left on",
+      "category": "kitchen",
+      "status": "rejected",
+      "detectability": "rejected",
+      "claim_class": "inference",
+      "risk_level": "INFO",
+      "priority": 999,
+      "condition": "detected(class_name='stove')",
+      "required_objects": [
+        "stove"
+      ],
+      "optional_objects": [],
+      "suppress_during": [],
+      "room_context": null,
+      "min_confidence": 0.5,
+      "min_dwell_seconds": 0.0,
+      "clear_after_seconds": 30.0,
+      "cooldown_seconds": 60,
+      "max_repeats": 2,
+      "max_per_day": 6,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": false,
+      "messages": {},
+      "next_best_action": "",
+      "caregiver_channel": "none",
+      "escalation": [],
+      "evidence": [],
+      "capability_disclaimer": "",
+      "rejection_reason": "No flame or heat state. `stove` is a physical object and is always detected. The legacy rule asserted this at risk_rules.yaml:54.",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:25ffd0abdf273efee51944101cac2872086d1085ce4e23003d46da87faebd3be"
+    },
+    {
+      "scenario_id": "SC-SAF-003",
+      "schema_version": 1,
+      "scenario_name": "Gas leak detection",
+      "category": "kitchen",
+      "status": "rejected",
+      "detectability": "rejected",
+      "claim_class": "inference",
+      "risk_level": "INFO",
+      "priority": 999,
+      "condition": "detected(class_name='gas_cylinder')",
+      "required_objects": [
+        "gas_cylinder"
+      ],
+      "optional_objects": [],
+      "suppress_during": [],
+      "room_context": null,
+      "min_confidence": 0.5,
+      "min_dwell_seconds": 0.0,
+      "clear_after_seconds": 30.0,
+      "cooldown_seconds": 60,
+      "max_repeats": 2,
+      "max_per_day": 6,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": false,
+      "messages": {},
+      "next_best_action": "",
+      "caregiver_channel": "none",
+      "escalation": [],
+      "evidence": [],
+      "capability_disclaimer": "",
+      "rejection_reason": "Requires a gas sensor. A camera cannot see LPG.",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:7e2ce5972c42cbe62d41d2695e2bfe07bdddd57b10fab40b6f94f3b80869f624"
+    },
+    {
+      "scenario_id": "SC-SAF-004",
+      "schema_version": 1,
+      "scenario_name": "Medication adherence",
+      "category": "bedroom",
+      "status": "rejected",
+      "detectability": "rejected",
+      "claim_class": "inference",
+      "risk_level": "INFO",
+      "priority": 999,
+      "condition": "detected(class_name='medicine_strip')",
+      "required_objects": [
+        "medicine_strip"
+      ],
+      "optional_objects": [],
+      "suppress_during": [],
+      "room_context": null,
+      "min_confidence": 0.5,
+      "min_dwell_seconds": 0.0,
+      "clear_after_seconds": 30.0,
+      "cooldown_seconds": 60,
+      "max_repeats": 2,
+      "max_per_day": 6,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": false,
+      "messages": {},
+      "next_best_action": "",
+      "caregiver_channel": "none",
+      "escalation": [],
+      "evidence": [],
+      "capability_disclaimer": "",
+      "rejection_reason": "No pill count, no schedule, no drug identity and no speech recognition. Asking an unanswerable question invites a resolve-the-uncertainty second dose, which is a serious-harm pathway for narrow-therapeutic-index drugs common in this population. See SC-MED-001 for the honest replacement.",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:403932b4c7f9be14a9a38169ccfbddee183ba0efaf829d973c54eab4c415cf6e"
+    },
+    {
+      "scenario_id": "SC-SAF-005",
+      "schema_version": 1,
+      "scenario_name": "Hydration monitoring",
+      "category": "hall",
+      "status": "rejected",
+      "detectability": "rejected",
+      "claim_class": "inference",
+      "risk_level": "INFO",
+      "priority": 999,
+      "condition": "detected(class_name='water_bottle')",
+      "required_objects": [
+        "water_bottle"
+      ],
+      "optional_objects": [],
+      "suppress_during": [],
+      "room_context": null,
+      "min_confidence": 0.5,
+      "min_dwell_seconds": 0.0,
+      "clear_after_seconds": 30.0,
+      "cooldown_seconds": 60,
+      "max_repeats": 2,
+      "max_per_day": 6,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": false,
+      "messages": {},
+      "next_best_action": "",
+      "caregiver_channel": "none",
+      "escalation": [],
+      "evidence": [],
+      "capability_disclaimer": "",
+      "rejection_reason": "No fill level and no drinking event. Bottle presence is not fluid intake.",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:953c789bf81d15a6b59a226d14ad569fbebad36a540ce1f0be8c666c3994c65c"
+    },
+    {
+      "scenario_id": "SC-SAF-006",
+      "schema_version": 1,
+      "scenario_name": "Tap left running or flooding",
+      "category": "bathroom",
+      "status": "rejected",
+      "detectability": "rejected",
+      "claim_class": "inference",
+      "risk_level": "INFO",
+      "priority": 999,
+      "condition": "detected(class_name='sink')",
+      "required_objects": [
+        "sink"
+      ],
+      "optional_objects": [],
+      "suppress_during": [],
+      "room_context": null,
+      "min_confidence": 0.5,
+      "min_dwell_seconds": 0.0,
+      "clear_after_seconds": 30.0,
+      "cooldown_seconds": 60,
+      "max_repeats": 2,
+      "max_per_day": 6,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": false,
+      "messages": {},
+      "next_best_action": "",
+      "caregiver_channel": "none",
+      "escalation": [],
+      "evidence": [],
+      "capability_disclaimer": "",
+      "rejection_reason": "No water-flow state. `sink` is furniture.",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:6d6e2e69bf76702c3090a8dd7b1d10ff97300ac6cbad850cc070902b833d0f1f"
+    },
+    {
+      "scenario_id": "SC-SAF-007",
+      "schema_version": 1,
+      "scenario_name": "Person unconscious or not moving",
+      "category": "hall",
+      "status": "rejected",
+      "detectability": "rejected",
+      "claim_class": "inference",
+      "risk_level": "INFO",
+      "priority": 999,
+      "condition": "detected(class_name='person')",
+      "required_objects": [
+        "person"
+      ],
+      "optional_objects": [],
+      "suppress_during": [],
+      "room_context": null,
+      "min_confidence": 0.5,
+      "min_dwell_seconds": 0.0,
+      "clear_after_seconds": 30.0,
+      "cooldown_seconds": 60,
+      "max_repeats": 2,
+      "max_per_day": 6,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": false,
+      "messages": {},
+      "next_best_action": "",
+      "caregiver_channel": "none",
+      "escalation": [],
+      "evidence": [],
+      "capability_disclaimer": "",
+      "rejection_reason": "No pose, no vitals and no motion analysis.",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:4ae690ccd86451742fa5ae1d2b4a4aeb16ff86a0168a8556c1cee72b93b48ab2"
+    },
+    {
+      "scenario_id": "SC-SAF-008",
+      "schema_version": 1,
+      "scenario_name": "Wandering or leaving the house",
+      "category": "hall",
+      "status": "rejected",
+      "detectability": "rejected",
+      "claim_class": "inference",
+      "risk_level": "INFO",
+      "priority": 999,
+      "condition": "detected(class_name='door')",
+      "required_objects": [
+        "door"
+      ],
+      "optional_objects": [],
+      "suppress_during": [],
+      "room_context": null,
+      "min_confidence": 0.5,
+      "min_dwell_seconds": 0.0,
+      "clear_after_seconds": 30.0,
+      "cooldown_seconds": 60,
+      "max_repeats": 2,
+      "max_per_day": 6,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": false,
+      "messages": {},
+      "next_best_action": "",
+      "caregiver_channel": "none",
+      "escalation": [],
+      "evidence": [],
+      "capability_disclaimer": "",
+      "rejection_reason": "`door` has no open/closed state and no threshold-crossing semantics.",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:55866d12334ab4f7e3353ad4debdd8869f9f7bdbe77aeafb3609567332d979cf"
+    },
+    {
+      "scenario_id": "SC-SAF-009",
+      "schema_version": 1,
+      "scenario_name": "Cognitive decline inference",
+      "category": "hall",
+      "status": "rejected",
+      "detectability": "rejected",
+      "claim_class": "inference",
+      "risk_level": "INFO",
+      "priority": 999,
+      "condition": "detected(class_name='person')",
+      "required_objects": [
+        "person"
+      ],
+      "optional_objects": [],
+      "suppress_during": [],
+      "room_context": null,
+      "min_confidence": 0.5,
+      "min_dwell_seconds": 0.0,
+      "clear_after_seconds": 30.0,
+      "cooldown_seconds": 60,
+      "max_repeats": 2,
+      "max_per_day": 6,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": false,
+      "messages": {},
+      "next_best_action": "",
+      "caregiver_channel": "none",
+      "escalation": [],
+      "evidence": [],
+      "capability_disclaimer": "",
+      "rejection_reason": "Requires longitudinal ADL modelling far beyond object presence, and is a medical claim regardless of how it is worded.",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:4ae690ccd86451742fa5ae1d2b4a4aeb16ff86a0168a8556c1cee72b93b48ab2"
+    },
+    {
+      "scenario_id": "SC-SAF-010",
+      "schema_version": 1,
+      "scenario_name": "Knife handling safety",
+      "category": "kitchen",
+      "status": "rejected",
+      "detectability": "rejected",
+      "claim_class": "inference",
+      "risk_level": "INFO",
+      "priority": 999,
+      "condition": "detected(class_name='knife')",
+      "required_objects": [
+        "knife"
+      ],
+      "optional_objects": [],
+      "suppress_during": [],
+      "room_context": null,
+      "min_confidence": 0.5,
+      "min_dwell_seconds": 0.0,
+      "clear_after_seconds": 30.0,
+      "cooldown_seconds": 60,
+      "max_repeats": 2,
+      "max_per_day": 6,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": false,
+      "messages": {},
+      "next_best_action": "",
+      "caregiver_channel": "none",
+      "escalation": [],
+      "evidence": [],
+      "capability_disclaimer": "",
+      "rejection_reason": "No grip, no motion and no surface or edge classes. `knife` plus `person` is cooking, a preserved IADL; warning about it degrades the capacity it claims to protect. See SC-KIT-002 for the supportable form.",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:67dea80b7106c287ef72df659918891bffe3872197bc6e0ae2dc94938b33889c"
+    },
+    {
+      "scenario_id": "SC-SAF-011",
+      "schema_version": 1,
+      "scenario_name": "Identifying who is home",
+      "category": "hall",
+      "status": "rejected",
+      "detectability": "rejected",
+      "claim_class": "inference",
+      "risk_level": "INFO",
+      "priority": 999,
+      "condition": "detected(class_name='face')",
+      "required_objects": [
+        "face"
+      ],
+      "optional_objects": [],
+      "suppress_during": [],
+      "room_context": null,
+      "min_confidence": 0.5,
+      "min_dwell_seconds": 0.0,
+      "clear_after_seconds": 30.0,
+      "cooldown_seconds": 60,
+      "max_repeats": 2,
+      "max_per_day": 6,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": false,
+      "messages": {},
+      "next_best_action": "",
+      "caregiver_channel": "none",
+      "escalation": [],
+      "evidence": [],
+      "capability_disclaimer": "",
+      "rejection_reason": "`face` yields no identity, and adding identity would be a deliberate step into biometric processing the project has committed against.",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:9cc84ba0932a4dc070f57e6fa474725ed0bb5b113f9f24893537a705209f1506"
+    }
+  ],
+  "content_hash": "sha256:4a757cbac4ff38e3f668a64763c3a83ee54edc10a6f192bcaffb4eab81486f08"
 }

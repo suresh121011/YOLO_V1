@@ -281,9 +281,47 @@ class TestRunAll:
 
     @pytest.mark.unit
     def test_repo_scenarios_have_no_errors(self) -> None:
-        """The committed scenario set must stay clean."""
+        """The committed scenario set must stay clean under the REPO's config.
+
+        Reachability checks compare against the live runtime values, so this
+        must read them rather than take `run_all`'s defaults — a scenario's
+        dwell is legal or not depending on `memory_window_frames`, and using the
+        default here would either pass scenarios the device cannot run or fail
+        scenarios it can.
+        """
         from src.scenario_engine.compile import load_scenario_files
+        from src.utils.config_helpers import load_yaml
+
+        runtime = load_yaml("configs/feature_flags.yaml").get("runtime", {})
+        thresholds = load_yaml("configs/class_thresholds.yaml").get("class_thresholds", {})
 
         scenarios = load_scenario_files("configs/scenarios")
-        findings = run_all(scenarios, safety_classes=["wet_floor"])
+        findings = run_all(
+            scenarios,
+            class_thresholds={str(k): float(v) for k, v in thresholds.items()},
+            global_confidence_floor=float(runtime.get("confidence_threshold", 0.25)),
+            memory_window_frames=int(runtime.get("memory_window_frames", 150)),
+            target_fps=float(runtime.get("target_fps", 15)),
+            safety_classes=["wet_floor"],
+        )
         assert errors(findings) == [], [f.to_dict() for f in errors(findings)]
+
+    @pytest.mark.unit
+    def test_repo_dwell_values_fit_the_configured_memory_window(self) -> None:
+        """Guards the coupling directly: lowering the window must fail loudly.
+
+        `min_dwell_seconds` and `present_for` are both bounded by the Event
+        Memory window. If someone lowers it back to 150 frames, every
+        environmental finding silently becomes unfireable.
+        """
+        from src.scenario_engine.compile import load_scenario_files
+        from src.utils.config_helpers import load_yaml
+
+        runtime = load_yaml("configs/feature_flags.yaml").get("runtime", {})
+        window = int(runtime.get("memory_window_frames", 150))
+        fps = float(runtime.get("target_fps", 15))
+        scenarios = load_scenario_files("configs/scenarios")
+
+        assert check_temporal_within_memory(scenarios, window, fps) == []
+        # And the guard is not vacuous: at the old 150-frame window it fires.
+        assert check_temporal_within_memory(scenarios, 150, fps)

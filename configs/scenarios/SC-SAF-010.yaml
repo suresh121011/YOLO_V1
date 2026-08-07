@@ -1,0 +1,32 @@
+# ─── SC-SAF-010 — Knife handling safety (REJECTED) ─────────────────────
+# Part of the versioned negative register (ADR-P6-08). Kept in the repository so
+# the reasoning is diffed alongside the positive set and the id stays reserved —
+# a rejected capability is a permanent limit, not a backlog item.
+#
+# The trigger below is what someone would naively write. It is recorded to show
+# what was considered, and never runs.
+# ──────────────────────────────────────────────────────────────────────────────
+scenario_id: SC-SAF-010
+schema_version: 1
+scenario_name: Knife handling safety
+category: kitchen
+status: rejected
+
+detectability: rejected
+claim_class: inference
+
+trigger:
+  op: detected
+  args: {class_name: knife}
+
+risk_level: INFO
+priority: 999
+patient_facing: false
+messages: {}
+next_best_action: ""
+caregiver_channel: none
+
+rejection_reason: >-
+  No grip, no motion and no surface or edge classes. `knife` plus `person` is cooking, a preserved IADL; warning about it degrades the capacity it claims to protect. See SC-KIT-002 for the supportable form.
+
+sample_video_needed: false

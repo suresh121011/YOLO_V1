@@ -1,0 +1,58 @@
+# ─── SC-COR-001 — Cord seen on the floor in a walkway ─────────────────────────
+# Re-scoped from the legacy `wire_tripping_hazard`, which spoke "watch your
+# step" every two minutes and fixed nothing.
+#
+# The CDC STEADI intervention is "coil or tape cords next to the wall" — a
+# one-time modification by a caregiver. So this is a caregiver-facing
+# assessment finding, stated once, never spoken to the resident.
+# ──────────────────────────────────────────────────────────────────────────────
+scenario_id: SC-COR-001
+schema_version: 1
+scenario_name: Cord seen on the floor in a walkway
+category: corridor
+status: draft
+
+detectability: inferred
+claim_class: inference
+
+trigger:
+  all:
+    - op: in_room
+      args: {room: corridor}
+    - op: present_for
+      args: {class_name: wire, seconds: 120}
+
+risk_level: LOW
+priority: 85
+
+min_confidence: 0.60
+min_dwell_seconds: 120
+clear_after_seconds: 300
+cooldown_seconds: 86400
+max_repeats: 0
+max_per_day: 1
+
+room_context: corridor
+patient_facing: false
+messages: {}
+
+next_best_action: Coil or tape loose cords along the wall
+caregiver_channel: digest
+
+capability_disclaimer: >-
+  The system cannot tell a cord lying across the walking path from one running
+  along the skirting board: there is no floor plane and no path model. Treat
+  this as a prompt to look, not a confirmed hazard.
+
+evidence:
+  - source_id: CDC-STEADI-CheckForSafety-2017
+    section: Floors
+    item: Coil or tape cords and wires next to the wall so you cannot trip over them
+    strength: guideline
+    supports: intervention
+
+false_positive_notes: >-
+  `wire` will be among the highest-frequency and least-informative classes: a
+  charger lead, a cable behind a cupboard, and an extension across a corridor
+  all detect identically.
+sample_video_needed: true

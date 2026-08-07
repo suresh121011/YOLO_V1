@@ -1,0 +1,55 @@
+# ─── SC-KIT-002 — Knife left out with nobody present ──────────────────────────
+# The only defensible knife scenario with these classes.
+#
+# `knife` + `person` is the definition of cooking, a preserved IADL, and the
+# legacy rule built on it fired 30-60 times per meal. A knife left on the
+# counter with nobody in the room is a different situation: a real hazard in a
+# multi-generational home, and one a caregiver can act on.
+# ──────────────────────────────────────────────────────────────────────────────
+scenario_id: SC-KIT-002
+schema_version: 1
+scenario_name: Knife left out with nobody present
+category: kitchen
+status: draft
+
+detectability: direct
+claim_class: observation
+
+trigger:
+  all:
+    - op: in_room
+      args: {room: kitchen}
+    - op: present_for
+      args: {class_name: knife, seconds: 60}
+    - op: absent_for
+      args: {class_name: person, seconds: 600}
+
+risk_level: LOW
+priority: 60
+
+min_confidence: 0.50
+min_dwell_seconds: 60
+clear_after_seconds: 120
+cooldown_seconds: 3600
+max_repeats: 0
+max_per_day: 3
+
+room_context: kitchen
+patient_facing: false        # nobody is present to hear it; that is the trigger
+messages: {}
+
+next_best_action: Put the knife away when convenient
+caregiver_channel: digest
+
+evidence:
+  - source_id: CDC-STEADI-CheckForSafety-2017
+    section: Kitchen
+    strength: guideline
+    supports: hazard
+    note: Backs kitchen hazard reduction generally, not this detection.
+
+false_positive_notes: >-
+  A knife in a block or on a magnetic strip is a permanent fixture, not a
+  hazard. If field data shows that dominates, demote or drop this scenario
+  rather than tuning it — it is not worth one false finding a day.
+sample_video_needed: true

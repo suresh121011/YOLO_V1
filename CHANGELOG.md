@@ -199,6 +199,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The validators immediately flagged two prompts in the M3 exemplar scenario as
     over the 14-word bound; the messages were shortened rather than the bound
     raised.
+- Phase-6 M5: the scenario taxonomy and the initial set — 20 scenarios, of which
+  **9 are supportable and 11 are rejected**. That ratio is the finding, not a
+  gap: 23 static-object classes plus `person`/`face`, with no pose, no on/off
+  state and no tracking, support far fewer real-time scenarios than the product
+  framing implies.
+  - `docs/08_scenario_engineering/scenario_taxonomy.md` — the category scheme,
+    the three shapes a scenario can take (environmental finding · real-time
+    hazard · observation), the classes that deliberately carry no scenario, and
+    the empty categories. `STA` (staircase) is empty *and important*: stairs are
+    among the strongest STEADI items and there is **no `stairs` class** — a
+    capability gap, not an oversight.
+  - Supportable: `SC-BTH-002` no grab bar seen near the toilet (a literal STEADI
+    bathroom item, fully supported, never spoken to the resident — the highest-
+    value scenario available and absent from the legacy set entirely) ·
+    `SC-KIT-001` cooking left unattended · `SC-KIT-002` knife left out with
+    nobody present (the only defensible knife scenario; `knife` + `person` is
+    cooking) · `SC-BTH-001` wet floor · `SC-MOB-001` walking aid left away from
+    the person · `SC-COR-001` cord on the floor · `SC-BTH-003` prolonged
+    bathroom occupancy · `SC-MED-001` medicine packaging left out (the honest
+    replacement for the deleted `medicine_reminder`) · `SC-SYS-001` nobody seen
+    for an unusually long time.
+  - Rejected (`SC-SAF-001…011`): fall detection, stove left on, gas leak,
+    medication adherence, hydration, tap running, person unconscious, wandering,
+    cognitive decline, knife-handling safety, and identifying who is home. Each
+    records the trigger someone would naively write, so the file documents what
+    was considered as well as why it was refused.
+  - **Projected volume for the whole set is 5 alerts/day against a budget of 20**,
+    versus ~370/day for the six legacy rules.
+  - `configs/feature_flags.yaml`: `memory_window_frames` raised 150 → 2700
+    (10.0s → 180s at 15 FPS). The scenario schema's dwell field and the
+    `present_for` predicate are both bounded by this window, and the
+    environmental findings need 60s while unattended-cooking needs 120s — all
+    unexpressible at 150 frames. The validator surfaced this rather than letting
+    the scenarios silently never fire. Footprint stays negligible (~6MB).
+  - Every scenario ships as `status: draft`. `status: active` requires
+    `reviewed_by`/`reviewed_on`, and that review is a **clinical judgement by a
+    qualified human**, not an engineering sign-off — marking them active would
+    fabricate the sign-off the schema exists to require. The consequence is
+    honest and visible: `validate_scenarios` reports `safety-class-uncovered`
+    for every safety-critical class, because coverage counts active scenarios
+    only. Those warnings clear when clinical review happens, not before.
 - Phase-5: Production Dataset Engineering, Missing-Annotation Resolution &
   Dataset v1.0 — makes dataset quality the primary solution and demotes
   Phase-4 masking to a safety net. Core invariant: auto-generated labels never

@@ -77,7 +77,13 @@ runtime:
   max_alerts_per_minute: 6        # Hard cap — prevents alert fatigue
 
   # Event Memory
-  memory_window_frames: 150       # Sliding window size (~10s at 15 FPS)
+  # Raised from 150 (10.0s) in Phase-6 M5. The scenario schema's dwell field and
+  # the present_for predicate are both bounded by this window, and the
+  # environmental findings need 60s while unattended-cooking needs ~120s — all
+  # unexpressible at 150 frames. 2700 frames is 180s at 15 FPS; footprint is
+  # window x classes x ~100B, so ~6MB, still negligible. `absent_for` is NOT
+  # bounded by this (it counts frames since start-up), only sustained presence is.
+  memory_window_frames: 2700      # Sliding window size (~180s at 15 FPS)
 
   # TTS
   tts_speed: 1.0                  # Speech rate (1.0 = normal, 0.9 = slightly slower)

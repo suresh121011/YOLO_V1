@@ -1,0 +1,68 @@
+# ─── SC-BTH-003 — Prolonged time in the bathroom ──────────────────────────────
+# A genuinely meaningful signal — bathroom falls are common and time on the
+# floor drives outcomes — and one the system cannot interpret.
+#
+# It cannot distinguish "fell" from "bathing" from "unwell" from "camera
+# occluded". So it is caregiver digest only, phrased as duration, and escalates
+# to a human check-in and never to an emergency. The thresholds are deliberately
+# long: one false check-in costs a phone call, but routine false check-ins cost
+# a caregiver who stops answering.
+# ──────────────────────────────────────────────────────────────────────────────
+scenario_id: SC-BTH-003
+schema_version: 1
+scenario_name: Prolonged time in the bathroom
+category: bathroom
+status: draft
+
+detectability: inferred
+claim_class: inference
+
+trigger:
+  all:
+    - op: in_room
+      args: {room: bathroom}
+    - op: present_for
+      args: {class_name: person, seconds: 150}
+
+risk_level: MEDIUM
+priority: 30
+
+min_confidence: 0.50
+min_dwell_seconds: 150
+clear_after_seconds: 60
+cooldown_seconds: 3600
+max_repeats: 0
+max_per_day: 3
+
+room_context: bathroom
+optional_objects: [toilet, sink, support_handle]
+
+patient_facing: false        # a dignity boundary, not only a design choice
+messages: {}
+
+next_best_action: Consider checking in by phone
+caregiver_channel: digest
+
+capability_disclaimer: >-
+  This reports how long a person has been visible in the bathroom. It cannot
+  tell bathing from illness from a fall, and it is not fall detection.
+
+evidence:
+  - source_id: WHO-StepSafely-2021
+    section: Falls in the home
+    strength: guideline
+    supports: hazard
+    note: >-
+      Backs the underlying concern that time on the floor worsens outcomes. The
+      inference from occupancy duration is ours, not the literature's.
+
+false_positive_notes: >-
+  Bathing, grooming and an ordinary slow morning all look identical to this. The
+  150s dwell is a floor, not a clinical threshold, and should be tuned per
+  household before activation.
+
+notes: >-
+  Surveillance risk is real here: a per-minute log of bathroom occupancy is the
+  drift from safety into monitoring. Retention must be short, and the resident
+  must be told this scenario exists.
+sample_video_needed: true

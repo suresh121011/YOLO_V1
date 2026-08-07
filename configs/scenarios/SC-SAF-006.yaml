@@ -1,0 +1,32 @@
+# ─── SC-SAF-006 — Tap left running or flooding (REJECTED) ─────────────────────
+# Part of the versioned negative register (ADR-P6-08). Kept in the repository so
+# the reasoning is diffed alongside the positive set and the id stays reserved —
+# a rejected capability is a permanent limit, not a backlog item.
+#
+# The trigger below is what someone would naively write. It is recorded to show
+# what was considered, and never runs.
+# ──────────────────────────────────────────────────────────────────────────────
+scenario_id: SC-SAF-006
+schema_version: 1
+scenario_name: Tap left running or flooding
+category: bathroom
+status: rejected
+
+detectability: rejected
+claim_class: inference
+
+trigger:
+  op: detected
+  args: {class_name: sink}
+
+risk_level: INFO
+priority: 999
+patient_facing: false
+messages: {}
+next_best_action: ""
+caregiver_channel: none
+
+rejection_reason: >-
+  No water-flow state. `sink` is furniture.
+
+sample_video_needed: false

@@ -1252,13 +1252,13 @@ stages:
       size: 2254
     - path: configs/feature_flags.yaml
       hash: md5
-      md5: 53fc46630d6ece2846b8ad3169c73a26
-      size: 4098
+      md5: 8bfd3e7f2c978d19f5a935c6b100fe6d
+      size: 4569
     - path: configs/scenarios
       hash: md5
-      md5: dd11670a8f52a526447e97c43980738d.dir
-      size: 3820
-      nfiles: 1
+      md5: 9d686b75e6469422b954ae71c60e3cc2.dir
+      size: 36488
+      nfiles: 20
     - path: scripts/scenarios/30_compile_scenarios.py
       hash: md5
       md5: 2c7b6f6694836fe2d9862150d9617944
@@ -1293,16 +1293,16 @@ stages:
     outs:
     - path: data/scenario_engine/build/scenarios.compiled.json
       hash: md5
-      md5: 63deba2457cd77e421bbe7c8cc75c1dc
-      size: 5150
+      md5: 918b622e3b1f8781d91aa17329032bdc
+      size: 34541
     - path: data/scenario_engine/build/scenarios.editable.csv
       hash: md5
-      md5: cf25936f973c5682d98afc0e85370eda
-      size: 201
+      md5: 0cc43d1f8e24e6289fc516b75b8cb606
+      size: 2040
     - path: data/scenario_engine/build/scenarios.view.csv
       hash: md5
-      md5: 2a2501a476cf381cb6561be819d8e476
-      size: 932
+      md5: 5a950dabe4cc319c8e0e47ea40e8c6d8
+      size: 10144
   validate_scenarios:
     cmd: python scripts/scenarios/31_validate_scenarios.py 
       --exit-zero-on-warnings
@@ -1313,13 +1313,13 @@ stages:
       size: 2279
     - path: configs/scenarios
       hash: md5
-      md5: dd11670a8f52a526447e97c43980738d.dir
-      size: 3820
-      nfiles: 1
+      md5: 9d686b75e6469422b954ae71c60e3cc2.dir
+      size: 36488
+      nfiles: 20
     - path: data/scenario_engine/build/scenarios.compiled.json
       hash: md5
-      md5: 63deba2457cd77e421bbe7c8cc75c1dc
-      size: 5150
+      md5: 918b622e3b1f8781d91aa17329032bdc
+      size: 34541
     - path: scripts/scenarios/31_validate_scenarios.py
       hash: md5
       md5: 74b02800184eacf62d53012337340c0b
@@ -1345,5 +1345,5 @@ stages:
     outs:
     - path: data/qa_reports/scenario_validation_report.json
       hash: md5
-      md5: c982557246d2c9a2a0d40bb3cdbf8519
-      size: 1931
+      md5: 3b467e2804586b2823adb186d2bdfcd1
+      size: 3420

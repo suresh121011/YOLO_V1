@@ -53,6 +53,7 @@ code; they are enumerated with file:line evidence in
 | [requirements_specification.md](requirements_specification.md) | What a Scenario and a Rule are; mandatory vs optional fields; what must never be assumed |
 | [domain_research_report.md](domain_research_report.md) | ADL/IADL framing, CDC STEADI and WHO guidance, alarm-fatigue evidence, and the engineering requirements they imply |
 | [negative_register.md](negative_register.md) | Scenarios permanently rejected as undeliverable with these 23 classes, and why |
+| [scenario_taxonomy.md](scenario_taxonomy.md) | Category scheme, id grammar, the three shapes a scenario takes, and the deliberately empty categories |
 | [adr/](adr/) | The nine load-bearing decisions, with rejected alternatives |
 
 ## Status
@@ -66,7 +67,7 @@ Phase 6 is in progress. Milestone status is tracked in `../../CHANGELOG.md` unde
 | M2 | Schema, frozen dataclasses, predicate registry | **done** |
 | M3 | Compiler, capability map, inverted index, CSV view | **done** |
 | M4 | Validator suite + alert-volume simulation gate | **done** |
-| M5 | Scenario taxonomy + first ~20 scenarios | pending |
+| M5 | Scenario taxonomy + first ~20 scenarios | **done** (draft; clinical review pending) |
 | M6 | **Validation gate — M7+ blocked until this passes** | pending |
 | M7 | Capture protocol, clip ingest, MP4 metadata stripper | pending |
 | M8 | Runtime integration; `configs/risk_rules.yaml` retired | pending |
