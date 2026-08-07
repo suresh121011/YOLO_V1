@@ -92,6 +92,17 @@ data/qa_reports/*
 !data/qa_reports/_snapshots/
 !data/qa_reports/_snapshots/**
 
+# ─── Scenario & Rule Engine (Phase-6) ─────────────────────────────────────────
+# Compiled scenario artifacts are `cache: false` DVC outs, so they must stay
+# git-readable at a tag — the same rationale record_release documents. They live
+# under a `build/` directory, which the generic Python rule at the top of this
+# file already ignores, so the directory itself has to be re-allowed before the
+# files inside it can be. A cache:false out under an ignored dir is silently
+# uncommittable, which is exactly how an artifact "that records what a thing is"
+# ends up missing from the tag.
+!data/scenario_engine/build/
+!data/scenario_engine/build/**
+
 # ─── Custom Capture Workflow (Phase-3) ────────────────────────────────────────
 # Staging inbox for raw phone photos — transient, never tracked
 data/capture_inbox/

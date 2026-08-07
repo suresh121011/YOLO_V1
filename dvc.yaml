@@ -429,5 +429,38 @@ stages:
       - data/qa_reports/eval_report.json:
           cache: false
 
+  # ─── Scenario & Rule Engine (Phase-6) ───────────────────────────────────────
+  # Masters are configs/scenarios/SC-*.yaml (plain git, hand-authored,
+  # PR-reviewed): knowledge is source, not data-plane content (ADR-P6-01). The
+  # directory is a *dep* rather than a params entry because DVC has no
+  # "params from N files" concept -- so adding a scenario correctly re-triggers
+  # the compile.
+  #
+  # All three outs are `cache: false`: the artifact that records what the rule
+  # set IS must stay readable at a git tag by anyone without DVC remote
+  # credentials, the same rationale record_release documents above. The
+  # compiled JSON is also the semantic review surface -- a rule set's
+  # correctness is a property of the SET, so a one-file scenario diff never
+  # shows the whole change.
+  compile_scenarios:
+    cmd: python scripts/scenarios/30_compile_scenarios.py
+    deps:
+      - scripts/scenarios/30_compile_scenarios.py
+      - src/scenario_engine
+      - configs/scenarios
+      - configs/data.yaml
+      - configs/feature_flags.yaml
+    params:
+      - configs/scenario_engine.yaml:
+          - compile
+          - rooms
+    outs:
+      - data/scenario_engine/build/scenarios.compiled.json:
+          cache: false
+      - data/scenario_engine/build/scenarios.view.csv:
+          cache: false
+      - data/scenario_engine/build/scenarios.editable.csv:
+          cache: false
+
   # export_model.py (ONNX/TFLite export for Raspberry Pi/Android targets)
   # will be added alongside its own DVC stage in Phase 6 — not Phase-5 scope.

@@ -118,6 +118,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     renamed scenario or an evidence edit **does not**. Getting this backwards
     either trains contributors to ignore staleness warnings or lets the clip
     suite pass green against behaviour that no longer exists.
+- Phase-6 M3: the scenario compiler, class capability map and CSV view.
+  - `src/scenario_engine/taxonomy.py` — the **class capability map** (ADR-P6-05),
+    derived from `configs/data.yaml` + `configs/feature_flags.yaml` + a
+    git-tracked R24 decision artifact. A taxonomy fingerprint answers "is the
+    taxonomy the same?", which is not the question a scenario needs: the
+    documented `wet_floor` demotion keeps class ID 20 reserved, so `nc` and
+    `names` are unchanged and the fingerprint is **byte-identical** while the
+    detector emits nothing. A test pins exactly that — the fingerprint is blind
+    to the demotion, the capability map is not. `passport` is the live instance:
+    the compiled artifact records it as `enabled: false`, so any scenario keyed
+    on it is now a build failure rather than a rule that never fires.
+    `taxonomy_fingerprint` deliberately re-implements the algorithm from
+    `src/dataset/completeness.py` because `src/scenario_engine` may not depend on
+    `src.dataset`; a test pins the two byte-for-byte so the duplication cannot
+    drift.
+  - `src/scenario_engine/compile.py` — set-level validation (duplicate ids,
+    unknown/demoted/disabled classes, static-only triggers, evidence gating
+    risk level and push channel) and the compiled artifact. The artifact carries
+    `rule_count` + `content_hash` so the loader can **fail closed**: a
+    hand-edited or truncated artifact is rejected, where the legacy loader did
+    `data.get("rules", [])` and logged `Loaded 0 rules` at INFO. It also carries
+    an **inverted index** (class → scenario ids) so an edge device evaluates only
+    the scenarios that touch a detected class, which is what keeps a few hundred
+    scenarios inside the 5 ms rule budget.
+  - `src/scenario_engine/csv_view.py` — CSV is a **view, not a format**
+    (ADR-P6-02). `scenarios.view.csv` is a read-only projection with a fixed
+    column order, `QUOTE_ALL`, LF endings and embedded newlines *rejected rather
+    than escaped* (a quoted multi-line cell renders as broken rows in `git
+    diff`). `scenarios.editable.csv` is a restricted subset a stakeholder can
+    safely edit, with **prompt fields excluded** — which is what keeps Devanagari
+    out of Excel's cp1252 reach — written with a BOM, matched by `scenario_id`,
+    and unable to create or delete scenarios.
+  - `scripts/scenarios/30_compile_scenarios.py` with `--check` (exit 0 current,
+    1 validation failure, 2 drift), `configs/scenario_engine.yaml`, and the
+    `compile_scenarios` DVC stage. All three outputs are `cache: false` so they
+    stay git-readable at a tag. `.gitignore`'s generic `build/` rule silently
+    ignored them — a `cache: false` out under an ignored directory is
+    uncommittable, which is exactly how an artifact "that records what a thing
+    is" goes missing from a release; the directory is now explicitly re-allowed.
+  - First exemplar scenario `configs/scenarios/SC-BTH-001.yaml` (wet floor),
+    carried over from `risk_rules.yaml` with its three defects fixed: a 3 s dwell
+    so flicker cannot fire it, an explicit clear condition so a floor wet for 20
+    minutes is one event rather than ten announcements, and escalation to the
+    caregiver instead of repeating at the resident.
 - Phase-5: Production Dataset Engineering, Missing-Annotation Resolution &
   Dataset v1.0 — makes dataset quality the primary solution and demotes
   Phase-4 masking to a safety net. Core invariant: auto-generated labels never

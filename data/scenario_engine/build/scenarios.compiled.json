@@ -1,0 +1,208 @@
+{
+  "artifact_schema_version": 1,
+  "scenarios_version": "scenarios-v0.1.0",
+  "taxonomy_fingerprint": "sha256:a831924bb82e23ffbc6cc1d56647a78cc72ff5e329920569b05bd5ae99c2f125",
+  "rule_count": 1,
+  "classes": {
+    "bed": {
+      "id": 17,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "book": {
+      "id": 9,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "chair": {
+      "id": 16,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "charger": {
+      "id": 10,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "cupboard": {
+      "id": 14,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "door": {
+      "id": 15,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "face": {
+      "id": 1,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "gas_cylinder": {
+      "id": 7,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "knife": {
+      "id": 5,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "laptop": {
+      "id": 12,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "medicine_bottle": {
+      "id": 3,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "medicine_strip": {
+      "id": 2,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "monitor": {
+      "id": 13,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "passport": {
+      "id": 8,
+      "detection_level": "bbox",
+      "enabled": false,
+      "reason": "disabled in feature_flags.yaml"
+    },
+    "person": {
+      "id": 0,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "sink": {
+      "id": 19,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "stove": {
+      "id": 6,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "support_handle": {
+      "id": 22,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "toilet": {
+      "id": 18,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "walking_stick": {
+      "id": 21,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "water_bottle": {
+      "id": 4,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "wet_floor": {
+      "id": 20,
+      "detection_level": "bbox",
+      "enabled": true
+    },
+    "wire": {
+      "id": 11,
+      "detection_level": "bbox",
+      "enabled": true
+    }
+  },
+  "inverted_index": {
+    "person": [
+      "SC-BTH-001"
+    ],
+    "wet_floor": [
+      "SC-BTH-001"
+    ]
+  },
+  "scenarios": [
+    {
+      "scenario_id": "SC-BTH-001",
+      "schema_version": 1,
+      "scenario_name": "Wet floor in a wet-room",
+      "category": "bathroom",
+      "status": "draft",
+      "detectability": "direct",
+      "claim_class": "observation",
+      "risk_level": "HIGH",
+      "priority": 20,
+      "condition": "(detected(class_name='wet_floor') AND present_for(class_name='wet_floor', seconds=3) AND detected(class_name='person'))",
+      "required_objects": [
+        "person",
+        "wet_floor"
+      ],
+      "optional_objects": [
+        "sink",
+        "toilet",
+        "support_handle"
+      ],
+      "suppress_during": [],
+      "room_context": "bathroom",
+      "min_confidence": 0.5,
+      "min_dwell_seconds": 3.0,
+      "clear_after_seconds": 30.0,
+      "cooldown_seconds": 120,
+      "max_repeats": 2,
+      "max_per_day": 6,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "caregiver_only"
+      },
+      "patient_facing": true,
+      "messages": {
+        "en": "The floor near the sink looks wet.",
+        "hi": "सिंक के पास फर्श गीला लग रहा है।"
+      },
+      "next_best_action": "Continue monitoring",
+      "caregiver_channel": "digest",
+      "escalation": [
+        {
+          "after_seconds": 90.0,
+          "action": "reprompt",
+          "messages": {
+            "en": "The floor near the sink still looks wet. Please use the handle when you pass.",
+            "hi": "सिंक के पास फर्श अब भी गीला लग रहा है। वहाँ से निकलते समय कृपया हैंडल पकड़ लीजिए।"
+          }
+        },
+        {
+          "after_seconds": 180.0,
+          "action": "notify_caregiver",
+          "messages": {}
+        }
+      ],
+      "evidence": [
+        {
+          "source_id": "CDC-STEADI-CheckForSafety-2017",
+          "section": "Bathroom",
+          "item": "Non-slip surfaces and grab bars in the tub, shower and by the toilet",
+          "strength": "guideline",
+          "supports": "hazard",
+          "note": "Backs the HAZARD. Does NOT back camera-based detection of it — see R21/R24 on wet_floor being confusable with dry polished stone."
+        }
+      ],
+      "capability_disclaimer": "",
+      "rejection_reason": "",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:67ac98118c0585ba527b7c35149f96cbf62658b76c048764620a662fb99f68af"
+    }
+  ],
+  "deprecated": [],
+  "rejected": [],
+  "content_hash": "sha256:b101c1c883741b301e825e07794d7e134a9a72714605f32757d8a4c717cf5b7c"
+}

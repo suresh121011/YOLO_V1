@@ -1,0 +1,92 @@
+# ─── SC-BTH-001 — Wet floor in a wet-room ─────────────────────────────────────
+# Read by: src/scenario_engine/compile.py (via configs/scenario_engine.yaml)
+#
+# The one legacy rule with a real evidence base AND a plausible real-time
+# prompt. Retained from configs/risk_rules.yaml with the three defects that
+# made it a metronome fixed: a 3s dwell so detector flicker cannot fire it, an
+# explicit clear condition so a floor that stays wet for 20 minutes is one
+# event rather than ten announcements, and escalation to the caregiver instead
+# of repeating at the resident.
+#
+# Gated on the R24 pilot: if wet_floor is demoted to scene-level, the class
+# capability map makes this scenario a build failure rather than a rule that
+# silently never fires (ADR-P6-05).
+# ──────────────────────────────────────────────────────────────────────────────
+
+scenario_id: SC-BTH-001
+schema_version: 1
+scenario_name: Wet floor in a wet-room
+category: bathroom
+status: draft            # -> active once clinically reviewed (M5)
+
+detectability: direct
+claim_class: observation
+
+trigger:
+  all:
+    - op: detected
+      args: {class_name: wet_floor}
+    # Dwell, not a higher confidence threshold. A wet floor persists for
+    # minutes, so 3s of sustained detection costs ~zero true positives while
+    # removing the flicker that polished granite produces (R21/R24).
+    - op: present_for
+      args: {class_name: wet_floor, seconds: 3}
+    - op: detected
+      args: {class_name: person}
+
+risk_level: HIGH
+priority: 20
+
+min_confidence: 0.50
+min_dwell_seconds: 3
+clear_after_seconds: 30    # no wet_floor for 30s closes the event
+cooldown_seconds: 120
+max_repeats: 2
+max_per_day: 6
+
+room_context: bathroom
+optional_objects: [sink, toilet, support_handle]
+
+quiet_hours:
+  start: "21:00"
+  end: "06:00"
+  behaviour: caregiver_only   # never wake someone for this; startle causes falls
+
+patient_facing: true
+messages:
+  # Observation first, location named, no fear word, no "careful".
+  en: "The floor near the sink looks wet."
+  hi: "सिंक के पास फर्श गीला लग रहा है।"
+
+next_best_action: Continue monitoring
+caregiver_channel: digest
+
+escalation:
+  - after_seconds: 90
+    action: reprompt
+    messages:
+      en: "The floor near the sink still looks wet. Please use the handle when you pass."
+      hi: "सिंक के पास फर्श अब भी गीला लग रहा है। वहाँ से निकलते समय कृपया हैंडल पकड़ लीजिए।"
+  - after_seconds: 180
+    action: notify_caregiver   # no third utterance to the resident
+
+evidence:
+  - source_id: CDC-STEADI-CheckForSafety-2017
+    section: Bathroom
+    item: Non-slip surfaces and grab bars in the tub, shower and by the toilet
+    strength: guideline
+    supports: hazard
+    note: >-
+      Backs the HAZARD. Does NOT back camera-based detection of it — see R21/R24
+      on wet_floor being confusable with dry polished stone.
+
+false_positive_notes: >-
+  Indian homes are predominantly polished granite, marble or vitrified tile.
+  Specular reflection is the expected false-positive source, and it is worst in
+  exactly the rooms that matter. Dwell plus the clear condition are the
+  mitigation; the confidence threshold deliberately stays moderate.
+
+sample_video_needed: true
+notes: >-
+  Requires a paired dry-floor negative of the same surface, per the capture
+  runbook's wet_floor rule.

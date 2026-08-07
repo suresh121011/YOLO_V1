@@ -1243,3 +1243,63 @@ stages:
       md5: 99ce17788eaf172956fae49c249533d2.dir
       size: 3989
       nfiles: 1
+  compile_scenarios:
+    cmd: python scripts/scenarios/30_compile_scenarios.py
+    deps:
+    - path: configs/data.yaml
+      hash: md5
+      md5: aee65566d7b4876d68948f6bc02abb3d
+      size: 2254
+    - path: configs/feature_flags.yaml
+      hash: md5
+      md5: 53fc46630d6ece2846b8ad3169c73a26
+      size: 4098
+    - path: configs/scenarios
+      hash: md5
+      md5: d7d3a0472500bd320fdd6f3bc849c0be.dir
+      size: 3703
+      nfiles: 1
+    - path: scripts/scenarios/30_compile_scenarios.py
+      hash: md5
+      md5: 2c7b6f6694836fe2d9862150d9617944
+      size: 4777
+    - path: src/scenario_engine
+      hash: md5
+      md5: 4ccfc4e4750606c530ecbb698ebd8d52.dir
+      size: 89493
+      nfiles: 10
+    params:
+      configs/scenario_engine.yaml:
+        compile:
+          scenario_dir: configs/scenarios
+          scenarios_version: scenarios-v0.1.0
+          outputs:
+            artifact: data/scenario_engine/build/scenarios.compiled.json
+            view_csv: data/scenario_engine/build/scenarios.view.csv
+            editable_csv: data/scenario_engine/build/scenarios.editable.csv
+          capability:
+            data_config: configs/data.yaml
+            feature_flags: configs/feature_flags.yaml
+            wet_floor_decision: data/qa_reports/wet_floor_decision.json
+        rooms:
+        - kitchen
+        - bedroom
+        - bathroom
+        - hall
+        - balcony
+        - corridor
+        - pooja_room
+        - staircase
+    outs:
+    - path: data/scenario_engine/build/scenarios.compiled.json
+      hash: md5
+      md5: ec343da0492b85f1614e4e741b8b9af8
+      size: 5245
+    - path: data/scenario_engine/build/scenarios.editable.csv
+      hash: md5
+      md5: cf25936f973c5682d98afc0e85370eda
+      size: 201
+    - path: data/scenario_engine/build/scenarios.view.csv
+      hash: md5
+      md5: 2a2501a476cf381cb6561be819d8e476
+      size: 932
