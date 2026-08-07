@@ -162,6 +162,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     so flicker cannot fire it, an explicit clear condition so a floor wet for 20
     minutes is one event rather than ten announcements, and escalation to the
     caregiver instead of repeating at the resident.
+- Phase-6 M4: the validator suite and the alert-volume simulation gate.
+  - `src/scenario_engine/validators.py` — report-level checks with ERROR/WARN
+    severities, following the `--exit-zero-on-warnings` convention. The message
+    lints are tied to real strings from `configs/risk_rules.yaml`, not
+    hypotheticals: **no unobservable assertions** catches "the stove appears to
+    be **on**" (`:54`) — hedging the verb does not make an unobservable state
+    observable; **no unanswerable questions** catches "Have you taken your
+    medication today?" (`:63`), since there is no ASR and the answer is never
+    heard; **no startle language** catches "Please be careful" (`:31`), because
+    startle is itself a fall mechanism. Plus locale completeness (a `hi` field
+    with no Devanagari is an English string pasted into it), message length,
+    regulated-claim verbs, confidence reachability against the detector floor,
+    dwell against the Event Memory ceiling, safety-class coverage, exhaustive
+    determinism, and ambiguous arbitration.
+  - `src/scenario_engine/simulate.py` — replays a day of detections through the
+    scenario set and projects per-scenario and whole-set alert volume, modelling
+    dwell, cooldown, `max_repeats`, the daily budget, quiet hours, and event
+    hysteresis. It deliberately excludes the global rate limit and queue
+    eviction: those are runtime back-pressure, and counting them would let a
+    scenario set be "in budget" only because the queue was discarding its alerts.
+  - **The simulation surfaced something worth recording.** Modelling the three
+    legacy rules against a representative Indian-kitchen day (cylinder and stove
+    permanently visible, two cooking sessions, a medicine strip out all day)
+    projects ~370 alerts under the *legacy* engine, but only 16 under the new
+    schema — because `max_repeats` is capped at 3 and hysteresis makes a
+    persisting condition one event rather than a metronome. The failure mode was
+    designed out by the schema rather than left for the gate to catch. The gate
+    still earns its place on the case per-scenario limits cannot see: ten
+    individually-reasonable scenarios, each inside its own budget, summing well
+    past the whole-set ceiling — which is how a taxonomy actually degrades, since
+    nobody adds an obviously noisy scenario, they add the twentieth reasonable one.
+  - `scripts/scenarios/31_validate_scenarios.py` + the `validate_scenarios` DVC
+    stage, writing `data/qa_reports/scenario_validation_report.json` as a
+    `cache: false` metric (git-readable at a tag, allowlisted in `.gitignore`).
+  - The validators immediately flagged two prompts in the M3 exemplar scenario as
+    over the 14-word bound; the messages were shortened rather than the bound
+    raised.
 - Phase-5: Production Dataset Engineering, Missing-Annotation Resolution &
   Dataset v1.0 — makes dataset quality the primary solution and demotes
   Phase-4 masking to a safety net. Core invariant: auto-generated labels never

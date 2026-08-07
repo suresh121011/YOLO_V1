@@ -1256,8 +1256,8 @@ stages:
       size: 4098
     - path: configs/scenarios
       hash: md5
-      md5: d7d3a0472500bd320fdd6f3bc849c0be.dir
-      size: 3703
+      md5: dd11670a8f52a526447e97c43980738d.dir
+      size: 3820
       nfiles: 1
     - path: scripts/scenarios/30_compile_scenarios.py
       hash: md5
@@ -1265,9 +1265,9 @@ stages:
       size: 4777
     - path: src/scenario_engine
       hash: md5
-      md5: 4ccfc4e4750606c530ecbb698ebd8d52.dir
-      size: 89493
-      nfiles: 10
+      md5: 8f109b64a48271c10fce1840f4672269.dir
+      size: 120755
+      nfiles: 12
     params:
       configs/scenario_engine.yaml:
         compile:
@@ -1293,8 +1293,8 @@ stages:
     outs:
     - path: data/scenario_engine/build/scenarios.compiled.json
       hash: md5
-      md5: ec343da0492b85f1614e4e741b8b9af8
-      size: 5245
+      md5: 63deba2457cd77e421bbe7c8cc75c1dc
+      size: 5150
     - path: data/scenario_engine/build/scenarios.editable.csv
       hash: md5
       md5: cf25936f973c5682d98afc0e85370eda
@@ -1303,3 +1303,47 @@ stages:
       hash: md5
       md5: 2a2501a476cf381cb6561be819d8e476
       size: 932
+  validate_scenarios:
+    cmd: python scripts/scenarios/31_validate_scenarios.py 
+      --exit-zero-on-warnings
+    deps:
+    - path: configs/class_thresholds.yaml
+      hash: md5
+      md5: 75ffa5f074ad267e637b4dd5fed62ed5
+      size: 2279
+    - path: configs/scenarios
+      hash: md5
+      md5: dd11670a8f52a526447e97c43980738d.dir
+      size: 3820
+      nfiles: 1
+    - path: data/scenario_engine/build/scenarios.compiled.json
+      hash: md5
+      md5: 63deba2457cd77e421bbe7c8cc75c1dc
+      size: 5150
+    - path: scripts/scenarios/31_validate_scenarios.py
+      hash: md5
+      md5: 74b02800184eacf62d53012337340c0b
+      size: 6015
+    - path: src/scenario_engine
+      hash: md5
+      md5: 8f109b64a48271c10fce1840f4672269.dir
+      size: 120755
+      nfiles: 12
+    params:
+      configs/scenario_engine.yaml:
+        validation:
+          max_projected_alerts_per_day: 20
+          max_per_scenario_per_day: 20
+          require_coverage_of:
+          - medicine_strip
+          - medicine_bottle
+          - knife
+          - stove
+          - gas_cylinder
+          - wire
+          - wet_floor
+    outs:
+    - path: data/qa_reports/scenario_validation_report.json
+      hash: md5
+      md5: c982557246d2c9a2a0d40bb3cdbf8519
+      size: 1931

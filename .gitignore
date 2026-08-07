@@ -84,6 +84,8 @@ data/qa_reports/*
 !data/qa_reports/full_build_preflight.*
 # Phase-5 M10 locked eval-set evaluation (RG10, dataset-v1.0.0 track)
 !data/qa_reports/eval_report.json
+# Phase-6 scenario validation + alert-volume gate evidence
+!data/qa_reports/scenario_validation_report.json
 # Phase-E (mode: smoke -> full) migration evidence: the before/after comparison
 # plus the pre-migration artifact snapshot it diffs against. The snapshot is
 # what makes the report reproducible rather than a claim — without it the

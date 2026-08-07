@@ -462,5 +462,25 @@ stages:
       - data/scenario_engine/build/scenarios.editable.csv:
           cache: false
 
+  # Report-level validators plus the alert-volume simulation. Separate from
+  # compile_scenarios because compilation answers "is this runnable?" while
+  # validation answers "is this WISE?" -- message lints, reachability, coverage,
+  # determinism, and the projected daily alert volume. Metric rather than out,
+  # and cache: false so the evidence is readable at a tag.
+  validate_scenarios:
+    cmd: python scripts/scenarios/31_validate_scenarios.py --exit-zero-on-warnings
+    deps:
+      - scripts/scenarios/31_validate_scenarios.py
+      - src/scenario_engine
+      - configs/scenarios
+      - configs/class_thresholds.yaml
+      - data/scenario_engine/build/scenarios.compiled.json
+    params:
+      - configs/scenario_engine.yaml:
+          - validation
+    metrics:
+      - data/qa_reports/scenario_validation_report.json:
+          cache: false
+
   # export_model.py (ONNX/TFLite export for Raspberry Pi/Android targets)
   # will be added alongside its own DVC stage in Phase 6 — not Phase-5 scope.

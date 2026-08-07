@@ -62,11 +62,14 @@ next_best_action: Continue monitoring
 caregiver_channel: digest
 
 escalation:
+  # Reworded, not repeated, and one concrete action appears only after the soft
+  # prompt has failed. Kept short: the validator's 14-word bound exists because
+  # presbycusis costs sentence-final content first.
   - after_seconds: 90
     action: reprompt
     messages:
-      en: "The floor near the sink still looks wet. Please use the handle when you pass."
-      hi: "सिंक के पास फर्श अब भी गीला लग रहा है। वहाँ से निकलते समय कृपया हैंडल पकड़ लीजिए।"
+      en: "The floor near the sink is still wet. Please hold the handle."
+      hi: "सिंक के पास फर्श अब भी गीला है। हैंडल पकड़कर चलिए।"
   - after_seconds: 180
     action: notify_caregiver   # no third utterance to the resident
 

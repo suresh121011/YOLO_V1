@@ -175,8 +175,8 @@
           "after_seconds": 90.0,
           "action": "reprompt",
           "messages": {
-            "en": "The floor near the sink still looks wet. Please use the handle when you pass.",
-            "hi": "सिंक के पास फर्श अब भी गीला लग रहा है। वहाँ से निकलते समय कृपया हैंडल पकड़ लीजिए।"
+            "en": "The floor near the sink is still wet. Please hold the handle.",
+            "hi": "सिंक के पास फर्श अब भी गीला है। हैंडल पकड़कर चलिए।"
           }
         },
         {
@@ -204,5 +204,5 @@
   ],
   "deprecated": [],
   "rejected": [],
-  "content_hash": "sha256:b101c1c883741b301e825e07794d7e134a9a72714605f32757d8a4c717cf5b7c"
+  "content_hash": "sha256:4ee215da837e9b3e99c800b1ef83e4c5bf2b6673901c1934400abd30c89c7c9f"
 }
