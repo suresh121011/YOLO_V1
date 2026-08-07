@@ -61,8 +61,8 @@ Phase 6 is in progress. Milestone status is tracked in `../../CHANGELOG.md` unde
 
 | M | Deliverable | State |
 |:--|:---|:---|
-| M0 | Design record: this tree + ADR-P6-01…09; CI branch triggers | in progress |
-| M1 | `EvalContext`; the ten runtime defects; RuleEngine tests | pending |
+| M0 | Design record: this tree + ADR-P6-01…09; CI branch triggers | **done** |
+| M1 | `EvalContext`; the runtime defects; RuleEngine tests; alert arbitration | **done** |
 | M2 | Schema, frozen dataclasses, predicate registry | pending |
 | M3 | Compiler, capability map, inverted index, CSV view | pending |
 | M4 | Validator suite + alert-volume simulation gate | pending |

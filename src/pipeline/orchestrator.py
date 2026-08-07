@@ -23,11 +23,13 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections import deque
 from typing import Any
 
 from ..config.config_loader import SystemConfig
 from ..logging.structured_logger import StructuredLogger
-from . import PipelineMetrics, Severity
+from . import Alert, PipelineMetrics, Severity
+from .alert_queue import AlertQueue
 from .confidence_fusion import ConfidenceFusion
 from .detector import YOLODetector
 from .event_memory import EventMemory
@@ -117,6 +119,15 @@ class ElderlyAssistantPipeline:
             fps=self._target_fps,
             rule_enabled=self._config.is_rule_enabled,
         )
+
+        # ── Alert arbitration ────────────────────────────────────────────
+        # A severity-ordered, bounded queue sits between the rule engine and
+        # TTS. It was fully implemented and unit-tested but never imported, so
+        # the pipeline spoke max(alerts) each frame and discarded the rest.
+        # Assigned before any background thread starts.
+        self._alert_queue = AlertQueue(max_size=10)
+        self._max_alerts_per_minute = int(self._config.get_runtime("max_alerts_per_minute", 6))
+        self._spoken_at: deque[float] = deque()
 
         # ── Piper TTS (non-blocking) ─────────────────────────────────────
         self._tts: PiperTTS | None = None
@@ -226,12 +237,14 @@ class ElderlyAssistantPipeline:
             except Exception as e:
                 self._logger.log_error(e, context=f"plugin_{type(plugin).__name__}")
 
-        # ── 7. Speak highest-priority alert ───────────────────────────
-        if alerts and self._tts is not None:
-            top = max(alerts, key=lambda a: a.severity.value)
-            self._tts.speak(top.message, priority=(top.severity == Severity.CRITICAL))
-            for alert in alerts:
-                self._logger.log_alert(alert)
+        # ── 7. Arbitrate and speak ────────────────────────────────────
+        for alert in alerts:
+            self._alert_queue.put(alert)
+            self._logger.log_alert(alert)
+
+        spoken = self._next_speakable_alert()
+        if spoken is not None and self._tts is not None:
+            self._tts.speak(spoken.message, priority=(spoken.severity == Severity.CRITICAL))
 
         # ── 8. Assemble metrics & log ─────────────────────────────────
         total_ms = (time.perf_counter() - t0) * 1000
@@ -258,6 +271,44 @@ class ElderlyAssistantPipeline:
             "mode": self._mode,
             "metrics": metrics,
         }
+
+    # ─────────────────────────────────────────
+    # Alert arbitration
+    # ─────────────────────────────────────────
+
+    def _next_speakable_alert(self) -> Alert | None:
+        """Pop the highest-priority pending alert, subject to the rate limit.
+
+        ``runtime.max_alerts_per_minute`` in configs/feature_flags.yaml carries
+        the comment "Hard cap — prevents alert fatigue" and was referenced by no
+        code at all. It is enforced here.
+
+        CRITICAL alerts bypass the cap. A cap that can silence a genuine
+        emergency is a worse failure than the fatigue it prevents, and the
+        alert-fatigue evidence concerns routine chatter, not emergencies. The
+        alert is still queued, logged, and counted either way — only speech is
+        rate-limited.
+        """
+        alert = self._alert_queue.get(timeout=0)
+        if alert is None:
+            return None
+
+        now = time.monotonic()
+        while self._spoken_at and now - self._spoken_at[0] >= 60.0:
+            self._spoken_at.popleft()
+
+        if (
+            alert.severity is not Severity.CRITICAL
+            and len(self._spoken_at) >= self._max_alerts_per_minute
+        ):
+            logger.info(
+                f"Rate limit reached ({self._max_alerts_per_minute}/min) — "
+                f"not speaking {alert.rule_id} [{alert.severity.name}]"
+            )
+            return None
+
+        self._spoken_at.append(now)
+        return alert
 
     # ─────────────────────────────────────────
     # Lifecycle

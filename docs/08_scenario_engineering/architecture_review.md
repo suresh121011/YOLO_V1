@@ -58,7 +58,8 @@ because it stops anyone from looking.
 
 ## 3. The ten defects
 
-Each was verified directly against the code, not inferred.
+Each was verified directly against the code, not inferred. **D1–D9 were fixed in milestone M1**, each
+with the regression test that pins it; D10 is documented and deliberately left as found (see §4).
 
 **D1 — Every feature flag is dead.** `orchestrator.py:49` does
 `yaml.safe_load(...).get("feature_flags", {})`, but `configs/feature_flags.yaml` has no
@@ -166,14 +167,28 @@ reintroduce per-alert person coordinates into `logs/events.jsonl` on a device in
 home. Explanation dicts must route through the same redaction allowlist, with a test asserting no
 `person`/`face` geometry survives.
 
-## 6. Alert arbitration is missing, and the live path inverts it
+## 6. Alert arbitration — was missing and inverted; repaired in M1
 
-`orchestrator.py:203-208` speaks `max(alerts, key=severity)` and logs the rest. Underneath,
-`tts_engine.py:92-95` does `put_nowait` on a `PriorityQueue(maxsize=5)` and, on `queue.Full`,
-**discards the incoming message** — so a CRITICAL arriving behind five queued INFO prompts is dropped
-with a `logger.warning`. `alert_queue.py:76-85` was written precisely to evict the lowest-priority item
-instead, and it is not wired in. A scenario layer produces *more* concurrent alerts, not fewer, so this
-must be repaired before M8.
+As found: the orchestrator spoke `max(alerts, key=severity)` and logged the rest, so a backlog could
+not survive a frame. Underneath, `tts_engine.py` did `put_nowait` on a `PriorityQueue(maxsize=5)` and,
+on `queue.Full`, **discarded the incoming message** — so a CRITICAL arriving behind five queued INFO
+prompts was dropped with a `logger.warning`. `alert_queue.py:76-85` was written precisely to evict the
+lowest-priority item instead, and was imported by nothing.
+
+Repaired in M1, because a scenario layer produces *more* concurrent alerts, not fewer:
+
+- `AlertQueue` sits between the rule engine and TTS. Alerts accumulate across frames and are drained
+  in severity order.
+- `PiperTTS.speak` evicts the lowest-priority **queued** message on overflow. A message is dropped
+  only when nothing queued outranks it.
+- `runtime.max_alerts_per_minute` is enforced (it was referenced by no code). **CRITICAL bypasses the
+  cap** — a limit that can silence an emergency is a worse failure than the fatigue it prevents, and
+  the alarm-fatigue evidence in `domain_research_report.md` §3 concerns routine chatter. Suppression
+  affects speech only; every alert is still queued, logged, and counted.
+
+Still outstanding for the scenario layer, and *not* solved by this: dwell, hysteresis, an event state
+machine, escalation-instead-of-repetition, per-scenario daily budgets, and quiet hours. Those are
+schema-level concerns (M2–M5), not queue-level ones.
 
 ## 7. CI reality
 

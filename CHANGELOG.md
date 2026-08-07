@@ -313,6 +313,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **`log_alert` wrote `explanation` unredacted** while `log_frame` redacted the
     same `person`/`face` geometry. Explanations are now redacted at any nesting
     depth, on word boundaries, before they reach `logs/events.jsonl`.
+- Phase-6 M1: **alert arbitration now exists.** `AlertQueue` — severity-ordered,
+  bounded, evicting the lowest-priority pending item on overflow — was fully
+  implemented and unit-tested but never imported by anything. The orchestrator
+  instead spoke `max(alerts)` each frame and discarded the rest, so a backlog
+  could not survive a frame. It is now wired in, and `max_alerts_per_minute`
+  (commented "Hard cap — prevents alert fatigue" in `configs/feature_flags.yaml`,
+  referenced by no code) is enforced. CRITICAL alerts bypass the cap: a limit
+  that can silence an emergency is a worse failure than the fatigue it prevents,
+  and the alarm-fatigue evidence concerns routine chatter. Suppression affects
+  speech only — every alert is still queued, logged, and counted.
+- Phase-6 M1: `PiperTTS.speak` **evicts the lowest-priority queued message on
+  overflow instead of dropping the incoming one.** With five routine prompts
+  backed up behind a multi-second synthesis, an arriving CRITICAL was discarded
+  with a log warning while the chatter still played — inverting the very
+  priority contract the class documents. A message is dropped now only when
+  nothing queued outranks it.
 - Phase-6 M1: CI now runs `mypy src/` (whole tree, matching `Makefile:78`). The
   `src/pipeline` exclusion rested on a "17 errors" note from 2026-07-14 that had
   gone stale — it measures clean — and it was hiding the dataclasses that
