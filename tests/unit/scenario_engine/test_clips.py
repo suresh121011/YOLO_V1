@@ -27,7 +27,9 @@ from src.scenario_engine.clips import (
     ClipRequirements,
     ExpectedOutcome,
     FfmpegUnavailableError,
+    SourceProvenance,
     _parse_frame_rate,
+    device_identifying_handlers,
     ffmpeg_available,
     load_clip_manifests,
     load_clip_requirements,
@@ -86,6 +88,44 @@ class TestSanitisationPolicy:
     def test_device_identifiers_are_caught(self) -> None:
         tags = {"com.apple.quicktime.model": "iPhone 15", "creation_time": "2026-08-07T10:00:00Z"}
         assert set(residual_metadata(tags)) == set(tags)
+
+
+class TestHandlerNameGate:
+    """The MP4 `hdlr` box is mandatory, so absence is not an achievable gate.
+
+    Found by the M7 acceptance run against ffmpeg 9.0: `handler_name` survives
+    `-map_metadata -1` and `-metadata:s handler_name=` alike, because the muxer
+    rewrites the box. Requiring its absence rejected every clip. The check is
+    therefore on the value.
+    """
+
+    @pytest.mark.unit
+    def test_handler_name_is_not_required_to_be_absent(self) -> None:
+        assert "handler_name" not in FORBIDDEN_METADATA_KEYS
+
+    @pytest.mark.unit
+    def test_ffmpegs_own_handlers_are_neutral(self) -> None:
+        assert device_identifying_handlers({"handler_name": "VideoHandler"}) == {}
+        assert device_identifying_handlers({"handler_name": "SoundHandler"}) == {}
+
+    @pytest.mark.unit
+    def test_a_device_chosen_handler_leaks_the_phone_model(self) -> None:
+        surviving = device_identifying_handlers({"handler_name": "Samsung Video Handler"})
+        assert surviving == {"handler_name": "Samsung Video Handler"}
+
+    @pytest.mark.unit
+    def test_matching_is_case_insensitive(self) -> None:
+        assert device_identifying_handlers({"Handler_Name": "videohandler"}) == {}
+
+    @pytest.mark.unit
+    def test_other_tags_are_not_examined_by_this_gate(self) -> None:
+        assert device_identifying_handlers({"encoder": "Lavf63.1.100"}) == {}
+
+    @pytest.mark.unit
+    def test_encoder_is_still_required_to_be_absent(self) -> None:
+        """It IS removable, via -fflags +bitexact, so the gate stays strict."""
+        assert "encoder" in FORBIDDEN_METADATA_KEYS
+        assert residual_metadata({"encoder": "Lavf63.1.100"}) != {}
 
 
 @pytest.mark.skipif(ffmpeg_available(), reason="ffmpeg is installed on this machine")
@@ -184,6 +224,123 @@ class TestClipManifest:
         """The manifest on disk must reload into the same assertion."""
         restored = ClipManifest.from_mapping(_clip().to_dict())
         assert restored == _clip()
+
+
+_EXTERNAL: dict[str, Any] = {
+    "source_type": "external",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Kitchen.webm",
+    "source_platform": "wikimedia",
+    "creator": "A. Contributor",
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "download_date": "2026-08-11",
+    "original_video_id": "File:Kitchen.webm",
+    "start_time_s": 12.0,
+    "end_time_s": 27.0,
+}
+
+
+class TestSourceProvenance:
+    """Permission comes from consent OR a licence, never from neither."""
+
+    @pytest.mark.unit
+    def test_own_capture_is_the_default(self) -> None:
+        assert SourceProvenance.from_mapping(None).source_type == "own_capture"
+
+    @pytest.mark.unit
+    def test_external_clip_needs_the_full_provenance_record(self) -> None:
+        """A publicly viewable video is not automatically reusable."""
+        for field_name in ("source_url", "creator", "license", "license_url", "source_platform"):
+            raw = {**_EXTERNAL, field_name: ""}
+            with pytest.raises(ClipError, match=field_name):
+                SourceProvenance.from_mapping(raw)
+
+    @pytest.mark.unit
+    def test_unrecognised_licence_is_refused(self) -> None:
+        """An allowlist, so 'free to use' cannot be recorded as a licence."""
+        with pytest.raises(ClipError, match="allowlist"):
+            SourceProvenance.from_mapping({**_EXTERNAL, "license": "free-to-use"})
+
+    @pytest.mark.unit
+    def test_a_complete_external_record_is_accepted(self) -> None:
+        provenance = SourceProvenance.from_mapping(_EXTERNAL)
+        assert provenance.is_external
+        assert provenance.start_time_s == 12.0
+
+    @pytest.mark.unit
+    def test_licence_fields_on_own_footage_are_refused(self) -> None:
+        """Own footage is permitted by consent; a licence there is a mix-up."""
+        with pytest.raises(ClipError, match="own_capture"):
+            SourceProvenance.from_mapping(
+                {"source_type": "own_capture", "license": "CC-BY-4.0", "license_url": "x"}
+            )
+
+    @pytest.mark.unit
+    def test_unknown_source_type_is_refused(self) -> None:
+        with pytest.raises(ClipError, match="source_type"):
+            SourceProvenance.from_mapping({"source_type": "scraped"})
+
+
+class TestPermissionIsExclusive:
+    @pytest.mark.unit
+    def test_external_clip_must_not_carry_a_consent_reference(self) -> None:
+        """An id there would record a consent no human ever gave."""
+        with pytest.raises(ClipError, match="no human gave"):
+            _clip(provenance=_EXTERNAL)
+
+    @pytest.mark.unit
+    def test_external_clip_without_consent_is_accepted(self) -> None:
+        raw = {**_CLIP, "provenance": _EXTERNAL}
+        del raw["consent_reference"]
+        clip = ClipManifest.from_mapping(raw)
+        assert clip.consent_reference == ""
+        assert clip.provenance.license == "CC-BY-4.0"
+
+    @pytest.mark.unit
+    def test_own_capture_without_consent_is_refused(self) -> None:
+        raw = {**_CLIP}
+        del raw["consent_reference"]
+        with pytest.raises(ClipError, match="consent_reference"):
+            ClipManifest.from_mapping(raw)
+
+
+class TestReviewLifecycle:
+    @pytest.mark.unit
+    def test_clips_start_pending_not_accepted(self) -> None:
+        """A file on disk is not a dataset member."""
+        assert _clip().review_status == "pending"
+        assert _clip().is_accepted is False
+
+    @pytest.mark.unit
+    def test_acceptance_must_name_a_human(self) -> None:
+        """Sanitisation is machine-checked and does not stand in for review."""
+        with pytest.raises(ClipError, match="reviewed_by"):
+            _clip(review_status="accepted")
+
+    @pytest.mark.unit
+    def test_accepted_clip_with_a_reviewer(self) -> None:
+        clip = _clip(review_status="accepted", reviewed_by="qa-lead")
+        assert clip.is_accepted is True
+
+    @pytest.mark.unit
+    def test_rejection_must_state_a_reason(self) -> None:
+        with pytest.raises(ClipError, match="rejection_reason"):
+            _clip(review_status="rejected")
+
+    @pytest.mark.unit
+    def test_unknown_review_status_is_refused(self) -> None:
+        with pytest.raises(ClipError, match="review_status"):
+            _clip(review_status="probably-fine")
+
+
+class TestPreDwellNegative:
+    @pytest.mark.unit
+    def test_pre_dwell_is_a_valid_negative_kind(self) -> None:
+        """A 20 s clip of a person at a stove: the engine correctly stays silent
+        because SC-KIT-001 needs 15 minutes of absence. That is a true negative,
+        and it is the shape most likely to be mislabelled as a positive."""
+        clip = _clip(polarity="negative", negative_kind="pre_dwell", expected={"fires": False})
+        assert clip.negative_kind == "pre_dwell"
 
 
 def _write_config(tmp_path: Path, **clip_overrides: Any) -> Path:

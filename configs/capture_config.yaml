@@ -77,7 +77,13 @@ clips:
   video:
     allowed_extensions: [.mp4, .mov]
     min_duration_s: 10          # shorter than a dwell threshold proves nothing
-    max_duration_s: 120         # review cost, and consent is per-clip
+    # 200 s, not 120 s. At 120 s exactly three of the nine active scenarios
+    # could never be demonstrated as engine-positives at all: SC-COR-001 needs
+    # 120 s of dwell (so >120 s of clip), SC-BTH-003 needs 150 s and SC-MED-001
+    # needs 170 s. Raising the ceiling to 200 s makes five of nine filmable.
+    # The other four need 6 min to 8 h and are long-form exceptions — see
+    # docs/08_scenario_engineering/clip_collection_plan.md §3.
+    max_duration_s: 200
     min_fps: 15                 # runtime target_fps — below it, dwell rescales
     max_file_mb: 500
     strip_metadata: true        # ffmpeg -map_metadata -1 + read-back assertion
@@ -92,6 +98,14 @@ clips:
   # stick) — a suite of positives only measures sensitivity and is blind to the
   # false-positive rate that actually gets the device unplugged.
   min_negative_fraction: 0.30
+
+  # First collection batch. Read by scripts/scenarios/33_clip_dataset_report.py
+  # via its CLI defaults; the numbers live here so the target is reviewable.
+  collection:
+    target_accepted_clips: 100
+    # Below this a scenario has an anecdote, not evidence: one clip is one
+    # camera angle in one household.
+    min_clips_per_scenario: 4
 
 annotation:
   # Where CVAT (YOLO 1.1) exports are staged per annotator before finalize.

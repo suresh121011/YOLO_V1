@@ -1,0 +1,74 @@
+{
+  "generated_at": "2026-08-11T11:31:23Z",
+  "git_commit": "c801c27",
+  "verdict": "PASS",
+  "ffmpeg_version": "ffmpeg version 9.0-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers",
+  "checks": [
+    {
+      "check_id": "A1",
+      "description": "ffmpeg and ffprobe are installed on this machine",
+      "status": "pass",
+      "detail": "ffmpeg version 9.0-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers"
+    },
+    {
+      "check_id": "A2",
+      "description": "A fixture clip is built carrying GPS, device and timestamp metadata",
+      "status": "pass",
+      "detail": "1877572 bytes"
+    },
+    {
+      "check_id": "A3",
+      "description": "ffprobe confirms forbidden metadata is present BEFORE stripping",
+      "status": "pass",
+      "detail": "present before strip: ['creation_time', 'date', 'encoder', 'location', 'location-eng']"
+    },
+    {
+      "check_id": "A7",
+      "description": "Ingest is refused when the consent scope is not scenario-video",
+      "status": "pass",
+      "detail": "dataset-training consent refused with the scope message"
+    },
+    {
+      "check_id": "A4",
+      "description": "Full ingest path succeeds: consent, gates, strip, read-back, manifest",
+      "status": "pass",
+      "detail": "h99_kitchen_s001_c001.mp4 + h99_kitchen_s001_c001.json"
+    },
+    {
+      "check_id": "A5",
+      "description": "ffprobe confirms forbidden metadata is ABSENT after stripping",
+      "status": "pass",
+      "detail": "zero residual; remaining tags: ['compatible_brands', 'handler_name', 'language', 'major_brand', 'minor_version']"
+    },
+    {
+      "check_id": "A6",
+      "description": "The residual detector still fires on the pre-strip file",
+      "status": "pass",
+      "detail": "still detects ['creation_time', 'date', 'encoder', 'location', 'location-eng'] on the original"
+    },
+    {
+      "check_id": "A9",
+      "description": "The surviving hdlr box carries a neutral handler name",
+      "status": "pass",
+      "detail": "neutral handler(s): ['VideoHandler']"
+    },
+    {
+      "check_id": "A10",
+      "description": "A device-chosen handler name would be rejected",
+      "status": "pass",
+      "detail": "'Samsung Video Handler' is detected as device-identifying"
+    },
+    {
+      "check_id": "A8",
+      "description": "Manifest reloads and its sha256 matches the ingested file",
+      "status": "pass",
+      "detail": "sha256 f70083447c73..., 15.0s @ 30.0 fps, ffmpeg=ffmpeg version 9.0-full_build-www.gyan.d"
+    }
+  ],
+  "workspace_kept": null,
+  "notes": [
+    "The fixture is synthetic (ffmpeg testsrc2) and is NOT a dataset member. It is ingested into a temporary clips root with a temporary consent registry so that no consent record is fabricated for a real household.",
+    "House id h99 is reserved for acceptance fixtures.",
+    "A3 and A6 exist to keep A5 falsifiable: without them a passing strip check could mean the file never carried metadata, or that the residual detector stopped working."
+  ]
+}

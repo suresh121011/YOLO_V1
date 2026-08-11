@@ -55,6 +55,7 @@ code; they are enumerated with file:line evidence in
 | [negative_register.md](negative_register.md) | Scenarios permanently rejected as undeliverable with these 23 classes, and why |
 | [scenario_taxonomy.md](scenario_taxonomy.md) | Category scheme, id grammar, the three shapes a scenario takes, and the deliberately empty categories |
 | [clip_capture_protocol.md](clip_capture_protocol.md) | How scenario clips are consented, shot, sanitised, and ingested — and what differs from the photograph workflow |
+| [clip_collection_plan.md](clip_collection_plan.md) | The first 100-clip batch: M7 acceptance results, the dwell-vs-clip-length arithmetic, the collection matrix, and the five-member allocation |
 | [adr/](adr/) | The ten load-bearing decisions, with rejected alternatives |
 
 ## Status
@@ -70,7 +71,8 @@ Phase 6 is in progress. Milestone status is tracked in `../../CHANGELOG.md` unde
 | M4 | Validator suite + alert-volume simulation gate | **done** |
 | M5 | Scenario taxonomy + first ~20 scenarios | **done** (draft; clinical review pending) |
 | M6 | **Validation gate — M7+ blocked until this passes** | **PASS** (8/8 gates) |
-| M7 | Capture protocol, clip ingest, MP4 metadata stripper | **done** (no clips ingested — ffmpeg absent, see below) |
+| M7 | Capture protocol, clip ingest, MP4 metadata stripper | **done** |
+| M7-RW | Real-world ingest acceptance + collection design | **PASS** (10/10); collection not yet started |
 | M8 | Runtime integration; `configs/risk_rules.yaml` retired | pending |
 | M9 | Integration strategy: YOLO · tracking · VLM · voice · caregiver | pending |
 
@@ -79,9 +81,11 @@ Phase 6 is in progress. Milestone status is tracked in `../../CHANGELOG.md` unde
 - **Clinical review.** Every scenario is `status: draft`. Promotion to `active` requires
   `reviewed_by`/`reviewed_on` from a qualified human, not engineering sign-off. The seven
   `safety-class-uncovered` warnings in the validation report persist for that reason and are correct.
-- **ffmpeg on the collection machine.** M7's ingest path is complete and tested, but the toolchain is
-  absent on the development box, so **no real clip has been ingested**. The module refuses rather than
-  proceeding with unsanitised video — see [ADR-P6-10](adr/ADR-P6-10-clips-as-a-frozen-stage.md).
+- **Field collection.** ffmpeg 9.0 is now installed and the ingest path is proven end-to-end against a
+  real MP4 carrying real GPS (`data/qa_reports/m7_acceptance_report.json`, 10/10). What remains is
+  human work: consent, filming, and review. **Zero scenario clips have been collected** —
+  `scripts/scenarios/33_clip_dataset_report.py` reports FAIL against the 100-clip target and will keep
+  doing so until real clips are accepted. See [clip_collection_plan.md](clip_collection_plan.md).
 
 ## Non-negotiables
 

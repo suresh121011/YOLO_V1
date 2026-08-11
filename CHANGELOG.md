@@ -318,6 +318,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     machine and the module refuses rather than proceeding unsanitised. This is
     the design working; installing ffmpeg on the collection machine is a
     prerequisite of the first session.
+- Phase-6 M7 real-world acceptance: ffmpeg 9.0 installed, the full ingest path
+  run against a real MP4 carrying real GPS, and the collection design for the
+  first 100-clip batch. Evidence: `data/qa_reports/m7_acceptance_report.json`
+  (**PASS 10/10**), `scripts/qa/m7_acceptance.py`.
+  - **A defect the unit tests could not have found.** `handler_name` was
+    required to be *absent* after stripping. Against real ffmpeg it never can
+    be: it lives in the mandatory MP4 `hdlr` box and the muxer rewrites it on
+    every remux — neither `-map_metadata -1` nor `-metadata:s handler_name=`
+    removes it, both measured. The gate was **unsatisfiable and would have
+    rejected every clip**, which is the worst kind of privacy control because
+    the pressure to switch it off is irresistible. Now checked by *value*
+    against `NEUTRAL_HANDLER_NAMES`; a device-chosen handler
+    (`Samsung Video Handler`) still fails. `encoder` stayed an absence check
+    because it *is* removable — `-fflags +bitexact` added.
+  - The acceptance test is built so it cannot pass vacuously: A3 proves the
+    fixture carries GPS **before** stripping, and A6 proves the residual
+    detector still fires on that file afterwards. Without both, a green A5
+    could mean the file never had metadata, or that the detector broke.
+  - **Permission is now exactly one thing.** `SourceProvenance` splits
+    `own_capture` (permitted by `consent_reference`, licence fields must be
+    empty) from `external` (permitted by a licence from an allowlist, with
+    `source_url`/`source_platform`/`creator`/`license_url` mandatory, and
+    `consent_reference` must be **empty**). Previously an external clip could
+    only be ingested by inventing a consent id — recording a consent no human
+    gave. Licences are an allowlist because "free to use" and "publicly
+    viewable" are what would otherwise land in that field.
+  - **A clip is not a dataset member until a human says so.** `review_status`
+    (`pending`/`accepted`/`rejected`), `reviewed_by`, `rejection_reason`.
+    Acceptance names a reviewer; rejection states a reason. `metadata_stripped`
+    is machine-verified and deliberately does not substitute — sanitisation says
+    nothing about whether an identity document is in frame.
+  - `src/scenario_engine/clip_dataset.py` + `33_clip_dataset_report.py` count
+    **accepted** clips, never files. 100 pending manifests is zero clips and the
+    report says FAIL.
+  - **`min_clip_seconds()` and the impossible-positive gate.** Read off each
+    compiled condition: `SC-KIT-001` cannot fire before 960 s, `SC-SYS-001`
+    before 28 800 s. A 20-second clip of a person at a stove is therefore **not**
+    an `SC-KIT-001` positive — the engine correctly stays silent — and the report
+    now refuses it with the instruction to relabel it `negative` /
+    `negative_kind: pre_dwell`. That is the likeliest mislabelling in a
+    short-clip batch and the hardest to catch by eye, since the footage looks
+    exactly like the hazard. `pre_dwell` added to the negative vocabulary.
+  - `max_duration_s` 120 → **200**. At 120 s, three of the nine active scenarios
+    (`SC-COR-001` 120 s, `SC-BTH-003` 150 s, `SC-MED-001` 170 s) could not be
+    demonstrated as positives at all.
+  - The consent registry path was hardcoded in `clips.py`; it is now read from
+    `consent.registry_path`, so an isolated acceptance run cannot be forced to
+    touch the real registry.
+  - `docs/08_scenario_engineering/clip_collection_plan.md` — M7 component audit,
+    the dwell-vs-clip-length arithmetic, reconciliation of the requested
+    scenario groups against the rejected register (hydration, fall detection,
+    wandering and `SC-FAL-001`/`SC-ELC-002` do not exist), the 100-clip matrix,
+    variation requirements, five-member allocation, QA gates and accounting.
+  - **No scenario clip has been collected.** The acceptance fixture is synthetic
+    (`ffmpeg testsrc2`), lives in a temporary tree under reserved house id
+    `h99`, and is not a dataset member.
 - Phase-5: Production Dataset Engineering, Missing-Annotation Resolution &
   Dataset v1.0 — makes dataset quality the primary solution and demotes
   Phase-4 masking to a safety net. Core invariant: auto-generated labels never

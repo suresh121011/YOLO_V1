@@ -88,6 +88,9 @@ data/qa_reports/*
 !data/qa_reports/scenario_validation_report.json
 # Phase-6 M6 correctness-gate evidence (mandatory before M7+; mirrors phase5)
 !data/qa_reports/phase6_validation_report.json
+# M7 real-world ingest acceptance + clip collection accounting
+!data/qa_reports/m7_acceptance_report.json
+!data/qa_reports/clip_dataset_report.json
 # Phase-E (mode: smoke -> full) migration evidence: the before/after comparison
 # plus the pre-migration artifact snapshot it diffs against. The snapshot is
 # what makes the report reproducible rather than a claim — without it the

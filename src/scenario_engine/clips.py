@@ -79,7 +79,26 @@ FORBIDDEN_METADATA_KEYS: frozenset[str] = frozenset(
         "model",
         "device",
         "encoder",
-        "handler_name",
+    }
+)
+
+#: Every MP4 track carries a handler name in the mandatory ``hdlr`` box. It
+#: cannot be removed -- the box is structural, and ffmpeg rewrites it on remux
+#: no matter what ``-map_metadata -1`` or ``-metadata:s handler_name=`` say.
+#: Verified empirically on ffmpeg 9.0 during the M7 acceptance run; requiring
+#: its *absence* made the gate unsatisfiable and rejected every clip.
+#:
+#: So the check is on the **value**, not on presence. These are the names our
+#: own remux produces. A device-chosen handler ("Samsung Video Handler",
+#: "GoPro AVC") is device-identifying and still fails.
+NEUTRAL_HANDLER_NAMES: frozenset[str] = frozenset(
+    {
+        "",
+        "videohandler",
+        "soundhandler",
+        "subtitlehandler",
+        "datahandler",
+        "audiohandler",
     }
 )
 
@@ -222,6 +241,22 @@ def residual_metadata(tags: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def device_identifying_handlers(tags: dict[str, Any]) -> dict[str, Any]:
+    """Handler names that did not come from our own remux.
+
+    Separate from :func:`residual_metadata` because the gate is different in
+    kind: ``handler_name`` cannot be absent, so this checks its *value* against
+    :data:`NEUTRAL_HANDLER_NAMES`. A phone that writes its own handler name
+    leaks the device model through a box that survives metadata stripping.
+    """
+    return {
+        key: value
+        for key, value in tags.items()
+        if key.strip().lower() == "handler_name"
+        and str(value).strip().lower() not in NEUTRAL_HANDLER_NAMES
+    }
+
+
 def strip_metadata(source: Path | str, destination: Path | str) -> dict[str, Any]:
     """Re-mux a clip with all container metadata removed, then verify it.
 
@@ -258,6 +293,12 @@ def strip_metadata(source: Path | str, destination: Path | str) -> dict[str, Any
             "-1",
             "-c",
             "copy",
+            # Suppresses the muxer's own `encoder` tag (e.g. "Lavf63.1.100").
+            # Without it -map_metadata -1 still leaves one behind, because it is
+            # written after input metadata is dropped. The ffmpeg build is
+            # recorded in the manifest instead, where it belongs.
+            "-fflags",
+            "+bitexact",
             str(dst),
         ],
         capture_output=True,
@@ -272,12 +313,22 @@ def strip_metadata(source: Path | str, destination: Path | str) -> dict[str, Any
 
     # Read-back assertion. Trusting -map_metadata to have worked is exactly the
     # unfalsifiable-gate pattern this project has been bitten by before.
-    surviving = residual_metadata(read_metadata(dst))
+    tags = read_metadata(dst)
+    surviving = residual_metadata(tags)
     if surviving:
         raise ClipError(
             f"{dst} still carries metadata after stripping: {sorted(surviving)}. "
             f"Refusing to accept the clip — this is the field that would put a "
             f"participant's home address in a versioned bucket."
+        )
+
+    handlers = device_identifying_handlers(tags)
+    if handlers:
+        raise ClipError(
+            f"{dst} carries a device-specific handler name after stripping: "
+            f"{sorted(handlers.values())}. The MP4 hdlr box cannot be removed, so a "
+            f"handler the source device chose would identify the phone. Expected one "
+            f"of {sorted(NEUTRAL_HANDLER_NAMES)}."
         )
 
     return {
@@ -311,6 +362,11 @@ class ClipRequirements:
     strip_metadata: bool = True
     consent_scope: str = "scenario-video"
     min_negative_fraction: float = 0.30
+    #: Read from the ``consent:`` block of the same file, so the registry is not
+    #: hardcoded in two places and an isolated acceptance run can point at its
+    #: own fixture without editing the real one.
+    consent_registry: Path = DEFAULT_CONSENT_REGISTRY
+    consent_reference_pattern: str = DEFAULT_CONSENT_PATTERN
 
     def validate_clip_id(self, clip_id: str) -> list[str]:
         """Check a clip ID against the grammar. Returns problems (empty = ok)."""
@@ -385,6 +441,7 @@ def load_clip_requirements(path: Path | str = DEFAULT_CAPTURE_CONFIG) -> ClipReq
 
     clips_raw = raw.get("clips", {}) or {}
     video_raw = clips_raw.get("video", {}) or {}
+    consent_raw = raw.get("consent", {}) or {}
 
     extensions = tuple(
         ext if str(ext).startswith(".") else f".{ext}"
@@ -407,6 +464,10 @@ def load_clip_requirements(path: Path | str = DEFAULT_CAPTURE_CONFIG) -> ClipReq
         consent_scope=str(clips_raw.get("consent_scope", defaults.consent_scope)),
         min_negative_fraction=float(
             clips_raw.get("min_negative_fraction", defaults.min_negative_fraction)
+        ),
+        consent_registry=Path(consent_raw.get("registry_path", defaults.consent_registry)),
+        consent_reference_pattern=str(
+            consent_raw.get("reference_pattern", defaults.consent_reference_pattern)
         ),
     )
 
@@ -437,8 +498,8 @@ def verify_clip_consent(
     reference: str,
     house_id: str,
     requirements: ClipRequirements,
-    registry_path: Path | str = DEFAULT_CONSENT_REGISTRY,
-    reference_pattern: str = DEFAULT_CONSENT_PATTERN,
+    registry_path: Path | str | None = None,
+    reference_pattern: str | None = None,
 ) -> list[str]:
     """Verify a clip's consent reference, including its **scope**.
 
@@ -459,6 +520,13 @@ def verify_clip_consent(
     Returns:
         List of problems; empty means the reference is acceptable.
     """
+    registry_path = registry_path if registry_path is not None else requirements.consent_registry
+    reference_pattern = (
+        reference_pattern
+        if reference_pattern is not None
+        else requirements.consent_reference_pattern
+    )
+
     problems: list[str] = []
     if not reference:
         return ["consent reference is required for every scenario clip"]
@@ -564,6 +632,132 @@ class ExpectedOutcome:
         )
 
 
+#: Licences under which a third-party clip may enter the dataset. An allowlist
+#: rather than a free string: "publicly viewable" is not a licence, and an
+#: unrecognised licence string is refused rather than recorded and forgotten.
+#: ``license_url`` is still required alongside — the evidence, not the claim.
+ALLOWED_EXTERNAL_LICENCES: tuple[str, ...] = (
+    "CC0-1.0",
+    "CC-BY-3.0",
+    "CC-BY-4.0",
+    "CC-BY-SA-3.0",
+    "CC-BY-SA-4.0",
+    "Pixabay-Content-License",
+    "Pexels-License",
+    "public-domain",
+)
+
+
+@dataclass(frozen=True)
+class SourceProvenance:
+    """Where a clip came from and what permits its use.
+
+    Two mutually exclusive worlds, and the schema refuses to blur them:
+
+    - ``own_capture`` — filmed by the team in a consenting household. Permission
+      comes from a ``consent_reference``; there is no licence and no URL.
+    - ``external`` — a third-party clip. Permission comes from a **licence**;
+      there is no household, so there must be **no consent reference**. Pasting
+      a consent id onto a stranger's video would fabricate a consent that no
+      human ever gave, which is worse than having none.
+
+    ``start_time_s``/``end_time_s`` record the trim window inside the original,
+    so a reviewer can go back to the source and see the same frames.
+    """
+
+    source_type: str = "own_capture"
+    source_url: str = ""
+    source_platform: str = ""
+    creator: str = ""
+    license: str = ""
+    license_url: str = ""
+    download_date: str = ""
+    original_video_id: str = ""
+    start_time_s: float | None = None
+    end_time_s: float | None = None
+
+    VALID_SOURCE_TYPES = ("own_capture", "external")
+
+    @property
+    def is_external(self) -> bool:
+        return self.source_type == "external"
+
+    @classmethod
+    def from_mapping(cls, raw: Any, where: str = "provenance") -> SourceProvenance:
+        if raw is None:
+            raw = {}
+        if not isinstance(raw, dict):
+            raise ClipError(f"{where} must be a mapping, got {type(raw).__name__}")
+
+        source_type = str(raw.get("source_type", "own_capture") or "own_capture").strip()
+        if source_type not in cls.VALID_SOURCE_TYPES:
+            raise ClipError(
+                f"{where}.source_type must be one of {list(cls.VALID_SOURCE_TYPES)}, "
+                f"got {source_type!r}"
+            )
+
+        provenance = cls(
+            source_type=source_type,
+            source_url=str(raw.get("source_url", "") or "").strip(),
+            source_platform=str(raw.get("source_platform", "") or "").strip(),
+            creator=str(raw.get("creator", "") or "").strip(),
+            license=str(raw.get("license", "") or "").strip(),
+            license_url=str(raw.get("license_url", "") or "").strip(),
+            download_date=str(raw.get("download_date", "") or "").strip(),
+            original_video_id=str(raw.get("original_video_id", "") or "").strip(),
+            start_time_s=(
+                float(raw["start_time_s"]) if raw.get("start_time_s") is not None else None
+            ),
+            end_time_s=(float(raw["end_time_s"]) if raw.get("end_time_s") is not None else None),
+        )
+
+        if provenance.is_external:
+            missing = [
+                name
+                for name in ("source_url", "source_platform", "creator", "license", "license_url")
+                if not getattr(provenance, name)
+            ]
+            if missing:
+                raise ClipError(
+                    f"{where}: an external clip must record {missing}. A publicly viewable "
+                    f"video is not automatically reusable, and a licence that cannot be "
+                    f"evidenced cannot be relied on."
+                )
+            if provenance.license not in ALLOWED_EXTERNAL_LICENCES:
+                raise ClipError(
+                    f"{where}.license {provenance.license!r} is not in the allowlist "
+                    f"{list(ALLOWED_EXTERNAL_LICENCES)}. Add it deliberately after checking "
+                    f"the terms, rather than recording an unverified string."
+                )
+        else:
+            populated = [
+                name
+                for name in ("source_url", "license", "license_url", "original_video_id")
+                if getattr(provenance, name)
+            ]
+            if populated:
+                raise ClipError(
+                    f"{where}: {populated} are set on an own_capture clip. Own footage is "
+                    f"permitted by consent, not by a licence — set source_type: external if "
+                    f"this is a third-party video."
+                )
+        return provenance
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "source_type": self.source_type,
+            "source_url": self.source_url,
+            "source_platform": self.source_platform,
+            "creator": self.creator,
+            "license": self.license,
+            "license_url": self.license_url,
+            "download_date": self.download_date,
+            "original_video_id": self.original_video_id,
+            "start_time_s": self.start_time_s,
+            "end_time_s": self.end_time_s,
+        }
+
+
 @dataclass(frozen=True)
 class ClipManifest:
     """One scenario clip and everything needed to trust it."""
@@ -588,13 +782,36 @@ class ClipManifest:
     annotated_at: str = ""
     notes: str = ""
     ground_truth_events: tuple[dict[str, Any], ...] = field(default_factory=tuple)
+    provenance: SourceProvenance = field(default_factory=SourceProvenance)
+    #: Deployment context. The dataset is built for Indian homes, so whether a
+    #: clip is one is a coverage fact, not a note.
+    country_context: str = "IN"
+    indian_home: bool = True
+    #: QA lifecycle. `metadata_stripped` is machine-verified and is NOT a
+    #: substitute for these: sanitisation is not the same as a human confirming
+    #: no private documents or unapproved people are in frame.
+    review_status: str = "pending"
+    reviewed_by: str = ""
+    rejection_reason: str = ""
 
     VALID_POLARITIES = ("positive", "negative")
     #: Why a negative clip exists. `confuser` targets a known false-positive
     #: source (shiny floor read as wet); `absence` is the plain no-hazard case;
     #: `assistive` is an object present that must NOT alarm (a walking stick);
-    #: `out_of_taxonomy` is a detector-level hard negative (a phone in hand).
-    VALID_NEGATIVE_KINDS = ("confuser", "absence", "assistive", "out_of_taxonomy")
+    #: `out_of_taxonomy` is a detector-level hard negative (a phone in hand);
+    #: `pre_dwell` is the hazard composition present but its temporal condition
+    #: not yet met -- a 20 s clip of a person at a stove, where the engine
+    #: correctly stays silent because `SC-KIT-001` needs 15 minutes of absence.
+    #: That last one is the most common shape in a short-clip collection batch
+    #: and the easiest to mislabel as a positive.
+    VALID_NEGATIVE_KINDS = (
+        "confuser",
+        "absence",
+        "assistive",
+        "out_of_taxonomy",
+        "pre_dwell",
+    )
+    VALID_REVIEW_STATUSES = ("pending", "accepted", "rejected")
 
     @classmethod
     def from_mapping(cls, raw: Any, where: str = "clip") -> ClipManifest:
@@ -632,6 +849,41 @@ class ClipManifest:
         if polarity == "positive" and not expected.fires:
             raise ClipError(f"{where}: a positive clip must expect an alert to fire")
 
+        provenance = SourceProvenance.from_mapping(raw.get("provenance"), f"{where}.provenance")
+
+        # Permission comes from exactly one place, and which one is decided by
+        # where the footage came from. Both-or-neither is a governance hole.
+        consent_reference = str(raw.get("consent_reference", "") or "").strip()
+        if provenance.is_external:
+            if consent_reference:
+                raise ClipError(
+                    f"{where}.consent_reference is set on an external clip. There is no "
+                    f"household to have consented; an id here would record a consent no "
+                    f"human gave. External clips are permitted by their licence."
+                )
+        elif not consent_reference:
+            raise ClipError(f"{where}.consent_reference is required")
+
+        review_status = str(raw.get("review_status", "pending") or "pending").strip()
+        if review_status not in cls.VALID_REVIEW_STATUSES:
+            raise ClipError(
+                f"{where}.review_status must be one of {list(cls.VALID_REVIEW_STATUSES)}, "
+                f"got {review_status!r}"
+            )
+        rejection_reason = str(raw.get("rejection_reason", "") or "").strip()
+        if review_status == "rejected" and not rejection_reason:
+            raise ClipError(
+                f"{where}: a rejected clip must state a rejection_reason, otherwise the "
+                f"rejection cannot be reviewed or reversed"
+            )
+        reviewed_by = str(raw.get("reviewed_by", "") or "").strip()
+        if review_status == "accepted" and not reviewed_by:
+            raise ClipError(
+                f"{where}: an accepted clip must name reviewed_by. Acceptance is a human "
+                f"judgement about what is in frame; sanitisation is machine-checked and "
+                f"does not stand in for it."
+            )
+
         return cls(
             clip_id=_required("clip_id"),
             session_id=_required("session_id"),
@@ -640,7 +892,7 @@ class ClipManifest:
             lighting=_required("lighting"),
             polarity=polarity,
             scenario_id=_required("scenario_id"),
-            consent_reference=_required("consent_reference"),
+            consent_reference=consent_reference,
             sha256=_required("sha256"),
             duration_s=float(raw.get("duration_s", 0.0)),
             fps=float(raw.get("fps", 0.0)),
@@ -653,7 +905,22 @@ class ClipManifest:
             annotated_at=str(raw.get("annotated_at", "")),
             notes=str(raw.get("notes", "")),
             ground_truth_events=tuple(raw.get("ground_truth_events", []) or []),
+            provenance=provenance,
+            country_context=str(raw.get("country_context", "IN") or "IN").strip(),
+            indian_home=bool(raw.get("indian_home", True)),
+            review_status=review_status,
+            reviewed_by=reviewed_by,
+            rejection_reason=rejection_reason,
         )
+
+    @property
+    def is_accepted(self) -> bool:
+        """Only accepted clips count toward the collection target.
+
+        A file on disk is not a dataset member. This is the distinction the
+        accounting report exists to keep honest.
+        """
+        return self.review_status == "accepted"
 
     def frame_prefix(self) -> str:
         """Prefix for extracted frames.
@@ -695,6 +962,12 @@ class ClipManifest:
             "annotated_at": self.annotated_at,
             "notes": self.notes,
             "ground_truth_events": list(self.ground_truth_events),
+            "provenance": self.provenance.to_dict(),
+            "country_context": self.country_context,
+            "indian_home": self.indian_home,
+            "review_status": self.review_status,
+            "reviewed_by": self.reviewed_by,
+            "rejection_reason": self.rejection_reason,
             "expected": {
                 "fires": self.expected.fires,
                 "scenario_id": self.expected.scenario_id,
