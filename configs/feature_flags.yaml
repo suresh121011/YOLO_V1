@@ -49,14 +49,28 @@ classes:
   support_handle: true
 
 # ─── Per-Rule Toggles ──────────────────────────────────────────────────────────
-# Disable individual safety rules without touching code or risk_rules.yaml
+# Disable individual scenarios without touching code or configs/scenarios/.
+# Keys are scenario ids (SC-KIT-001, ...). risk_rules.yaml is retired (ADR-P6-03).
+#
+# A key that names no scenario is inert, so the six legacy rule ids that used to
+# live here were removed rather than left as reassuring no-ops:
+# knife_near_person, medicine_reminder and gas_cylinder_check were DELETED in
+# Phase 6, not renamed (see docs/08_scenario_engineering/negative_register.md);
+# stove_unattended, wet_floor_hazard and wire_tripping_hazard became SC-KIT-001,
+# SC-BTH-001 and SC-COR-001 with corrected semantics.
+#
+# These are kill switches, not the review gate. A scenario also has to be
+# `status: active`, which needs a clinical reviewer.
 rules:
-  knife_near_person: true
-  stove_unattended: true
-  wet_floor_hazard: true
-  medicine_reminder: true
-  wire_tripping_hazard: true
-  gas_cylinder_check: true
+  SC-KIT-001: true    # cooking left unattended
+  SC-KIT-002: true    # knife left out with nobody present
+  SC-BTH-001: true    # wet floor in a wet-room
+  SC-BTH-002: true    # no grab bar seen near the toilet
+  SC-BTH-003: true    # prolonged time in the bathroom
+  SC-COR-001: true    # cord on the floor in a walkway
+  SC-MED-001: true    # medicine packaging left out
+  SC-MOB-001: true    # walking aid left away from the person
+  SC-SYS-001: true    # nobody seen for an unusually long time
 
 # ─── Runtime Behavior ──────────────────────────────────────────────────────────
 runtime:

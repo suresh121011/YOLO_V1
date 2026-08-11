@@ -115,16 +115,48 @@ sqlite3 logs/events.db \
 5. Escalate: If repeated, report for engineering investigation
 ```
 
-### Scenario: Rule Engine YAML Corruption
+### Scenario: Scenario YAML Corruption
+
+`configs/risk_rules.yaml` was retired in Phase 6 (ADR-P6-03). The authored
+knowledge now lives as one file per scenario in `configs/scenarios/`, and the
+compiled artifact `data/scenario_engine/build/scenarios.compiled.json` is
+**generated** — never hand-edit it, and never `git checkout` it as a recovery
+step, because the next compile will overwrite whatever you restored.
 
 ```
-1. Identify: "YAML parse error" in logs; no alerts being generated
-2. Contain: Pipeline continues using last valid rule set (in-memory)
+1. Identify: "Cannot load scenarios" / ScenarioRuntimeError on start-up, or
+   "Scenarios hot-reloaded" absent after an edit. The engine names the file and
+   the field.
+2. Contain: A failed reload leaves the previously loaded set active — a bad edit
+   never disarms a running pipeline. A failed *start-up* refuses to run at all,
+   which is deliberate: a silent engine is indistinguishable from a working one
+   that has seen no hazards.
 3. Recover:
-   a. git diff configs/risk_rules.yaml  # See what changed
-   b. git checkout HEAD configs/risk_rules.yaml  # Restore
-   c. rule_engine.reload_rules()  # Trigger hot-reload
-4. Verify: Check that rules fire correctly on next hazard detection
+   a. git diff configs/scenarios/          # See what changed
+   b. git checkout HEAD configs/scenarios/ # Restore the AUTHORED masters
+   c. python scripts/scenarios/30_compile_scenarios.py   # Regenerate
+   d. python scripts/scenarios/31_validate_scenarios.py  # Is it still wise?
+   e. rule_engine.reload_rules()           # Hot-reload into the running pipeline
+4. Verify: 30_compile_scenarios.py --check exits 0 (1 = validation failure,
+   2 = the committed artifact has drifted from the sources).
+```
+
+### Scenario: The pipeline starts but never alerts
+
+Three causes, in the order worth checking:
+
+```
+1. Every scenario is still `status: draft`. This is the expected state until a
+   clinical reviewer sets reviewed_by/reviewed_on. The engine refuses to start
+   rather than running silently — check the start-up error, which counts the
+   drafts.
+2. No `room` was passed to build_pipeline(). Room-scoped scenarios (SC-KIT-*,
+   SC-BTH-*, SC-COR-*) are gated on it, so a camera with no room configured is
+   inert for most of the set.
+3. The hazard has not dwelled long enough. SC-KIT-001 needs 16 minutes,
+   SC-KIT-002 11, SC-MOB-001 6. Call rule_engine.last_decisions() — it reports
+   per-scenario why each did or did not fire ("dwelling", "cooling_down",
+   "wrong_room", "quiet_hours_suppress", "max_per_day").
 ```
 
 ---

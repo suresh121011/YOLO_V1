@@ -7,6 +7,15 @@ These interfaces are LOCKED in Stage 1. All future stages must conform to them.
 
 Changing these dataclasses is a breaking change — update all downstream modules.
 
+**What LOCKED permits, precisely.** Adding a field that has a default is allowed
+when it is recorded in an ADR and in ``CHANGELOG.md``: every existing
+construction site and every existing test keeps working unchanged. Removing a
+field, renaming one, or changing what an existing field means remains
+prohibited. ``Alert`` was extended this way in Phase 6 under
+``docs/08_scenario_engineering/adr/ADR-P6-09-alert-contract-extension.md`` — the
+nuance is written here rather than only in the ADR so that it travels with the
+code it governs.
+
 Data flow:
     Camera frame
         → Detection (output of YOLODetector)
@@ -21,7 +30,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     import numpy as np
@@ -180,17 +189,45 @@ class Alert:
         cooldown_seconds:     Minimum seconds before this rule fires again
         frame_id:             Frame where the alert condition was detected
         explanation:          Debug dict — never shown to user, logged for debugging
+
+    Phase-6 additions (ADR-P6-09). All defaulted, so pre-Phase-6 construction
+    sites are unaffected. The product output is four-stage — risk level, patient
+    prompt, next best action, caregiver alert — and `message` alone could carry
+    only the first two:
+
+        scenario_id:       Provenance back to the authored row in configs/scenarios/
+        next_best_action:  The action stage. Shown to a caregiver, never spoken.
+        caregiver_channel: none | digest | push | push_and_call
+        patient_facing:    When False, nothing is spoken to the resident
+        messages:          Open-ended {lang: text}, superseding the message_en /
+                           message_hi pair. The target population includes large
+                           Marathi, Tamil, Telugu, Bengali, Kannada, Malayalam,
+                           Gujarati and Punjabi first-language groups.
+        capability_disclaimer: Surfaced with an inferred scenario so an inference
+                           is never presented as an observation.
+
+    These deliberately do NOT travel in `explanation`: StructuredLogger writes
+    that dict verbatim, so product output there would be indistinguishable from
+    debug geometry and would end up unshipped.
     """
 
     rule_id: str
     severity: Severity
     message: str
-    message_hi: str | None  # Hindi translation (V2)
+    message_hi: str | None  # Hindi translation (V2) — superseded by `messages`
     triggering_detections: list[Detection]
     timestamp_ms: float
     cooldown_seconds: int
     frame_id: int
     explanation: dict = field(default_factory=dict)  # Debug metadata only
+
+    # ── Phase-6 additive extension (ADR-P6-09) ───────────────────────────────
+    scenario_id: str | None = None
+    next_best_action: str | None = None
+    caregiver_channel: str = "none"
+    patient_facing: bool = True
+    messages: dict[str, str] | None = None
+    capability_disclaimer: str = ""
 
 
 # ─── Event Memory Entry ───────────────────────────────────────────────────────
@@ -354,21 +391,41 @@ class BaseAnalyzer:
         raise NotImplementedError
 
 
-class BaseRuleEngine:
-    """Abstract interface for safety rule engines."""
+@runtime_checkable
+class BaseRuleEngine(Protocol):
+    """The rule-engine seam the orchestrator injects through (ADR-P6-04).
+
+    A ``Protocol`` rather than a base class, matching
+    ``src.scenario_engine.context.MemoryView``. Nothing subclasses this — its
+    whole job is to type one constructor parameter — and structural typing lets
+    an engine live in a package that must not import this one.
+
+    Two Phase-6 corrections, both to make the declaration match reality:
+
+    * ``current_fps`` was **missing**. ``orchestrator.py`` has always passed the
+      measured loop rate as a fourth argument, so anyone implementing this
+      interface exactly as written would have crashed on the first frame.
+    * ``memory`` is typed ``Any`` because the two engines legitimately want
+      different surfaces of it: the retired string engine used ``BaseMemory``'s
+      class-id methods, while the scenario engine uses ``MemoryView``'s
+      name-based temporal ones. ``EventMemory`` satisfies both, and this package
+      cannot name ``MemoryView`` without importing the layer above it. Naming
+      either concrete surface here would exclude the other engine from the seam.
+    """
 
     def evaluate(
         self,
         detections: list[Detection],
-        memory: BaseMemory,
+        memory: Any,
         context: SceneContext | None = None,
+        current_fps: float | None = None,
     ) -> list[Alert]:
         """Evaluate all rules and return triggered alerts."""
-        raise NotImplementedError
+        ...
 
     def reload_rules(self) -> None:
-        """Hot-reload rules from YAML without pipeline restart."""
-        raise NotImplementedError
+        """Hot-reload rules from their source without a pipeline restart."""
+        ...
 
 
 class BaseTTS:

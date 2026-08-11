@@ -374,6 +374,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **No scenario clip has been collected.** The acceptance fixture is synthetic
     (`ffmpeg testsrc2`), lives in a temporary tree under reserved house id
     `h99`, and is not a dataset member.
+- Phase-6 M8: **runtime integration. `configs/risk_rules.yaml` is retired** and
+  the scenario engine is the pipeline's rule engine (ADR-P6-03, ADR-P6-04).
+  - `src/scenario_engine/runtime.py` — `ScenarioRuleEngine`. Dwell before
+    firing, hysteresis on clearing, `max_repeats`/`max_per_day` caps, quiet
+    hours, room gating, per-scenario confidence floors, and an inverted index
+    that prunes candidates. Its state machine mirrors `simulate.py` on purpose:
+    a projected alert volume computed from a different model than the runtime
+    would be a number with no meaning.
+  - **`src/app/` — a composition root, and the reason one was needed.** The
+    obvious wiring (orchestrator constructs the engine) would make
+    `src.pipeline` import `src.scenario_engine`, which already imports
+    `src.pipeline`. That cycle works today only because
+    `src/pipeline/__init__.py` re-exports no submodules and would detonate the
+    first time one is added — `test_layering.py` already forbade it. So
+    `ElderlyAssistantPipeline` now **requires** an injected `rule_engine` and
+    raises a pointed error when given none, and `src.app.factory.build_pipeline()`
+    does the assembly from above both packages. A new layering test asserts
+    nothing imports the composition root.
+  - **`BaseRuleEngine` was wrong, and typing the parameter revealed it.** The
+    documented interface declared `evaluate(detections, memory, context)` while
+    `orchestrator.py` has always passed a fourth argument, the measured FPS —
+    so anyone implementing the published interface exactly would have crashed on
+    the first frame. Now a `Protocol` (matching `MemoryView`) with `current_fps`
+    present and `memory` typed `Any`, because the two engines legitimately want
+    different surfaces of it and this package cannot name `MemoryView` without
+    importing the layer above.
+  - `Alert` extended additively per ADR-P6-09: `scenario_id`,
+    `next_best_action`, `caregiver_channel`, `patient_facing`, `messages`,
+    `capability_disclaimer`. All defaulted, so every pre-existing construction
+    site is unaffected. The LOCKED header now states precisely what LOCKED
+    permits — additive with a default, recorded in an ADR — so the nuance
+    travels with the code rather than living only in the ADR.
+  - **The golden alert-trace test asserts the opposite of what the plan asked
+    for, and says why.** The plan wanted "identical alerts for retained rules".
+    Running it showed the premise was wrong: the behaviour was *supposed* to
+    change, and pinning sameness would have locked in the defect the phase
+    exists to remove. `tests/unit/pipeline/test_engine_migration.py` is a
+    characterisation test instead — it replays one detection trace (a person
+    cooking, with stove, knife and cylinder visible) through both engines and
+    pins the difference. The legacy engine alerts on frame one; the scenario
+    engine stays silent for the whole minute, because `SC-KIT-001` is about
+    cooking left *unattended* and `knife_near_person` no longer exists.
+  - `configs/feature_flags.yaml` `rules:` now names scenario ids. The six legacy
+    keys were **removed rather than left as inert no-ops** — a flag that toggles
+    nothing is worse than an absent one, because it reads as control.
+  - `troubleshooting.md`: the corruption-recovery step told operators to
+    `git checkout HEAD configs/risk_rules.yaml`, which would now be a footgun
+    against a generated artifact. Rewritten for the authored-masters flow, plus
+    a new "starts but never alerts" section covering the three real causes
+    (everything is draft, no `room` configured, dwell not yet elapsed) and
+    `last_decisions()`, which reports per-scenario why each stayed silent.
+  - **The engine refuses to start while every scenario is `draft`** — the
+    current, correct state. A safety engine that quietly loads zero rules is
+    indistinguishable from one working perfectly and seeing nothing.
 - Phase-5: Production Dataset Engineering, Missing-Annotation Resolution &
   Dataset v1.0 — makes dataset quality the primary solution and demotes
   Phase-4 masking to a safety net. Core invariant: auto-generated labels never

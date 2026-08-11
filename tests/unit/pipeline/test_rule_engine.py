@@ -280,9 +280,9 @@ class TestReload:
 
 class TestShippedRules:
     @pytest.mark.unit
-    def test_configs_risk_rules_yaml_loads_and_validates(self) -> None:
+    def test_the_retired_legacy_rule_file_still_loads(self) -> None:
         """The committed rule set must satisfy every load-time invariant."""
-        engine = RuleEngine("configs/risk_rules.yaml")
+        engine = RuleEngine("tests/fixtures/legacy_risk_rules.yaml")
         assert len(engine._rules) >= 1
         assert all(r.message_en for r in engine._rules)
 
@@ -291,4 +291,4 @@ class TestShippedRules:
         """Guards against a rule silently never firing because of a class typo."""
         data = yaml.safe_load(Path("configs/data.yaml").read_text(encoding="utf-8"))
         names = frozenset(data["names"].values())
-        RuleEngine("configs/risk_rules.yaml", valid_class_names=names)
+        RuleEngine("tests/fixtures/legacy_risk_rules.yaml", valid_class_names=names)

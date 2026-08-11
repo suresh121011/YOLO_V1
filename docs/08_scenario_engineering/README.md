@@ -73,8 +73,26 @@ Phase 6 is in progress. Milestone status is tracked in `../../CHANGELOG.md` unde
 | M6 | **Validation gate — M7+ blocked until this passes** | **PASS** (8/8 gates) |
 | M7 | Capture protocol, clip ingest, MP4 metadata stripper | **done** |
 | M7-RW | Real-world ingest acceptance + collection design | **PASS** (10/10); collection not yet started |
-| M8 | Runtime integration; `configs/risk_rules.yaml` retired | pending |
+| M8 | Runtime integration; `configs/risk_rules.yaml` retired | **done** (inert until clinical review — see below) |
 | M9 | Integration strategy: YOLO · tracking · VLM · voice · caregiver | pending |
+
+### How the runtime is wired (M8)
+
+```
+src/app/factory.py            composition root — the only module importing both
+        │
+        ├──> src/pipeline/orchestrator.py       ElderlyAssistantPipeline(rule_engine=…)
+        └──> src/scenario_engine/runtime.py     ScenarioRuleEngine
+```
+
+`build_pipeline(room="kitchen")` is the entry point. The orchestrator does **not**
+construct the engine: that would make `src.pipeline` import `src.scenario_engine`,
+which already imports `src.pipeline`. `configs/risk_rules.yaml` is retired; the frozen copy
+lives at `tests/fixtures/legacy_risk_rules.yaml` so the migration comparison stays runnable.
+
+**The engine refuses to start while every scenario is `draft`.** That is the current state and
+it is correct — a safety engine that quietly loads zero rules is indistinguishable from one
+working perfectly and seeing nothing.
 
 ### Two things engineering cannot clear on its own
 

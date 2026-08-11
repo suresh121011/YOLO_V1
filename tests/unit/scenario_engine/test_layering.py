@@ -93,6 +93,26 @@ def test_pipeline_never_imports_the_scenario_engine() -> None:
 
 
 @pytest.mark.unit
+def test_nothing_imports_the_composition_root() -> None:
+    """`src.app` is the only module that knows about both packages.
+
+    It imports downward into `src.pipeline` and `src.scenario_engine`; if either
+    imported back, the cycle the injection seam exists to avoid would simply
+    move up a level rather than being removed.
+    """
+    offenders = [
+        path
+        for root in (Path("src/pipeline"), Path("src/scenario_engine"))
+        for path in _python_files(root)
+        if any(m == "src.app" or m.startswith("src.app.") for m in _imported_modules(path))
+    ]
+    assert not offenders, (
+        f"{offenders} import src.app. The composition root wires the layers together "
+        f"and must stay above both of them. See ADR-P6-04."
+    )
+
+
+@pytest.mark.unit
 def test_guard_detects_a_planted_violation(tmp_path: Path) -> None:
     """The guard must actually catch something — including a lazy import."""
     planted = tmp_path / "bad.py"

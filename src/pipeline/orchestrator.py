@@ -15,7 +15,10 @@ Graceful degradation:
   Storage full      → logger silently caps; pipeline continues
 
 Feature flags loaded from: configs/feature_flags.yaml
-Rules loaded from:         configs/risk_rules.yaml
+Rules:                     injected as a BaseRuleEngine (ADR-P6-04). The default
+                           implementation is src.scenario_engine.runtime, built
+                           by src.app.factory. configs/risk_rules.yaml and its
+                           string DSL are retired (ADR-P6-03).
 """
 
 from __future__ import annotations
@@ -28,12 +31,11 @@ from typing import Any
 
 from ..config.config_loader import SystemConfig
 from ..logging.structured_logger import StructuredLogger
-from . import Alert, PipelineMetrics, Severity
+from . import Alert, BaseRuleEngine, PipelineMetrics, Severity
 from .alert_queue import AlertQueue
 from .confidence_fusion import ConfidenceFusion
 from .detector import YOLODetector
 from .event_memory import EventMemory
-from .rule_engine import RuleEngine
 from .scene_analyzer import SmolVLM2Analyzer
 from .tts_engine import PiperTTS
 
@@ -46,9 +48,11 @@ class ElderlyAssistantPipeline:
     Initialise once, then call process_frame() in your camera loop.
     Call shutdown() when done.
 
-    Example::
+    Build it through the composition root, which injects the rule engine::
 
-        pipeline = ElderlyAssistantPipeline()
+        from src.app import build_pipeline
+
+        pipeline = build_pipeline(room="kitchen")
         cap = cv2.VideoCapture(0)
         while True:
             ret, frame = cap.read()
@@ -60,7 +64,7 @@ class ElderlyAssistantPipeline:
     def __init__(
         self,
         model_path: str = "models/yolo11n/weights/best.pt",
-        rules_path: str = "configs/risk_rules.yaml",
+        scenario_dir: str = "configs/scenarios",
         tts_model_path: str = "models/tts/en_IN-medium.onnx",
         tts_config_path: str = "models/tts/en_IN-medium.onnx.json",
         flags_path: str = "configs/feature_flags.yaml",
@@ -68,7 +72,26 @@ class ElderlyAssistantPipeline:
         vlm_model: str = "HuggingFaceTB/SmolVLM2-256M-Video-Instruct",
         log_dir: str = "logs",
         target_fps: float | None = None,
+        room: str | None = None,
+        rule_engine: BaseRuleEngine | None = None,
     ) -> None:
+        """
+        Args:
+            scenario_dir: Authored scenario masters. Replaces the retired
+                ``rules_path``/``configs/risk_rules.yaml`` (ADR-P6-03).
+            room: Deployment room for this camera — a static per-camera
+                constant that room-scoped scenarios are gated on. A pipeline
+                with no room set never fires a room-scoped scenario.
+            rule_engine: **Required.** The integration seam (ADR-P6-04): one
+                constructor parameter, matching the trainer injection approved
+                in Phase 4. Normally
+                :class:`~src.scenario_engine.runtime.ScenarioRuleEngine`, built
+                by :func:`src.app.factory.build_pipeline`. It is not constructed
+                here — see the comment at the assignment for why.
+
+        Raises:
+            ValueError: If ``rule_engine`` is None.
+        """
         # Every component is configured from this one object — no component
         # reads YAML directly (SystemConfig's own documented contract). Until
         # Phase 6 the orchestrator hand-rolled a loader that read a
@@ -114,11 +137,33 @@ class ElderlyAssistantPipeline:
             logger.info("SmolVLM2 disabled via feature flag")
 
         # ── Rule Engine ──────────────────────────────────────────────────
-        self._rule_engine = RuleEngine(
-            rules_path=rules_path,
-            fps=self._target_fps,
-            rule_enabled=self._config.is_rule_enabled,
-        )
+        # Constructor injection, not the plugin seam (ADR-P6-04). BaseRuleEngine
+        # already declared exactly this signature; the plugin seam had three
+        # mutually incompatible contracts and no registration mechanism.
+        #
+        # configs/risk_rules.yaml and its string DSL are retired (ADR-P6-03) —
+        # three of its six rules were deleted rather than migrated, on a
+        # projected volume of ~370 alerts/day with ~0 actionable.
+        #
+        # There is deliberately NO default here. Constructing the scenario
+        # engine in this file would make src.pipeline import
+        # src.scenario_engine, which already imports src.pipeline — a cycle that
+        # works today only because src/pipeline/__init__.py re-exports no
+        # submodules, and that would detonate the first time one is added.
+        # tests/unit/scenario_engine/test_layering.py enforces the direction.
+        #
+        # Build the pipeline through src.app.factory.build_pipeline(), the
+        # composition root that sits above both packages.
+        if rule_engine is None:
+            raise ValueError(
+                "ElderlyAssistantPipeline needs a rule_engine. configs/risk_rules.yaml "
+                "and its string DSL are retired (ADR-P6-03); the replacement is "
+                "src.scenario_engine.runtime.ScenarioRuleEngine, injected here rather "
+                "than constructed here so the package dependency stays one-way "
+                "(ADR-P6-04). Use src.app.factory.build_pipeline(), or pass an engine "
+                "explicitly."
+            )
+        self._rule_engine: BaseRuleEngine = rule_engine
 
         # ── Alert arbitration ────────────────────────────────────────────
         # A severity-ordered, bounded queue sits between the rule engine and
