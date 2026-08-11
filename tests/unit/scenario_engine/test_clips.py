@@ -12,20 +12,31 @@ it are guarded, following the house pattern for optional heavy dependencies
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 
 from src.scenario_engine.clips import (
+    DEFAULT_CAPTURE_CONFIG,
     FORBIDDEN_METADATA_KEYS,
     ClipError,
     ClipManifest,
+    ClipRequirements,
     ExpectedOutcome,
     FfmpegUnavailableError,
+    _parse_frame_rate,
     ffmpeg_available,
+    load_clip_manifests,
+    load_clip_requirements,
+    parse_clip_id,
     read_metadata,
     residual_metadata,
     strip_metadata,
+    validate_clip_set,
+    verify_clip_consent,
 )
 
 _CLIP: dict[str, Any] = {
@@ -167,3 +178,291 @@ class TestClipManifest:
         clip = _clip()
         assert clip.is_stale("sha256:deadbeef") is False
         assert clip.is_stale("sha256:something-else") is True
+
+    @pytest.mark.unit
+    def test_round_trips_through_to_dict(self) -> None:
+        """The manifest on disk must reload into the same assertion."""
+        restored = ClipManifest.from_mapping(_clip().to_dict())
+        assert restored == _clip()
+
+
+def _write_config(tmp_path: Path, **clip_overrides: Any) -> Path:
+    payload: dict[str, Any] = {
+        "capture": {"inbox_dir": "data/capture_inbox"},
+        "clips": {
+            "inbox_dir": "data/clip_inbox",
+            "clips_root": "data/scenario_engine/clips",
+            "clip_id_pattern": r"^h\d{2}_[a-z_]+_s\d{3}_c\d{3}$",
+            "consent_scope": "scenario-video",
+            "min_negative_fraction": 0.30,
+            "video": {
+                "allowed_extensions": [".mp4", ".mov"],
+                "min_duration_s": 10,
+                "max_duration_s": 120,
+                "min_fps": 15,
+                "max_file_mb": 500,
+                "strip_metadata": True,
+            },
+            **clip_overrides,
+        },
+    }
+    path = tmp_path / "capture_config.yaml"
+    path.write_text(yaml.safe_dump(payload), encoding="utf-8")
+    return path
+
+
+class TestClipRequirements:
+    @pytest.mark.unit
+    def test_the_repo_config_carries_a_clips_block(self) -> None:
+        """A `clips:` block that silently falls back to defaults is untested config."""
+        raw = yaml.safe_load(DEFAULT_CAPTURE_CONFIG.read_text(encoding="utf-8"))
+        assert "clips" in raw, "configs/capture_config.yaml lost its clips: block"
+        requirements = load_clip_requirements()
+        assert requirements.consent_scope == "scenario-video"
+
+    @pytest.mark.unit
+    def test_image_extensions_were_not_widened_to_video(self) -> None:
+        """Adding .mp4 there would send clips through the PIL-backed min_dim gate."""
+        raw = yaml.safe_load(DEFAULT_CAPTURE_CONFIG.read_text(encoding="utf-8"))
+        image_extensions = raw["capture"]["image"]["allowed_extensions"]
+        assert not {".mp4", ".mov"} & set(image_extensions)
+
+    @pytest.mark.unit
+    def test_missing_file_falls_back_to_defaults(self, tmp_path: Path) -> None:
+        requirements = load_clip_requirements(tmp_path / "absent.yaml")
+        assert requirements == ClipRequirements()
+
+    @pytest.mark.unit
+    def test_strip_metadata_cannot_be_switched_off(self, tmp_path: Path) -> None:
+        """The privacy control is not a preference."""
+        path = _write_config(tmp_path, video={"strip_metadata": False})
+        with pytest.raises(ClipError, match="strip_metadata"):
+            load_clip_requirements(path)
+
+    @pytest.mark.unit
+    def test_inverted_duration_bounds_are_refused(self, tmp_path: Path) -> None:
+        path = _write_config(tmp_path, video={"min_duration_s": 90, "max_duration_s": 30})
+        with pytest.raises(ClipError, match="min_duration_s"):
+            load_clip_requirements(path)
+
+    @pytest.mark.unit
+    def test_bad_clip_id_pattern_fails_at_load(self, tmp_path: Path) -> None:
+        path = _write_config(tmp_path, clip_id_pattern="^h(\\d{2}$")
+        with pytest.raises(ClipError, match="clip_id_pattern"):
+            load_clip_requirements(path)
+
+    @pytest.mark.unit
+    def test_clip_id_grammar(self) -> None:
+        requirements = ClipRequirements()
+        assert requirements.validate_clip_id("h01_pooja_room_s002_c010") == []
+        assert requirements.validate_clip_id("h01_kitchen_s001") != []
+
+    @pytest.mark.unit
+    def test_short_clip_cannot_exercise_a_dwell_threshold(self) -> None:
+        problems = ClipRequirements().check_media(duration_s=4.0, fps=30.0)
+        assert any("min_duration_s" in p for p in problems)
+
+    @pytest.mark.unit
+    def test_low_frame_rate_is_rejected_not_warned(self) -> None:
+        """A 10 fps clip silently doubles every frame-counted dwell it tests."""
+        problems = ClipRequirements().check_media(duration_s=45.0, fps=10.0)
+        assert any("min_fps" in p for p in problems)
+
+    @pytest.mark.unit
+    def test_a_conforming_clip_passes_both_gates(self) -> None:
+        assert ClipRequirements().check_media(duration_s=45.0, fps=30.0) == []
+
+    @pytest.mark.unit
+    def test_unprobeable_media_is_a_problem_not_a_pass(self) -> None:
+        """probe_media returns 0.0 for values ffprobe cannot determine."""
+        problems = ClipRequirements().check_media(duration_s=0.0, fps=0.0)
+        assert len(problems) == 2
+
+    @pytest.mark.unit
+    def test_wrong_extension_is_refused(self, tmp_path: Path) -> None:
+        source = tmp_path / "clip.avi"
+        source.write_bytes(b"x")
+        assert any("extension" in p for p in ClipRequirements().check_file(source))
+
+
+class TestFrameRateParsing:
+    @pytest.mark.unit
+    def test_ntsc_rational_notation(self) -> None:
+        assert _parse_frame_rate("30000/1001") == pytest.approx(29.97, abs=0.01)
+
+    @pytest.mark.unit
+    def test_degenerate_values_do_not_raise(self) -> None:
+        for raw in ("0/0", "N/A", "", None, "garbage"):
+            assert _parse_frame_rate(raw) == 0.0
+
+
+class TestClipConsent:
+    """Scope enforcement — the control that image ingest does not have."""
+
+    @staticmethod
+    def _registry(tmp_path: Path, **record: Any) -> Path:
+        base = {"house_id": "h01", "granted_on": "2026-07-20", "scope": "scenario-video"}
+        path = tmp_path / "consent_registry.yaml"
+        path.write_text(yaml.safe_dump({"CONSENT-h01-2026-001": {**base, **record}}))
+        return path
+
+    @pytest.mark.unit
+    def test_video_scope_is_accepted(self, tmp_path: Path) -> None:
+        registry = self._registry(tmp_path)
+        assert (
+            verify_clip_consent("CONSENT-h01-2026-001", "h01", ClipRequirements(), registry) == []
+        )
+
+    @pytest.mark.unit
+    def test_image_consent_does_not_imply_video_consent(self, tmp_path: Path) -> None:
+        """A still can be curated to avoid faces; 30 seconds of video cannot."""
+        registry = self._registry(tmp_path, scope="dataset-training")
+        problems = verify_clip_consent("CONSENT-h01-2026-001", "h01", ClipRequirements(), registry)
+        assert any("scenario-video" in p for p in problems)
+
+    @pytest.mark.unit
+    def test_withdrawn_consent_blocks_ingest(self, tmp_path: Path) -> None:
+        registry = self._registry(tmp_path, withdrawn=True)
+        problems = verify_clip_consent("CONSENT-h01-2026-001", "h01", ClipRequirements(), registry)
+        assert any("WITHDRAWN" in p for p in problems)
+
+    @pytest.mark.unit
+    def test_consent_for_another_house_is_refused(self, tmp_path: Path) -> None:
+        registry = self._registry(tmp_path)
+        problems = verify_clip_consent("CONSENT-h01-2026-001", "h02", ClipRequirements(), registry)
+        assert any("covers house" in p for p in problems)
+
+    @pytest.mark.unit
+    def test_missing_registry_is_fatal_unlike_image_ingest(self, tmp_path: Path) -> None:
+        """Scope cannot be checked without the registry, so it is not downgraded."""
+        problems = verify_clip_consent(
+            "CONSENT-h01-2026-001", "h01", ClipRequirements(), tmp_path / "absent.yaml"
+        )
+        assert any("consent registry" in p for p in problems)
+
+    @pytest.mark.unit
+    def test_empty_reference_is_refused(self, tmp_path: Path) -> None:
+        assert verify_clip_consent("", "h01", ClipRequirements(), tmp_path / "absent.yaml") != []
+
+
+class TestParseClipId:
+    @pytest.mark.unit
+    def test_multi_word_room(self) -> None:
+        assert parse_clip_id("h01_pooja_room_s002_c010") == (
+            "h01",
+            "pooja_room",
+            "h01_pooja_room_s002",
+        )
+
+    @pytest.mark.unit
+    def test_session_prefix_matches_the_capture_grammar(self) -> None:
+        """So a clip's session is the same session the image workflow knows."""
+        assert parse_clip_id("h01_kitchen_s001_c001")[2] == "h01_kitchen_s001"
+
+    @pytest.mark.unit
+    def test_too_few_tokens_raises(self) -> None:
+        with pytest.raises(ClipError, match="clip id"):
+            parse_clip_id("h01_kitchen")
+
+
+class TestClipSet:
+    @staticmethod
+    def _set(count: int, negatives: int) -> list[ClipManifest]:
+        clips: list[ClipManifest] = []
+        for index in range(count):
+            is_negative = index < negatives
+            clips.append(
+                _clip(
+                    clip_id=f"h01_kitchen_s001_c{index:03d}",
+                    metadata_stripped=True,
+                    polarity="negative" if is_negative else "positive",
+                    negative_kind="confuser" if is_negative else "",
+                    expected=(
+                        {"fires": False}
+                        if is_negative
+                        else {
+                            "fires": True,
+                            "scenario_id": "SC-KIT-001",
+                            "first_alert_within_s": 30.0,
+                        }
+                    ),
+                )
+            )
+        return clips
+
+    @pytest.mark.unit
+    def test_empty_set_is_not_a_failure(self) -> None:
+        """The expected state before the first capture session."""
+        assert validate_clip_set([], ClipRequirements()) == []
+
+    @pytest.mark.unit
+    def test_all_positive_suite_is_refused(self) -> None:
+        """It measures sensitivity and is blind to the false-positive rate."""
+        problems = validate_clip_set(self._set(10, negatives=0), ClipRequirements())
+        assert any("negatives" in p for p in problems)
+
+    @pytest.mark.unit
+    def test_the_validation_strategy_ratio_passes(self) -> None:
+        """3 negatives in 10 — the matrix at validation_strategy.md:63-76."""
+        assert validate_clip_set(self._set(10, negatives=3), ClipRequirements()) == []
+
+    @pytest.mark.unit
+    def test_unsanitised_clip_is_caught_at_set_level(self) -> None:
+        clips = self._set(10, negatives=3)
+        clips[0] = _clip(clip_id=clips[0].clip_id, metadata_stripped=False)
+        problems = validate_clip_set(clips, ClipRequirements())
+        assert any("metadata_stripped" in p for p in problems)
+
+    @pytest.mark.unit
+    def test_stale_clip_is_reported_against_the_artifact(self) -> None:
+        problems = validate_clip_set(
+            self._set(10, negatives=3),
+            ClipRequirements(),
+            rule_hashes={"SC-KIT-001": "sha256:moved-on"},
+        )
+        assert any("re-review" in p for p in problems)
+
+    @pytest.mark.unit
+    def test_current_clip_is_not_reported_stale(self) -> None:
+        assert (
+            validate_clip_set(
+                self._set(10, negatives=3),
+                ClipRequirements(),
+                rule_hashes={"SC-KIT-001": "sha256:deadbeef"},
+            )
+            == []
+        )
+
+    @pytest.mark.unit
+    def test_clip_for_an_unknown_scenario_is_reported(self) -> None:
+        problems = validate_clip_set(
+            self._set(10, negatives=3), ClipRequirements(), rule_hashes={"SC-BTH-001": "sha256:x"}
+        )
+        assert any("not in the compiled artifact" in p for p in problems)
+
+
+class TestLoadClipManifests:
+    @pytest.mark.unit
+    def test_absent_tree_loads_as_empty(self, tmp_path: Path) -> None:
+        assert load_clip_manifests(tmp_path) == []
+
+    @pytest.mark.unit
+    def test_manifests_load_sorted_by_clip_id(self, tmp_path: Path) -> None:
+        manifest_dir = tmp_path / "manifests"
+        manifest_dir.mkdir()
+        for clip_id in ("h01_kitchen_s001_c002", "h01_kitchen_s001_c001"):
+            payload = _clip(clip_id=clip_id).to_dict()
+            (manifest_dir / f"{clip_id}.json").write_text(json.dumps(payload), encoding="utf-8")
+        assert [c.clip_id for c in load_clip_manifests(tmp_path)] == [
+            "h01_kitchen_s001_c001",
+            "h01_kitchen_s001_c002",
+        ]
+
+    @pytest.mark.unit
+    def test_one_broken_manifest_fails_the_load(self, tmp_path: Path) -> None:
+        """A suite with an unparseable member cannot be trusted green."""
+        manifest_dir = tmp_path / "manifests"
+        manifest_dir.mkdir()
+        (manifest_dir / "broken.json").write_text("{not json", encoding="utf-8")
+        with pytest.raises(ClipError, match="readable JSON"):
+            load_clip_manifests(tmp_path)

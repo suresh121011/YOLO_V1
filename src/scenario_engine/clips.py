@@ -37,11 +37,29 @@ that needs it says so loudly.
 from __future__ import annotations
 
 import json
+import logging
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+from src.utils.config_helpers import load_yaml
+
+logger = logging.getLogger(__name__)
+
+#: The ``clips:`` block lives beside ``capture:`` in the same file, so the
+#: video protocol is read next to the image protocol it extends.
+DEFAULT_CAPTURE_CONFIG = Path("configs/capture_config.yaml")
+
+#: Mirrors ``consent.registry_path`` / ``consent.reference_pattern``. Duplicated
+#: rather than imported from ``src.dataset.capture.config`` because
+#: ``src/scenario_engine`` is a leaf that may not import ``src.dataset``
+#: (ADR-P6-04); both are stable published formats documented in
+#: ``data/consent/README.md``.
+DEFAULT_CONSENT_REGISTRY = Path("data/consent/consent_registry.yaml")
+DEFAULT_CONSENT_PATTERN = r"^CONSENT-h\d{2}-\d{4}-\d{3}$"
 
 #: Container metadata keys that must not survive ingest. ``location`` and
 #: ``com.apple.quicktime.location.ISO6709`` are the GPS carriers; the rest
@@ -107,8 +125,8 @@ def ffmpeg_version() -> str:
     return result.stdout.strip().splitlines()[0] if result.stdout.strip() else "unknown"
 
 
-def read_metadata(path: Path | str) -> dict[str, Any]:
-    """Return the container-level metadata ffprobe reports for a file."""
+def _ffprobe(path: Path | str) -> dict[str, Any]:
+    """Raw ``ffprobe -show_format -show_streams`` payload for a file."""
     _require_ffmpeg()
     result = subprocess.run(
         [
@@ -127,12 +145,70 @@ def read_metadata(path: Path | str) -> dict[str, Any]:
         check=True,
     )
     payload = json.loads(result.stdout or "{}")
+    return payload if isinstance(payload, dict) else {}
+
+
+def read_metadata(path: Path | str) -> dict[str, Any]:
+    """Return the container-level metadata ffprobe reports for a file."""
+    payload = _ffprobe(path)
 
     tags: dict[str, Any] = {}
     tags.update(payload.get("format", {}).get("tags", {}) or {})
     for stream in payload.get("streams", []) or []:
         tags.update(stream.get("tags", {}) or {})
     return tags
+
+
+def _parse_frame_rate(raw: Any) -> float:
+    """Parse ffprobe's ``"30000/1001"`` rational frame-rate notation."""
+    text = str(raw or "").strip()
+    if not text or text in {"0/0", "N/A"}:
+        return 0.0
+    if "/" in text:
+        numerator, _, denominator = text.partition("/")
+        try:
+            den = float(denominator)
+            return float(numerator) / den if den else 0.0
+        except ValueError:
+            return 0.0
+    try:
+        return float(text)
+    except ValueError:
+        return 0.0
+
+
+def probe_media(path: Path | str) -> tuple[float, float]:
+    """Return ``(duration_seconds, fps)`` for a clip's first video stream.
+
+    Both feed intake gates: a clip shorter than a scenario's dwell threshold
+    cannot exercise it, and a clip below the runtime's ``target_fps`` rescales
+    every frame-counted temporal predicate it is supposed to be testing.
+
+    Returns ``(0.0, 0.0)`` for values ffprobe cannot determine, so the caller's
+    range checks — not this function — decide what is acceptable.
+    """
+    payload = _ffprobe(path)
+
+    try:
+        duration = float(payload.get("format", {}).get("duration", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        duration = 0.0
+
+    fps = 0.0
+    for stream in payload.get("streams", []) or []:
+        if stream.get("codec_type") != "video":
+            continue
+        fps = _parse_frame_rate(stream.get("avg_frame_rate")) or _parse_frame_rate(
+            stream.get("r_frame_rate")
+        )
+        if not duration:
+            try:
+                duration = float(stream.get("duration", 0.0) or 0.0)
+            except (TypeError, ValueError):
+                duration = 0.0
+        break
+
+    return duration, fps
 
 
 def residual_metadata(tags: dict[str, Any]) -> dict[str, Any]:
@@ -209,6 +285,241 @@ def strip_metadata(source: Path | str, destination: Path | str) -> dict[str, Any
         "ffmpeg_version": ffmpeg_version(),
         "verified_by_readback": True,
     }
+
+
+# ─── Intake requirements ──────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class ClipRequirements:
+    """The ``clips:`` block of ``configs/capture_config.yaml``.
+
+    Parsed here rather than by :mod:`src.dataset.capture.config` because
+    ``src/scenario_engine`` may not import ``src.dataset`` (ADR-P6-04). That
+    loader ignores unknown root keys, so the two coexist in one file without
+    either needing to know about the other.
+    """
+
+    inbox_dir: Path = Path("data/clip_inbox")
+    clips_root: Path = Path("data/scenario_engine/clips")
+    clip_id_pattern: str = r"^h\d{2}_[a-z_]+_s\d{3}_c\d{3}$"
+    allowed_extensions: tuple[str, ...] = (".mp4", ".mov")
+    min_duration_s: float = 10.0
+    max_duration_s: float = 120.0
+    min_fps: float = 15.0
+    max_file_mb: int = 500
+    strip_metadata: bool = True
+    consent_scope: str = "scenario-video"
+    min_negative_fraction: float = 0.30
+
+    def validate_clip_id(self, clip_id: str) -> list[str]:
+        """Check a clip ID against the grammar. Returns problems (empty = ok)."""
+        if not re.match(self.clip_id_pattern, clip_id):
+            return [f"clip id '{clip_id}' does not match pattern {self.clip_id_pattern}"]
+        return []
+
+    def check_file(self, path: Path) -> list[str]:
+        """Extension and size gates, applied before ffprobe is spent on the file."""
+        problems: list[str] = []
+        if path.suffix.lower() not in self.allowed_extensions:
+            problems.append(
+                f"{path.name}: extension '{path.suffix}' not in " f"{list(self.allowed_extensions)}"
+            )
+        if not path.exists():
+            problems.append(f"{path}: file not found")
+            return problems
+        size_mb = path.stat().st_size / (1024 * 1024)
+        if size_mb > self.max_file_mb:
+            problems.append(f"{path.name}: {size_mb:.0f} MB exceeds max_file_mb {self.max_file_mb}")
+        return problems
+
+    def check_media(self, duration_s: float, fps: float) -> list[str]:
+        """Duration and frame-rate gates.
+
+        A clip below ``min_fps`` is rejected rather than warned about: the
+        temporal predicates it exists to test are counted in frames against the
+        runtime's ``target_fps``, so a 10 fps clip silently doubles every dwell
+        it is meant to be checking.
+        """
+        problems: list[str] = []
+        if duration_s <= 0:
+            problems.append("duration could not be determined by ffprobe")
+        elif duration_s < self.min_duration_s:
+            problems.append(
+                f"duration {duration_s:.1f}s is under min_duration_s "
+                f"{self.min_duration_s}s — too short to exercise a dwell threshold"
+            )
+        elif duration_s > self.max_duration_s:
+            problems.append(
+                f"duration {duration_s:.1f}s exceeds max_duration_s {self.max_duration_s}s"
+            )
+        if fps <= 0:
+            problems.append("frame rate could not be determined by ffprobe")
+        elif fps < self.min_fps:
+            problems.append(
+                f"frame rate {fps:.1f} is under min_fps {self.min_fps} — frame-counted "
+                f"temporal predicates would be rescaled relative to the runtime"
+            )
+        return problems
+
+
+def load_clip_requirements(path: Path | str = DEFAULT_CAPTURE_CONFIG) -> ClipRequirements:
+    """Load the ``clips:`` block, falling back to built-in defaults.
+
+    A missing file or absent block is not an error — the defaults keep unit
+    tests and minimal checkouts runnable, matching
+    :func:`src.dataset.capture.config.load_capture_config`.
+
+    Raises:
+        ClipError: If a configured value is unusable (bad regex, empty
+            extension list, inverted duration bounds).
+    """
+    config_path = Path(path)
+    defaults = ClipRequirements()
+
+    try:
+        raw = load_yaml(config_path)
+    except FileNotFoundError:
+        logger.warning(f"Capture config not found at {config_path} — using built-in clip defaults")
+        return defaults
+
+    clips_raw = raw.get("clips", {}) or {}
+    video_raw = clips_raw.get("video", {}) or {}
+
+    extensions = tuple(
+        ext if str(ext).startswith(".") else f".{ext}"
+        for ext in (
+            str(e).lower().strip()
+            for e in (video_raw.get("allowed_extensions") or list(defaults.allowed_extensions))
+        )
+    )
+
+    requirements = ClipRequirements(
+        inbox_dir=Path(clips_raw.get("inbox_dir", defaults.inbox_dir)),
+        clips_root=Path(clips_raw.get("clips_root", defaults.clips_root)),
+        clip_id_pattern=str(clips_raw.get("clip_id_pattern", defaults.clip_id_pattern)),
+        allowed_extensions=extensions,
+        min_duration_s=float(video_raw.get("min_duration_s", defaults.min_duration_s)),
+        max_duration_s=float(video_raw.get("max_duration_s", defaults.max_duration_s)),
+        min_fps=float(video_raw.get("min_fps", defaults.min_fps)),
+        max_file_mb=int(video_raw.get("max_file_mb", defaults.max_file_mb)),
+        strip_metadata=bool(video_raw.get("strip_metadata", defaults.strip_metadata)),
+        consent_scope=str(clips_raw.get("consent_scope", defaults.consent_scope)),
+        min_negative_fraction=float(
+            clips_raw.get("min_negative_fraction", defaults.min_negative_fraction)
+        ),
+    )
+
+    try:
+        re.compile(requirements.clip_id_pattern)
+    except re.error as exc:
+        raise ClipError(f"Invalid clips.clip_id_pattern regex in {config_path}: {exc}") from exc
+    if not requirements.allowed_extensions:
+        raise ClipError(f"clips.video.allowed_extensions must be non-empty in {config_path}")
+    if requirements.min_duration_s >= requirements.max_duration_s:
+        raise ClipError(f"clips.video.min_duration_s must be below max_duration_s in {config_path}")
+    if not 0.0 <= requirements.min_negative_fraction <= 1.0:
+        raise ClipError(f"clips.min_negative_fraction must be in [0, 1] in {config_path}")
+    if not requirements.strip_metadata:
+        raise ClipError(
+            f"clips.video.strip_metadata cannot be disabled in {config_path}. MP4 carries "
+            f"GPS in the moov/udta atom; ingesting unsanitised video would put a "
+            f"participant's home address in a versioned S3 bucket, where deleting the "
+            f"object does not remove prior versions."
+        )
+    return requirements
+
+
+# ─── Consent ──────────────────────────────────────────────────────────────────
+
+
+def verify_clip_consent(
+    reference: str,
+    house_id: str,
+    requirements: ClipRequirements,
+    registry_path: Path | str = DEFAULT_CONSENT_REGISTRY,
+    reference_pattern: str = DEFAULT_CONSENT_PATTERN,
+) -> list[str]:
+    """Verify a clip's consent reference, including its **scope**.
+
+    Deliberately separate from :func:`src.dataset.capture.consent.verify_consent`
+    rather than importing it, for two reasons. The layering rule forbids the
+    import (ADR-P6-04); and the behaviour genuinely differs in two ways that
+    matter:
+
+    1. **Scope is checked.** Image ingest ignores ``scope`` entirely. A 30-second
+       clip cannot be curated frame-by-frame to avoid faces the way a still can,
+       so ``dataset-training`` consent does not cover it.
+    2. **A missing registry is fatal, not a warning.** Image ingest downgrades to
+       a format-only check when the registry is absent. Scope cannot be checked
+       without the registry, so downgrading would silently drop the very control
+       this function exists to apply — the same reason a missing ffmpeg is an
+       error here rather than a skip.
+
+    Returns:
+        List of problems; empty means the reference is acceptable.
+    """
+    problems: list[str] = []
+    if not reference:
+        return ["consent reference is required for every scenario clip"]
+    if not re.match(reference_pattern, reference):
+        problems.append(
+            f"consent reference '{reference}' does not match pattern {reference_pattern}"
+        )
+
+    try:
+        raw = load_yaml(Path(registry_path))
+    except FileNotFoundError:
+        problems.append(
+            f"no consent registry at {registry_path} — clip consent scope cannot be "
+            f"verified without it, and scenario clips are not ingested on scope trust. "
+            f"Ingest clips on the collection machine."
+        )
+        return problems
+
+    if not isinstance(raw, dict):
+        raise ClipError(
+            f"Consent registry {registry_path} must be a mapping of consent_id -> record"
+        )
+
+    record = raw.get(reference)
+    if not isinstance(record, dict):
+        problems.append(f"consent reference '{reference}' not found in {registry_path}")
+        return problems
+
+    if bool(record.get("withdrawn", False)):
+        problems.append(f"consent '{reference}' has been WITHDRAWN — do not ingest")
+    if str(record.get("house_id", "")) != house_id:
+        problems.append(
+            f"consent '{reference}' covers house '{record.get('house_id')}', "
+            f"but the clip belongs to '{house_id}'"
+        )
+    scope = str(record.get("scope", ""))
+    if scope != requirements.consent_scope:
+        problems.append(
+            f"consent '{reference}' has scope '{scope}', but scenario clips require "
+            f"'{requirements.consent_scope}'. Video consent is not implied by image "
+            f"consent — re-consent the household before ingesting clips."
+        )
+    return problems
+
+
+def parse_clip_id(clip_id: str) -> tuple[str, str, str]:
+    """Split a clip ID into ``(house_id, room, session_id)``.
+
+    The grammar is ``h{NN}_{room}_s{NNN}_c{NNN}``, i.e. the capture session
+    grammar plus a clip counter, so house and room parse the same way they do
+    for image sessions.
+
+    Raises:
+        ClipError: If the ID has too few ``_``-separated tokens.
+    """
+    parts = clip_id.split("_")
+    if len(parts) < 4:
+        raise ClipError(
+            f"clip id '{clip_id}' is not of the form h{{NN}}_{{room}}_s{{NNN}}_c{{NNN}}"
+        )
+    return parts[0], "_".join(parts[1:-2]), "_".join(parts[:-1])
 
 
 # ─── Clip manifest ────────────────────────────────────────────────────────────
@@ -361,3 +672,121 @@ class ClipManifest:
         green against a stale expectation is worse than one that fails.
         """
         return self.rule_hash_at_label_time != current_rule_hash
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialisable form, key-sorted for byte-stable manifests."""
+        payload: dict[str, Any] = {
+            "clip_id": self.clip_id,
+            "session_id": self.session_id,
+            "house_id": self.house_id,
+            "room": self.room,
+            "lighting": self.lighting,
+            "polarity": self.polarity,
+            "negative_kind": self.negative_kind,
+            "scenario_id": self.scenario_id,
+            "consent_reference": self.consent_reference,
+            "sha256": self.sha256,
+            "duration_s": self.duration_s,
+            "fps": self.fps,
+            "rule_hash_at_label_time": self.rule_hash_at_label_time,
+            "metadata_stripped": self.metadata_stripped,
+            "ffmpeg_version": self.ffmpeg_version,
+            "annotator": self.annotator,
+            "annotated_at": self.annotated_at,
+            "notes": self.notes,
+            "ground_truth_events": list(self.ground_truth_events),
+            "expected": {
+                "fires": self.expected.fires,
+                "scenario_id": self.expected.scenario_id,
+                "severity": self.expected.severity,
+                "first_alert_within_s": self.expected.first_alert_within_s,
+            },
+        }
+        return dict(sorted(payload.items()))
+
+
+# ─── Clip sets ────────────────────────────────────────────────────────────────
+
+
+def load_clip_manifests(clips_root: Path | str) -> list[ClipManifest]:
+    """Load every ``manifests/*.json`` under a clips root, sorted by clip id.
+
+    Raises:
+        ClipError: If any manifest is unreadable or invalid. A clip suite with
+            one unparseable member is not a suite that can be trusted green.
+    """
+    manifest_dir = Path(clips_root) / "manifests"
+    if not manifest_dir.exists():
+        return []
+
+    manifests: list[ClipManifest] = []
+    for path in sorted(manifest_dir.glob("*.json")):
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ClipError(f"{path} is not readable JSON: {exc}") from exc
+        manifests.append(ClipManifest.from_mapping(raw, where=str(path)))
+    return sorted(manifests, key=lambda clip: clip.clip_id)
+
+
+def validate_clip_set(
+    clips: list[ClipManifest],
+    requirements: ClipRequirements,
+    rule_hashes: dict[str, str] | None = None,
+) -> list[str]:
+    """Set-level checks that no single clip can satisfy on its own.
+
+    Individual manifests are validated at construction. What only the set can
+    answer is whether the suite is *honest*: enough negatives to measure the
+    false-positive rate, no duplicate ids, no scenario asserted against a
+    ``rule_hash`` that has since moved.
+
+    Args:
+        clips:        The loaded manifests.
+        requirements: Intake requirements carrying ``min_negative_fraction``.
+        rule_hashes:  Optional ``scenario_id -> rule_hash`` from the compiled
+                      artifact. When given, stale clips are reported.
+
+    Returns:
+        List of problems; empty means the set is acceptable.
+    """
+    problems: list[str] = []
+    if not clips:
+        return problems
+
+    seen: set[str] = set()
+    for clip in clips:
+        if clip.clip_id in seen:
+            problems.append(f"duplicate clip id '{clip.clip_id}'")
+        seen.add(clip.clip_id)
+        problems.extend(requirements.validate_clip_id(clip.clip_id))
+        if requirements.strip_metadata and not clip.metadata_stripped:
+            problems.append(
+                f"{clip.clip_id}: metadata_stripped is false — the clip was not "
+                f"sanitised, or the manifest was hand-edited"
+            )
+
+    negatives = sum(1 for clip in clips if clip.polarity == "negative")
+    fraction = negatives / len(clips)
+    if fraction < requirements.min_negative_fraction:
+        problems.append(
+            f"only {negatives}/{len(clips)} clips ({fraction:.0%}) are negatives, under "
+            f"min_negative_fraction {requirements.min_negative_fraction:.0%} — a suite of "
+            f"positives measures sensitivity and is blind to the false-positive rate"
+        )
+
+    if rule_hashes is not None:
+        for clip in clips:
+            current = rule_hashes.get(clip.scenario_id)
+            if current is None:
+                problems.append(
+                    f"{clip.clip_id}: scenario '{clip.scenario_id}' is not in the "
+                    f"compiled artifact"
+                )
+            elif clip.is_stale(current):
+                problems.append(
+                    f"{clip.clip_id}: labelled against rule_hash "
+                    f"{clip.rule_hash_at_label_time} but '{clip.scenario_id}' is now "
+                    f"{current} — re-review the clip before trusting its expectation"
+                )
+    return problems

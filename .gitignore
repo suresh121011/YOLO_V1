@@ -107,6 +107,14 @@ data/qa_reports/*
 !data/scenario_engine/build/
 !data/scenario_engine/build/**
 
+# Scenario clips: the video is a CACHED DVC out (participant footage — never
+# git, only the remote), the manifests are a `cache: false` out because they
+# carry the expectation each clip asserts and that belongs in a PR diff.
+data/clip_inbox/
+data/scenario_engine/clips/video/
+!data/scenario_engine/clips/manifests/
+!data/scenario_engine/clips/manifests/**
+
 # ─── Custom Capture Workflow (Phase-3) ────────────────────────────────────────
 # Staging inbox for raw phone photos — transient, never tracked
 data/capture_inbox/

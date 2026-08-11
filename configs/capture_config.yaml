@@ -49,6 +49,50 @@ consent:
   reference_pattern: "^CONSENT-h\\d{2}-\\d{4}-\\d{3}$"   # CONSENT-h01-2026-001
   required: true
 
+# ─── Scenario clips (Phase-6) ─────────────────────────────────────────────────
+# Short videos that turn a scenario into a test. Read by
+# src/scenario_engine/clips.py — NOT by src/dataset/capture/config.py, which
+# ignores unknown root keys. src/scenario_engine may not import src.dataset
+# (ADR-P6-04), so it parses this block itself.
+#
+# This is a SIBLING of `capture:`, not `capture.clips:`, and video extensions
+# are deliberately NOT added to capture.image.allowed_extensions: that list
+# feeds a per-image min_dim gate which opens each file with PIL, so an .mp4
+# entry there would reject or crash on every clip.
+#
+# Protocol: docs/08_scenario_engineering/clip_capture_protocol.md
+clips:
+  # Staging inbox for raw phone video. Gitignored, never DVC-tracked.
+  inbox_dir: data/clip_inbox
+
+  # Ingested, metadata-stripped clips + their manifests.
+  clips_root: data/scenario_engine/clips
+
+  # Clip ID grammar: {session_id}_c{NNN}, e.g. h01_kitchen_s001_c001. The
+  # session prefix is the capture session grammar unchanged, so house/room
+  # parse identically and extracted frames group as one leakage unit
+  # (src/utils/dataset_utils.py).
+  clip_id_pattern: "^h\\d{2}_[a-z_]+_s\\d{3}_c\\d{3}$"
+
+  video:
+    allowed_extensions: [.mp4, .mov]
+    min_duration_s: 10          # shorter than a dwell threshold proves nothing
+    max_duration_s: 120         # review cost, and consent is per-clip
+    min_fps: 15                 # runtime target_fps — below it, dwell rescales
+    max_file_mb: 500
+    strip_metadata: true        # ffmpeg -map_metadata -1 + read-back assertion
+
+  # A 30-second clip cannot be curated to avoid faces the way a still can, so
+  # scenario video needs its own consent scope. Image-scope consent is NOT
+  # sufficient and ingest refuses it. See data/consent/README.md.
+  consent_scope: scenario-video
+
+  # Share of a clip set that must be negatives. The 10-scenario matrix in
+  # validation_strategy.md carries 3 (shiny floor, plastic bottle, walking
+  # stick) — a suite of positives only measures sensitivity and is blind to the
+  # false-positive rate that actually gets the device unplugged.
+  min_negative_fraction: 0.30
+
 annotation:
   # Where CVAT (YOLO 1.1) exports are staged per annotator before finalize.
   staging_dir: data/capture_inbox/annotations

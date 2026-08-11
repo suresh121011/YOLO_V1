@@ -21,3 +21,8 @@ verified against the code before being adopted — see `../architecture_review.m
 | [ADR-P6-07](ADR-P6-07-near-units-and-room-vs-zone.md) | `near()` is frame-normalized screen space; `room` is config, `zone` is deferred |
 | [ADR-P6-08](ADR-P6-08-rejected-scenario-negative-register.md) | Rejected scenarios stay in-repo as versioned rows with a `rejection_reason` |
 | [ADR-P6-09](ADR-P6-09-alert-contract-extension.md) | Extend the LOCKED `Alert` additively rather than returning a parallel outcome type |
+| [ADR-P6-10](ADR-P6-10-clips-as-a-frozen-stage.md) | Scenario clips are a frozen DVC stage with split outs, a read-back-verified MP4 strip, and their own consent scope |
+
+ADR-P6-10 was added at milestone M7, when the clip workflow was designed. It is a Phase-6 decision
+like the rest; it was not part of the 2026-08-07 ratification because the clip protocol had not been
+specified at that point.

@@ -266,6 +266,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     clinical review; no labelled clips exist yet, so G3 is a projection over a
     synthetic occupancy profile rather than measured field behaviour; and the
     runtime still loads `configs/risk_rules.yaml` (M8).
+- Phase-6 M7: scenario clip capture protocol, ingest, and **MP4 metadata
+  stripping — which did not exist**. `src/dataset/capture/exif.py` strips EXIF
+  from images and does not cover video, and could not: MP4 carries GPS in the
+  `moov/udta` `©xyz` atom next to creation time and device model, which an EXIF
+  stripper never touches. A clip reaching the S3 remote with that atom intact is
+  a participant's home address in a **versioned** bucket, where deleting the
+  object does not remove prior versions.
+  - `src/scenario_engine/clips.py` — `ffmpeg -map_metadata -1 -map_chapters -1
+    -c copy` **plus a read-back assertion** via ffprobe; a surviving forbidden
+    key rejects the clip. `-c copy` so sanitising never re-encodes the footage a
+    scenario is validated against. A missing toolchain is an **error, not a
+    skip**: a privacy control that silently degrades is not a control.
+  - `ClipManifest`/`ExpectedOutcome` turn a clip into a test rather than a
+    recording — a positive clip must state `first_alert_within_s`, a negative
+    must state `negative_kind` (`confuser`/`absence`/`assistive`/
+    `out_of_taxonomy`). `rule_hash_at_label_time` makes staleness detectable: a
+    suite passing green against an expectation the scenario no longer has is
+    worse than one that fails.
+  - **Consent gained a scope, and video is not implied by images.** Clips
+    require `scope: scenario-video`; `dataset-training` is refused at ingest. A
+    still can be curated frame by frame before it is kept, a 30-second clip
+    cannot. Unlike image ingest, a **missing consent registry is fatal** rather
+    than a downgrade to format-only checking — scope is precisely what cannot be
+    verified without it, so clips are only ever ingested on the collection
+    machine. Documented in `data/consent/README.md`.
+  - `clips:` block in `configs/capture_config.yaml` as a **sibling** of
+    `capture:`. Video extensions are deliberately *not* added to
+    `capture.image.allowed_extensions` — that list feeds a per-image `min_dim`
+    gate that opens each file with PIL, so an `.mp4` entry there would reject or
+    crash on every clip. A test fails if anyone tries. `strip_metadata: false`
+    is rejected at load: the privacy control is not a preference.
+  - Clip IDs extend the Phase-3 session grammar (`{session}_c{NNN}`), so frames
+    named `{clip_id}_frame_{NNNNN}.jpg` are already recognised by
+    `src/utils/dataset_utils.py`'s group extractor — **leakage prevention comes
+    for free**, with no new code.
+  - `min_negative_fraction: 0.30` is enforced over the clip *set*: a suite of
+    positives measures sensitivity and is blind to the false-positive rate,
+    which is the failure mode that gets the device unplugged. The 10-scenario
+    matrix in `validation_strategy.md` already carried exactly three negatives.
+  - `scripts/scenarios/32_ingest_scenario_clips.py` and the **frozen**
+    `ingest_scenario_clips` DVC stage, mirroring `ingest_custom_captures` so
+    `dvc repro` on a fresh machine can never overwrite human-collected footage
+    with an empty re-run. Outs are split by review value: `video/` cached (large
+    binary, confidentiality rests on the remote), `manifests/` `cache: false` and
+    git-committed, because a manifest is an **assertion** and changing what the
+    suite claims must appear in a pull request.
+  - `docs/08_scenario_engineering/clip_capture_protocol.md` and
+    `adr/ADR-P6-10-clips-as-a-frozen-stage.md`.
+  - **No clip has been ingested.** ffmpeg is not installed on the development
+    machine and the module refuses rather than proceeding unsanitised. This is
+    the design working; installing ffmpeg on the collection machine is a
+    prerequisite of the first session.
 - Phase-5: Production Dataset Engineering, Missing-Annotation Resolution &
   Dataset v1.0 — makes dataset quality the primary solution and demotes
   Phase-4 masking to a safety net. Core invariant: auto-generated labels never
