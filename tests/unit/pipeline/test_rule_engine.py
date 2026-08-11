@@ -155,6 +155,23 @@ class TestEvaluation:
         assert engine.evaluate(detections, memory) == []
 
     @pytest.mark.unit
+    def test_first_fire_is_not_suppressed_on_a_freshly_booted_device(
+        self, tmp_path: Path, memory: EventMemory, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A never-fired rule must fire immediately, whatever the clock reads.
+
+        `time.monotonic()` counts from boot, so a 0.0 "last fired" sentinel meant
+        `now - 0.0 < cooldown` was TRUE on a freshly-powered device -- every rule
+        suppressed for its full cooldown after a power cut. This asserts the
+        boot case directly rather than depending on how long the test machine
+        happens to have been up.
+        """
+        monkeypatch.setattr("src.pipeline.rule_engine.time.monotonic", lambda: 3.0)
+        engine = RuleEngine(_write_rules(tmp_path, [_rule(cooldown_seconds=1800)]))
+        alerts = engine.evaluate([_detection("knife")], memory)
+        assert len(alerts) == 1, "a never-fired rule was suppressed just after boot"
+
+    @pytest.mark.unit
     def test_zero_cooldown_allows_refire(self, tmp_path: Path, memory: EventMemory) -> None:
         engine = RuleEngine(_write_rules(tmp_path, [_rule(cooldown_seconds=0)]))
         detections = [_detection("knife")]

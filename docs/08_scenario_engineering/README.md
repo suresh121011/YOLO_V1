@@ -68,7 +68,7 @@ Phase 6 is in progress. Milestone status is tracked in `../../CHANGELOG.md` unde
 | M3 | Compiler, capability map, inverted index, CSV view | **done** |
 | M4 | Validator suite + alert-volume simulation gate | **done** |
 | M5 | Scenario taxonomy + first ~20 scenarios | **done** (draft; clinical review pending) |
-| M6 | **Validation gate — M7+ blocked until this passes** | pending |
+| M6 | **Validation gate — M7+ blocked until this passes** | **PASS** (8/8 gates) |
 | M7 | Capture protocol, clip ingest, MP4 metadata stripper | pending |
 | M8 | Runtime integration; `configs/risk_rules.yaml` retired | pending |
 | M9 | Integration strategy: YOLO · tracking · VLM · voice · caregiver | pending |

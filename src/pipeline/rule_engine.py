@@ -275,8 +275,14 @@ class RuleEngine:
 
         with self._lock:
             for rule in self._rules:
-                last_fired = self._cooldowns.get(rule.rule_id, 0.0)
-                if now - last_fired < rule.cooldown_seconds:
+                # `None` means "never fired", NOT "fired at time zero".
+                # time.monotonic() counts from boot, so a 0.0 sentinel makes a
+                # freshly-powered device suppress every rule for its whole
+                # cooldown -- 30 minutes of silence after a power cut for an
+                # 1800s scenario. Caught by test_cooldown_suppresses_immediate_refire
+                # only because the box happened to have been up 27 minutes.
+                last_fired = self._cooldowns.get(rule.rule_id)
+                if last_fired is not None and now - last_fired < rule.cooldown_seconds:
                     continue  # Rule still cooling down
 
                 if not evaluate_node(rule.condition, detected_names, memory, fps):

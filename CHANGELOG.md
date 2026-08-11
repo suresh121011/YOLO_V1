@@ -240,6 +240,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     honest and visible: `validate_scenarios` reports `safety-class-uncovered`
     for every safety-critical class, because coverage counts active scenarios
     only. Those warnings clear when clinical review happens, not before.
+- Phase-6 M6: **the mandatory correctness gate. Verdict PASS, 8/8 gates.** This is
+  the boundary between building the scenario engine and using it; M7+ was blocked
+  until it passed, mirroring Phase-5's M6.
+  - `scripts/qa/validate_phase6.py` runs the real checks against the real
+    repository and commits the evidence to
+    `data/qa_reports/phase6_validation_report.json` (`cache: false`, allowlisted
+    in `.gitignore`). G1 artifact currency - G2 zero validator ERRORs - G3 alert
+    volume within budget - G4 order-independent firing - G5 scenario-engine and
+    pipeline suites - G6 performance budgets - G7 DVC idempotency - G8 layering.
+  - `tests/performance/test_scenario_budget.py` closes a gap the plan named: the
+    5 ms/frame rule-engine allocation from `performance_budget.md:30` had no
+    test. It measures the **worst case** (300 scenarios, all evaluated, crowded
+    frame, spatial predicates O(n^2)) rather than only the indexed path, since
+    passing the worst case implies the indexed one. A second test asserts the
+    inverted index actually prunes, rather than merely existing.
+  - **The gate is proved falsifiable.** `tests/unit/test_validate_phase6.py`
+    drives G2 and G3 with deliberately broken inputs and asserts they fail. This
+    repository has a recorded incident where release gate RG6 read green for an
+    entire cycle while structurally incapable of failing, certifying a release
+    over 21,964 un-pushed objects (`gates.py:394-421`) — a gate that cannot fail
+    converts an unchecked property into a documented assurance.
+  - The report records its own **known limitations** rather than a bare PASS, and
+    a test asserts they are present: every scenario is still `draft` pending
+    clinical review; no labelled clips exist yet, so G3 is a projection over a
+    synthetic occupancy profile rather than measured field behaviour; and the
+    runtime still loads `configs/risk_rules.yaml` (M8).
 - Phase-5: Production Dataset Engineering, Missing-Annotation Resolution &
   Dataset v1.0 — makes dataset quality the primary solution and demotes
   Phase-4 masking to a safety net. Core invariant: auto-generated labels never
