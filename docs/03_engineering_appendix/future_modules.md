@@ -18,14 +18,17 @@ Related:
 
 ## 16.1 V2 Planned Modules
 
-| Module | Purpose | Priority | Estimated Effort |
-|:-------|:--------|:---------|:----------------|
-| `fall_detector.py` | Pose-based fall detection | High | 2–3 weeks |
-| `activity_classifier.py` | Sitting/standing/cooking/sleeping classification | Medium | 2 weeks |
-| `hindi_tts_plugin.py` | Hindi voice support for Piper | High | 1 week |
-| `caregiver_sync.py` | WiFi event sync to dashboard | Medium | 2 weeks |
-| `multi_person_tracker.py` | Track multiple people with unique IDs | Medium | 2–3 weeks |
-| `medication_scheduler.py` | Cross-reference medicine detections with schedule | Low | 1–2 weeks |
+Phase-6 status added in M9. Three of these six are now either **done differently** or **rejected**, and
+saying so here matters more than the estimates: this table is where someone looks before starting work.
+
+| Module | Purpose | Priority | Estimated Effort | Phase-6 status |
+|:-------|:--------|:---------|:----------------|:---|
+| `fall_detector.py` | Pose-based fall detection | High | 2–3 weeks | **Rejected** for these 23 static-object classes — see [../08_scenario_engineering/negative_register.md](../08_scenario_engineering/negative_register.md). Needs pose, which the taxonomy does not carry |
+| `activity_classifier.py` | Sitting/standing/cooking/sleeping classification | Medium | 2 weeks | Unchanged. The VLM's `activity` string is advisory only and gates no decision |
+| `hindi_tts_plugin.py` | Hindi voice support for Piper | High | 1 week | **No plugin needed.** M9 wired `runtime.tts_language` to the per-scenario `messages` map; drop in a `hi_IN` voice and set the key. The sketch below subclasses `PiperTTS`, which is no longer the shape of the problem |
+| `caregiver_sync.py` | WiFi event sync to dashboard | Medium | 2 weeks | Partly built: `BaseCaregiverSink` + a local sink ship in M9 (ADR-P6-11). What remains is only the transport, and it implements that Protocol rather than `BasePlugin` — the plugin seam is still not wired |
+| `multi_person_tracker.py` | Track multiple people with unique IDs | Medium | 2–3 weeks | Deliberately absent, with conditions — see [../08_scenario_engineering/integration_strategy.md](../08_scenario_engineering/integration_strategy.md) §2. A tracker arrives with the scenarios that need it and the evidence it is reliable enough |
+| `medication_scheduler.py` | Cross-reference medicine detections with schedule | Low | 1–2 weeks | **Rejected.** Adherence is unobservable: seeing a medicine strip is not seeing a dose taken, and `medicine_reminder` was deleted for the double-dose path it created |
 
 ### V2 Module: `hindi_tts_plugin.py` — Quick Reference
 

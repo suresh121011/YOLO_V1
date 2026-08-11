@@ -98,7 +98,18 @@ output:
   verbose: true
 ```
 
-## 3. Risk Rules Configuration (`configs/risk_rules.yaml`)
+## 3. Risk Rules Configuration (`configs/risk_rules.yaml`) — RETIRED
+
+> **This file no longer exists.** `configs/risk_rules.yaml` and its string condition DSL were retired in
+> Phase-6 M8 (ADR-P6-03); the frozen copy lives at `tests/fixtures/legacy_risk_rules.yaml` so the
+> migration comparison stays runnable. Knowledge is authored one scenario per file in
+> `configs/scenarios/` and compiled to `data/scenario_engine/build/scenarios.compiled.json`.
+>
+> Two of the rules below were **deleted rather than migrated**: `medicine_reminder` asks a question the
+> device cannot hear the answer to and has a plausible double-dose path, and `gas_cylinder_check` fires
+> on a detector dropout in a kitchen where the cylinder is always visible. See
+> [../08_scenario_engineering/negative_register.md](../08_scenario_engineering/negative_register.md).
+> The block is kept as the historical record of what the format was.
 
 ```yaml
 rules:
@@ -147,16 +158,28 @@ rules:
 
 ## 4. Feature Flags (`configs/feature_flags.yaml`)
 
+> **Superseded — do not copy this block.** It is the Phase-2 sketch. The shipped file has four roots
+> (`components:`, `classes:`, `rules:`, `runtime:`) and no `feature_flags:` root — which is exactly the
+> key the orchestrator used to read, making every flag inert until Phase-6 M1. `vlm_enabled` and
+> `active_learning` are not real key names. Read `configs/feature_flags.yaml` itself, and
+> [../02_technical_architecture_specification/feature_flags.md](../02_technical_architecture_specification/feature_flags.md)
+> for which keys are wired.
+
 ```yaml
-feature_flags:
-  vlm_enabled: false
-  hindi_tts: false
-  caregiver_sync: false
-  thermal_monitoring: true
-  active_learning: true
-  rule_hot_reload: false
-  debug_overlay: false
+# The real shape, abbreviated:
+components:
+  smolvlm_analysis: false
+  tts_output: true
   performance_logging: true
+classes:
+  passport: false                  # privacy — enforced in the detector
+rules:
+  SC-KIT-001: true                 # scenario ids, not legacy rule names
+runtime:
+  target_fps: 15
+  max_alerts_per_minute: 6
+  memory_window_frames: 2700
+  tts_language: en_IN
 ```
 
 ## 5. Per-Class Confidence Thresholds (`configs/class_thresholds.yaml`)

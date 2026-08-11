@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-11T12:03:58Z",
-  "git_commit": "f5d6fe0",
+  "generated_at": "2026-08-11T15:20:14Z",
+  "git_commit": "47ed0cb",
   "phase": "6",
   "milestone": "M6",
   "verdict": "PASS",
@@ -22,7 +22,7 @@
       "status": "pass",
       "details": {
         "exit_code": 0,
-        "message": "2026-08-11T17:33:41 [INFO] __main__: --check: committed artifact is current."
+        "message": "2026-08-11T20:49:56 [INFO] __main__: --check: committed artifact is current."
       }
     },
     {
@@ -63,7 +63,7 @@
       "status": "pass",
       "details": {
         "exit_code": 0,
-        "summary": "\u001b[32m============================= \u001b[32m\u001b[1m478 passed\u001b[0m\u001b[32m in 5.77s\u001b[0m\u001b[32m =============================\u001b[0m"
+        "summary": "\u001b[32m============================= \u001b[32m\u001b[1m509 passed\u001b[0m\u001b[32m in 7.06s\u001b[0m\u001b[32m =============================\u001b[0m"
       }
     },
     {
@@ -72,7 +72,7 @@
       "status": "pass",
       "details": {
         "exit_code": 0,
-        "summary": "\u001b[32m============================== \u001b[32m\u001b[1m3 passed\u001b[0m\u001b[32m in 0.20s\u001b[0m\u001b[32m ==============================\u001b[0m",
+        "summary": "\u001b[32m============================== \u001b[32m\u001b[1m3 passed\u001b[0m\u001b[32m in 0.16s\u001b[0m\u001b[32m ==============================\u001b[0m",
         "budget_ms": 5.0
       }
     },
@@ -82,7 +82,7 @@
       "status": "pass",
       "details": {
         "exit_code": 0,
-        "message": "Use `dvc push` to send your updates to remote storage."
+        "message": "Data and pipelines are up to date."
       }
     },
     {
@@ -91,13 +91,13 @@
       "status": "pass",
       "details": {
         "exit_code": 0,
-        "summary": "\u001b[32m============================= \u001b[32m\u001b[1m18 passed\u001b[0m\u001b[32m in 0.25s\u001b[0m\u001b[32m ==============================\u001b[0m"
+        "summary": "\u001b[32m============================= \u001b[32m\u001b[1m18 passed\u001b[0m\u001b[32m in 0.29s\u001b[0m\u001b[32m ==============================\u001b[0m"
       }
     }
   ],
   "known_limitations": [
     "Every scenario is status: draft. Activation requires clinical review by a qualified human (reviewed_by/reviewed_on), which is a human track, not an engineering sign-off. Until then G2 reports safety-class-uncovered warnings for every safety-critical class, because coverage counts active scenarios only.",
     "No labelled scenario clips exist yet (M7). G3 replays a synthetic occupancy profile, which is a projection rather than measured field behaviour.",
-    "The runtime still loads configs/risk_rules.yaml; the compiled artifact is not yet injected into the pipeline (M8)."
+    "No trained model exists. Every gate here runs against synthetic detections; scripts/qa/model_landing_check.py is the check to run when weights arrive (M9)."
   ]
 }

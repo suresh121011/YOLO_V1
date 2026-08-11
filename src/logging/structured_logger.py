@@ -197,7 +197,15 @@ class StructuredLogger:
         return explanation
 
     def log_alert(self, alert: Any) -> None:
-        """Log a fired alert with its explanation, geometry redacted."""
+        """Log a fired alert with its explanation, geometry redacted.
+
+        The ADR-P6-09 fields are logged alongside the original ones. That ADR
+        states they are "carried and logged" until the caregiver system exists;
+        they were carried but not logged, so from the event log alone there was
+        no way to tell a caregiver-only alert from a spoken one, or to audit
+        whether a channel was honoured. Read with ``getattr`` because this method
+        is typed ``Any`` and still accepts pre-Phase-6 alert objects.
+        """
         self._alert_count += 1
         self._write(
             self._events_path,
@@ -208,6 +216,10 @@ class StructuredLogger:
                 "severity": alert.severity.name,
                 "message": alert.message,
                 "frame_id": alert.frame_id,
+                "scenario_id": getattr(alert, "scenario_id", None),
+                "next_best_action": getattr(alert, "next_best_action", None),
+                "caregiver_channel": getattr(alert, "caregiver_channel", "none"),
+                "patient_facing": getattr(alert, "patient_facing", True),
                 "explanation": self.redact_explanation(alert.explanation),
             },
         )

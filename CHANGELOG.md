@@ -428,6 +428,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **The engine refuses to start while every scenario is `draft`** — the
     current, correct state. A safety engine that quietly loads zero rules is
     indistinguishable from one working perfectly and seeing nothing.
+- Phase-6 M9 (**Phase 6 complete**): integration strategy for the five seams —
+  YOLO · tracking · VLM · voice · caregiver
+  (`docs/08_scenario_engineering/integration_strategy.md`). The acceptance was
+  "no further code changes are required when the model lands", which is
+  unfalsifiable as prose, so it ships as a command: **`scripts/qa/model_landing_check.py`**
+  (L1 weights load · L2 taxonomy declared · L3 weights carry *exactly* it ·
+  L4 scenario classes usable · L5 a scenario is active · L6 the pipeline
+  assembles). A check ends `pass`/`fail`/`blocked`/`skipped`, where **`blocked`
+  means the engineering is done and a human step is outstanding** — kept distinct
+  so a pending clinical review never reads as a broken pipeline, and a broken
+  pipeline never hides behind one.
+  - **Auditing the seams found five more pre-existing defects (#14–#18).** They
+    are seam defects rather than component defects: each component worked, and
+    nothing had ever made the joins load-bearing.
+  - **#14 — `Alert.patient_facing` was enforced nowhere.** It is documented as
+    "when False, nothing is spoken to the resident", and **7 of the 9 scenarios
+    set it False**. All seven were spoken aloud to the resident, including
+    `SC-BTH-002`, whose entire design is that it never addresses them; a
+    quiet-hours `caregiver_only` scenario would have spoken at 3am, the precise
+    behaviour that setting exists to prevent. Now honoured, and silent alerts are
+    *skipped* rather than left queued, so one cannot gag a speakable alert behind
+    it or consume the speech budget.
+  - **#15 — `caregiver_channel` had no consumer**, and contrary to ADR-P6-09's
+    claim was not logged either. All nine scenarios declare a channel.
+    **Defects 14 and 15 were masking each other**: with everything spoken and
+    nothing routed the device looked correct, and fixing 14 alone would have
+    taken seven of nine scenarios to producing nothing observable anywhere.
+    `src/pipeline/caregiver.py` + `BaseCaregiverSink` (ADR-P6-11) is the sink —
+    **local only**, `logs/caregiver.jsonl`, no network. `push_and_call` records
+    `escalation_pending: true` and logs `NOBODY HAS BEEN CALLED`: escalation
+    terminates at a human, and when it cannot reach one it must say so rather
+    than write a line that reads as delivered. `log_alert` now carries the
+    ADR-P6-09 fields.
+  - **#16 — the VLM's control surface was decorative.** The sampling interval
+    was hard-coded to 5 while `smolvlm_every_n_frames` sat unread, and
+    `smolvlm_timeout_ms` was stored by the analyzer and never consulted. Both
+    wired; an overrunning inference is now *discarded* rather than fused, so a
+    description of the world seconds ago cannot raise confidence on detections it
+    never saw.
+  - **#17 — nothing checked the weights' class list.** `YOLODetector` now takes
+    `expected_classes` and raises `TaxonomyMismatchError` naming the exact
+    difference (ADR-P6-12). Ids are compared as well as names: the R24 decision
+    holds id 20 reserved for `wet_floor` without renumbering, so a model that
+    shuffles ids while keeping every name is precisely the case a name-set check
+    waves through. `SystemConfig` carries `class_names` from `configs/data.yaml`
+    so the detector still reads no YAML itself.
+  - **#18 — eight of the ten `components:` flags were read by no code at all.**
+    The file opens "All runtime behavior is controlled here"; an operator setting
+    `tts_output: false` was still spoken to. This is defect #1 wearing a
+    different hat — M1 fixed how the file is *loaded*, and nobody checked that
+    each flag was *consumed*. `tts_output` is now wired;
+    `tests/unit/test_feature_flags_are_live.py` requires every remaining flag to
+    be wired or explicitly labelled NOT WIRED, in both the YAML and the test, so
+    the labels can rot in neither direction.
+  - `runtime.tts_language` selects from a scenario's `messages` map, falling back
+    to English rather than to silence. **The loaded voice file wins a
+    disagreement with the config** — Devanagari through an `en_IN` voice does not
+    fail, it produces confident gibberish at someone who may be alone.
+  - `tts_speed` wired, and the config changed 1.0 → **0.9**: 0.9 was Piper's own
+    default and therefore the rate the device has always actually spoken at.
+    Wiring a dead key must not quietly change behaviour on the way past.
+  - `alert_cooldown_multiplier` **removed** rather than labelled: wiring it would
+    let an operator scale every cooldown outside the governed path, silently
+    invalidating the alert-volume projection the M6 gate depends on.
+  - **Tracking is deliberately absent — no code, no stub.** `EventMemory` counts
+    classes, not instances, and every authored scenario is written to survive
+    that (`SC-BTH-003` says "time in the bathroom", never "*you* have been in the
+    bathroom"). A `track_id` is a claim about sameness of a person, which is
+    stronger than anything this system currently asserts. A tracker arrives with
+    the scenarios that need it and the evidence it is reliable enough, or not at
+    all: one that is right 80% of the time is worse than none, because the
+    scenarios written on top will assume 100%.
+  - `docs/02_technical_architecture_specification/feature_flags.md` corrected —
+    it listed `vlm_enabled` (a key in no config file — defect 3) and
+    `active_learning` (real name `active_learning_logging`), and claimed type
+    validation and hot reload that do not exist.
+  - ADR-P6-11 (caregiver sink is local-only) and ADR-P6-12 (weights must declare
+    their taxonomy) added.
 - Phase-5: Production Dataset Engineering, Missing-Annotation Resolution &
   Dataset v1.0 — makes dataset quality the primary solution and demotes
   Phase-4 masking to a safety net. Core invariant: auto-generated labels never

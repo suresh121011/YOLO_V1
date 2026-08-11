@@ -428,6 +428,30 @@ class BaseRuleEngine(Protocol):
         ...
 
 
+@runtime_checkable
+class BaseCaregiverSink(Protocol):
+    """Where a ``caregiver_channel`` alert actually goes (M9).
+
+    ``Alert.caregiver_channel`` was added in ADR-P6-09 with no consumer; that
+    ADR records "M9 specifies the sink" and this is it. A ``Protocol`` for the
+    same reason as ``BaseRuleEngine``: it types one constructor parameter, and a
+    real remote sink will live outside this package.
+
+    ``notify`` returns whether the alert was accepted for delivery, so a caller
+    can tell "no caregiver channel was requested" from "a channel was requested
+    and nothing happened". Those must never look alike — the second is a
+    silently dropped escalation.
+    """
+
+    def notify(self, alert: Alert) -> bool:
+        """Route one alert to the caregiver. False if the channel is ``none``."""
+        ...
+
+    def flush(self) -> None:
+        """Emit anything buffered (the ``digest`` channel). Call on shutdown."""
+        ...
+
+
 class BaseTTS:
     """Abstract interface for TTS engines."""
 

@@ -10,9 +10,18 @@ Threading model:
 
 Graceful degradation:
   YOLO fails        → unrecoverable, raises on init
+  YOLO taxonomy ≠ configs/data.yaml → unrecoverable, raises on init (ADR-P6-12)
   SmolVLM2 fails    → transparent fallback to YOLO-only mode
   TTS fails         → silent mode (logs alerts, no speech)
   Storage full      → logger silently caps; pipeline continues
+
+Alert fan-out (M9). One alert reaches up to three places, and which ones is
+authored per scenario rather than decided here:
+  logs/events.jsonl   always, via StructuredLogger
+  caregiver sink      when caregiver_channel != none
+  speech              when patient_facing, subject to the per-minute cap
+Seven of the nine scenarios are caregiver-only, so the second row is not an
+afterthought — it is where most of this system's output goes.
 
 Feature flags loaded from: configs/feature_flags.yaml
 Rules:                     injected as a BaseRuleEngine (ADR-P6-04). The default
@@ -27,12 +36,14 @@ import logging
 import threading
 import time
 from collections import deque
+from pathlib import Path
 from typing import Any
 
 from ..config.config_loader import SystemConfig
 from ..logging.structured_logger import StructuredLogger
-from . import Alert, BaseRuleEngine, PipelineMetrics, Severity
+from . import Alert, BaseCaregiverSink, BaseRuleEngine, PipelineMetrics, Severity
 from .alert_queue import AlertQueue
+from .caregiver import LocalCaregiverSink
 from .confidence_fusion import ConfidenceFusion
 from .detector import YOLODetector
 from .event_memory import EventMemory
@@ -40,6 +51,31 @@ from .scene_analyzer import SmolVLM2Analyzer
 from .tts_engine import PiperTTS
 
 logger = logging.getLogger(__name__)
+
+
+def resolve_speech_language(configured: str, voice_model_path: str) -> str:
+    """Which language the device can actually speak, as a bare code ('en', 'hi').
+
+    ``runtime.tts_language`` states the language the deployment *wants*; the
+    Piper voice file determines what it can *pronounce*. Piper voices are named
+    ``<lang>_<REGION>-<quality>.onnx``, so the two are checkable against each
+    other — and they must be, because feeding Devanagari to an English voice does
+    not fail, it produces confident gibberish at a resident who may be alone.
+
+    On disagreement the voice wins and the mismatch is logged: speaking
+    understandable English is a recoverable disappointment, speaking noise is not.
+    """
+    wanted = (configured or "en").split("_")[0].strip().lower() or "en"
+    voice_tag = Path(voice_model_path).name.split("-")[0].split("_")[0].strip().lower()
+    if not voice_tag:
+        return wanted
+    if voice_tag != wanted:
+        logger.warning(
+            f"runtime.tts_language is {configured!r} but the configured voice is "
+            f"{Path(voice_model_path).name!r} ({voice_tag}). Speaking {voice_tag}: a voice "
+            f"cannot pronounce a language it was not trained for."
+        )
+    return voice_tag
 
 
 class ElderlyAssistantPipeline:
@@ -74,6 +110,7 @@ class ElderlyAssistantPipeline:
         target_fps: float | None = None,
         room: str | None = None,
         rule_engine: BaseRuleEngine | None = None,
+        caregiver_sink: BaseCaregiverSink | None = None,
     ) -> None:
         """
         Args:
@@ -88,6 +125,11 @@ class ElderlyAssistantPipeline:
                 :class:`~src.scenario_engine.runtime.ScenarioRuleEngine`, built
                 by :func:`src.app.factory.build_pipeline`. It is not constructed
                 here — see the comment at the assignment for why.
+            caregiver_sink: Where ``Alert.caregiver_channel`` alerts go (M9).
+                Defaults to :class:`~src.pipeline.caregiver.LocalCaregiverSink`
+                writing ``logs/caregiver.jsonl``. Unlike the rule engine this
+                *does* default, because it is in this package and a missing sink
+                would silently discard the caregiver stage.
 
         Raises:
             ValueError: If ``rule_engine`` is None.
@@ -112,12 +154,16 @@ class ElderlyAssistantPipeline:
         # ── YOLO Detector (required) ─────────────────────────────────────
         # Per-class thresholds come from configs/class_thresholds.yaml, which
         # was previously never loaded at runtime.
+        # expected_classes makes the weights prove they carry the taxonomy every
+        # other layer addresses by name. Without it a model trained on a
+        # different class list runs happily and reasons about the wrong world.
         self._detector = YOLODetector(
             model_path=model_path,
             class_thresholds=dict(self._config.class_thresholds),
             disabled_classes={
                 name for name, enabled in self._config.classes.items() if not enabled
             },
+            expected_classes=dict(self._config.class_names),
         )
         self._detector.warmup()
 
@@ -130,8 +176,16 @@ class ElderlyAssistantPipeline:
         self._fusion = ConfidenceFusion(alpha=0.7, beta=0.3)
 
         # ── SmolVLM2 Analyzer (optional) ─────────────────────────────────
+        # smolvlm_every_n_frames and smolvlm_timeout_ms are documented as the VLM
+        # control surface; the sampling interval was hard-coded to 5 in
+        # process_frame and the timeout was stored by the analyzer and never
+        # applied, so neither key did anything.
+        self._vlm_interval = max(1, int(self._config.get_runtime("smolvlm_every_n_frames", 5)))
+        vlm_timeout_s = float(self._config.get_runtime("smolvlm_timeout_ms", 2000)) / 1000.0
         if self._config.is_component_enabled("smolvlm_analysis"):
-            self._analyzer: SmolVLM2Analyzer | None = SmolVLM2Analyzer(vlm_model)
+            self._analyzer: SmolVLM2Analyzer | None = SmolVLM2Analyzer(
+                vlm_model, timeout_seconds=vlm_timeout_s
+            )
         else:
             self._analyzer = None
             logger.info("SmolVLM2 disabled via feature flag")
@@ -175,14 +229,29 @@ class ElderlyAssistantPipeline:
         self._spoken_at: deque[float] = deque()
 
         # ── Piper TTS (non-blocking) ─────────────────────────────────────
+        # `tts_output: false` now genuinely silences the device. It was one of
+        # eight component flags that nothing consumed — an operator could switch
+        # off speech in the config and the device would keep talking.
         self._tts: PiperTTS | None = None
-        try:
-            self._tts = PiperTTS(
-                model_path=tts_model_path,
-                config_path=tts_config_path,
-            )
-        except Exception as e:
-            logger.warning(f"TTS init failed: {e}. Running in silent mode.")
+        if not self._config.is_component_enabled("tts_output"):
+            logger.info("TTS disabled via feature flag — alerts are logged, not spoken")
+        else:
+            try:
+                self._tts = PiperTTS(
+                    model_path=tts_model_path,
+                    config_path=tts_config_path,
+                    speech_rate=float(self._config.get_runtime("tts_speed", 0.9)),
+                )
+            except Exception as e:
+                logger.warning(f"TTS init failed: {e}. Running in silent mode.")
+
+        self._speech_language = resolve_speech_language(
+            str(self._config.get_runtime("tts_language", "en_IN")), tts_model_path
+        )
+
+        # ── Caregiver channel ────────────────────────────────────────────
+        # The fourth product stage. Local-only by design — see caregiver.py.
+        self._caregiver: BaseCaregiverSink = caregiver_sink or LocalCaregiverSink(log_dir=log_dir)
 
         # ── Logger ───────────────────────────────────────────────────────
         self._logger = StructuredLogger(log_dir=log_dir)
@@ -242,14 +311,13 @@ class ElderlyAssistantPipeline:
         self._memory.update(detections)
         memory_ms = (time.perf_counter() - t2) * 1000
 
-        # ── 3. SmolVLM2 (every 5th frame, if enabled) ─────────────────
+        # ── 3. SmolVLM2 (every Nth frame, if enabled) ─────────────────
         vlm_ms = None
         t3 = time.perf_counter()
-        vlm_interval = 5
         if (
             self._analyzer is not None
             and self._analyzer.is_available()
-            and frame_id % vlm_interval == 0
+            and frame_id % self._vlm_interval == 0
             and detections
         ):
             try:
@@ -282,14 +350,20 @@ class ElderlyAssistantPipeline:
             except Exception as e:
                 self._logger.log_error(e, context=f"plugin_{type(plugin).__name__}")
 
-        # ── 7. Arbitrate and speak ────────────────────────────────────
+        # ── 7. Arbitrate, notify the caregiver, and speak ─────────────
         for alert in alerts:
             self._alert_queue.put(alert)
             self._logger.log_alert(alert)
+            try:
+                self._caregiver.notify(alert)
+            except Exception as e:
+                self._logger.log_error(e, context="caregiver_sink")
 
         spoken = self._next_speakable_alert()
         if spoken is not None and self._tts is not None:
-            self._tts.speak(spoken.message, priority=(spoken.severity == Severity.CRITICAL))
+            text = self.spoken_text(spoken)
+            if text:
+                self._tts.speak(text, priority=(spoken.severity == Severity.CRITICAL))
 
         # ── 8. Assemble metrics & log ─────────────────────────────────
         total_ms = (time.perf_counter() - t0) * 1000
@@ -321,6 +395,26 @@ class ElderlyAssistantPipeline:
     # Alert arbitration
     # ─────────────────────────────────────────
 
+    def spoken_text(self, alert: Alert) -> str:
+        """The string to speak for this alert, in the device's speech language.
+
+        ``Alert.messages`` is the open-ended ``{lang: text}`` map added by
+        ADR-P6-09; ``message`` is the English string every pre-Phase-6 alert
+        carries. Falling back to ``message`` matters more than honouring the
+        locale: a resident who hears the wrong language still hears a warning,
+        while a resident who hears nothing does not.
+        """
+        messages = alert.messages or {}
+        text = messages.get(self._speech_language, "").strip()
+        if text:
+            return text
+        if messages and self._speech_language != "en":
+            logger.warning(
+                f"{alert.rule_id} has no {self._speech_language!r} message "
+                f"(has {sorted(messages)}) -- speaking the English text."
+            )
+        return messages.get("en", "").strip() or alert.message
+
     def _next_speakable_alert(self) -> Alert | None:
         """Pop the highest-priority pending alert, subject to the rate limit.
 
@@ -333,8 +427,17 @@ class ElderlyAssistantPipeline:
         alert-fatigue evidence concerns routine chatter, not emergencies. The
         alert is still queued, logged, and counted either way — only speech is
         rate-limited.
+
+        Alerts with ``patient_facing=False`` are skipped rather than returned.
+        ``Alert`` documents that field as "when False, nothing is spoken to the
+        resident" and until M9 nothing enforced it, so a caregiver-only finding
+        (``SC-BTH-002``, no grab bar) was announced to the resident, and a
+        quiet-hours ``caregiver_only`` scenario spoke at 3am — the exact
+        behaviour that setting exists to prevent. They are skipped, not merely
+        left in the queue, so a silent alert cannot block a speakable one behind
+        it; the caregiver sink has already received them.
         """
-        alert = self._alert_queue.get(timeout=0)
+        alert = self._pop_patient_facing()
         if alert is None:
             return None
 
@@ -355,6 +458,16 @@ class ElderlyAssistantPipeline:
         self._spoken_at.append(now)
         return alert
 
+    def _pop_patient_facing(self) -> Alert | None:
+        """Drain silent alerts and return the first speakable one, if any."""
+        while True:
+            alert = self._alert_queue.get(timeout=0)
+            if alert is None:
+                return None
+            if alert.patient_facing:
+                return alert
+            logger.debug(f"{alert.rule_id} is caregiver-only — not spoken")
+
     # ─────────────────────────────────────────
     # Lifecycle
     # ─────────────────────────────────────────
@@ -363,6 +476,12 @@ class ElderlyAssistantPipeline:
         """Clean shutdown: flush logs, stop background threads, clear memory."""
         logger.info("Pipeline shutting down...")
         self._shutdown_event.set()
+        try:
+            # Before anything else: a buffered digest that is never flushed is a
+            # caregiver notification the caregiver never receives.
+            self._caregiver.flush()
+        except Exception as e:
+            logger.error(f"Caregiver digest flush failed: {e}")
         if self._tts is not None:
             self._tts.shutdown()
         self._memory.clear()

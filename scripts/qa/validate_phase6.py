@@ -266,8 +266,8 @@ def run(skip_slow: bool = False) -> int:
             "for every safety-critical class, because coverage counts active scenarios only.",
             "No labelled scenario clips exist yet (M7). G3 replays a synthetic occupancy "
             "profile, which is a projection rather than measured field behaviour.",
-            "The runtime still loads configs/risk_rules.yaml; the compiled artifact is not "
-            "yet injected into the pipeline (M8).",
+            "No trained model exists. Every gate here runs against synthetic detections; "
+            "scripts/qa/model_landing_check.py is the check to run when weights arrive (M9).",
         ],
     }
     save_json_report(report, REPORT_PATH)

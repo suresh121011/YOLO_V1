@@ -15,7 +15,7 @@ from typing import Any
 
 import pytest
 
-from src.pipeline.detector import YOLODetector
+from src.pipeline.detector import TaxonomyMismatchError, YOLODetector
 
 # ─── Fake model ───────────────────────────────────────────────────────────────
 
@@ -193,3 +193,70 @@ class TestDetectionMapping:
         assert detection.bbox.h == pytest.approx(0.2)
         assert detection.frame_id == 42
         assert detection.class_id == 0
+
+
+# ─── M9: the weights must carry the taxonomy the system reasons over ──────────
+
+
+class TestTaxonomyVerification:
+    @pytest.mark.unit
+    def test_matching_taxonomy_loads(
+        self, monkeypatch: pytest.MonkeyPatch, model_file: str
+    ) -> None:
+        detector, _ = _detector(monkeypatch, model_file, [], expected_classes=dict(_NAMES))
+        assert detector.class_names == _NAMES
+
+    @pytest.mark.unit
+    def test_a_renamed_class_is_refused(
+        self, monkeypatch: pytest.MonkeyPatch, model_file: str
+    ) -> None:
+        expected = {**_NAMES, 5: "cutting_knife"}
+        with pytest.raises(TaxonomyMismatchError, match="cutting_knife"):
+            _detector(monkeypatch, model_file, [], expected_classes=expected)
+
+    @pytest.mark.unit
+    def test_renumbering_is_refused_even_with_the_same_names(
+        self, monkeypatch: pytest.MonkeyPatch, model_file: str
+    ) -> None:
+        """The R24 decision holds id 20 reserved without renumbering. A model
+        that shuffles ids while keeping every name would otherwise sail through
+        and mislabel every detection it makes."""
+        shuffled = {0: "person", 5: "passport", 8: "knife", 20: "wet_floor"}
+        with pytest.raises(TaxonomyMismatchError, match="id collisions"):
+            _detector(monkeypatch, model_file, [], expected_classes=shuffled)
+
+    @pytest.mark.unit
+    def test_a_missing_class_is_refused(
+        self, monkeypatch: pytest.MonkeyPatch, model_file: str
+    ) -> None:
+        expected = {**_NAMES, 22: "support_handle"}
+        with pytest.raises(TaxonomyMismatchError, match="missing from the model"):
+            _detector(monkeypatch, model_file, [], expected_classes=expected)
+
+    @pytest.mark.unit
+    def test_no_expectation_loads_but_says_so(
+        self, monkeypatch: pytest.MonkeyPatch, model_file: str, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Permissive by default for experiments — but never silently."""
+        with caplog.at_level("WARNING"):
+            _detector(monkeypatch, model_file, [])
+        assert "UNVERIFIED" in caplog.text
+
+    @pytest.mark.unit
+    def test_list_style_names_are_normalised(self) -> None:
+        """Ultralytics hands back a dict; exported formats sometimes a list."""
+
+        class _ListNames:
+            names = ["person", "face"]
+
+        assert YOLODetector.model_class_names(_ListNames()) == {0: "person", 1: "face"}
+
+    @pytest.mark.unit
+    def test_the_shipped_taxonomy_is_what_gets_checked(self) -> None:
+        """The guard is worthless if SystemConfig hands the detector nothing."""
+        from src.config.config_loader import SystemConfig
+
+        config = SystemConfig.load()
+        assert len(config.class_names) == 23
+        assert config.class_names[0] == "person"
+        assert config.class_names[20] == "wet_floor"

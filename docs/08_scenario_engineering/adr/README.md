@@ -22,7 +22,10 @@ verified against the code before being adopted — see `../architecture_review.m
 | [ADR-P6-08](ADR-P6-08-rejected-scenario-negative-register.md) | Rejected scenarios stay in-repo as versioned rows with a `rejection_reason` |
 | [ADR-P6-09](ADR-P6-09-alert-contract-extension.md) | Extend the LOCKED `Alert` additively rather than returning a parallel outcome type |
 | [ADR-P6-10](ADR-P6-10-clips-as-a-frozen-stage.md) | Scenario clips are a frozen DVC stage with split outs, a read-back-verified MP4 strip, and their own consent scope |
+| [ADR-P6-11](ADR-P6-11-caregiver-sink-is-local-only.md) | The caregiver sink is local-only; `push_and_call` records `escalation_pending` rather than looking delivered |
+| [ADR-P6-12](ADR-P6-12-weights-must-declare-their-taxonomy.md) | Weights are verified against `configs/data.yaml` at load — names *and* ids — and refused on mismatch |
 
-ADR-P6-10 was added at milestone M7, when the clip workflow was designed. It is a Phase-6 decision
-like the rest; it was not part of the 2026-08-07 ratification because the clip protocol had not been
-specified at that point.
+ADR-P6-10 was added at milestone M7, when the clip workflow was designed; ADR-P6-11 and ADR-P6-12 at
+M9, when the integration seams were audited. All three are Phase-6 decisions like the rest; they were
+not part of the 2026-08-07 ratification because the questions they settle had not been reached at that
+point.

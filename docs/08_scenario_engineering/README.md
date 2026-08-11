@@ -56,7 +56,8 @@ code; they are enumerated with file:line evidence in
 | [scenario_taxonomy.md](scenario_taxonomy.md) | Category scheme, id grammar, the three shapes a scenario takes, and the deliberately empty categories |
 | [clip_capture_protocol.md](clip_capture_protocol.md) | How scenario clips are consented, shot, sanitised, and ingested — and what differs from the photograph workflow |
 | [clip_collection_plan.md](clip_collection_plan.md) | The first 100-clip batch: M7 acceptance results, the dwell-vs-clip-length arithmetic, the collection matrix, and the five-member allocation |
-| [adr/](adr/) | The ten load-bearing decisions, with rejected alternatives |
+| [integration_strategy.md](integration_strategy.md) | The five seams — YOLO · tracking · VLM · voice · caregiver — what is ready, the five defects the audit found, and the landing check that makes "no code changes" falsifiable |
+| [adr/](adr/) | The twelve load-bearing decisions, with rejected alternatives |
 
 ## Status
 
@@ -74,7 +75,9 @@ Phase 6 is in progress. Milestone status is tracked in `../../CHANGELOG.md` unde
 | M7 | Capture protocol, clip ingest, MP4 metadata stripper | **done** |
 | M7-RW | Real-world ingest acceptance + collection design | **PASS** (10/10); collection not yet started |
 | M8 | Runtime integration; `configs/risk_rules.yaml` retired | **done** (inert until clinical review — see below) |
-| M9 | Integration strategy: YOLO · tracking · VLM · voice · caregiver | pending |
+| M9 | Integration strategy: YOLO · tracking · VLM · voice · caregiver | **done** (5 more defects fixed; landing check ships) |
+
+**Phase 6 is complete.** What remains is not engineering — see the two items below.
 
 ### How the runtime is wired (M8)
 
@@ -94,7 +97,20 @@ lives at `tests/fixtures/legacy_risk_rules.yaml` so the migration comparison sta
 it is correct — a safety engine that quietly loads zero rules is indistinguishable from one
 working perfectly and seeing nothing.
 
-### Two things engineering cannot clear on its own
+### The day the model lands (M9)
+
+```bash
+python scripts/qa/model_landing_check.py       # L1..L6, writes data/qa_reports/model_landing_report.json
+```
+
+Six checks, run before anything else: the weights load, they carry **exactly** the taxonomy in
+`configs/data.yaml` (names *and* ids), every class the scenarios need is usable, a scenario is active,
+and the pipeline assembles. A check reporting `blocked` means the engineering is done and a human step
+is outstanding — deliberately distinct from `fail`. See
+[integration_strategy.md](integration_strategy.md); the seam-by-seam readiness and the five defects the
+audit turned up are recorded there.
+
+### Three things engineering cannot clear on its own
 
 - **Clinical review.** Every scenario is `status: draft`. Promotion to `active` requires
   `reviewed_by`/`reviewed_on` from a qualified human, not engineering sign-off. The seven
@@ -104,6 +120,9 @@ working perfectly and seeing nothing.
   human work: consent, filming, and review. **Zero scenario clips have been collected** —
   `scripts/scenarios/33_clip_dataset_report.py` reports FAIL against the 100-clip target and will keep
   doing so until real clips are accepted. See [clip_collection_plan.md](clip_collection_plan.md).
+- **A trained model.** There are no weights in this repository, so every gate in this phase runs against
+  synthetic detections. `model_landing_check.py` reports L1 FAIL for that reason today, and that is the
+  expected result rather than a defect.
 
 ## Non-negotiables
 

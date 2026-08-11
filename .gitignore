@@ -78,6 +78,14 @@ data/qa_reports/*
 # Phase-5 M6 correctness-validation gate evidence is committed (mandatory
 # before M7+; mirrors phase4_mitigation/)
 !data/qa_reports/phase5_validation_report.json
+# Phase-6 gate evidence is committed for the same reason: a gate whose result
+# cannot be read at a tag is not a gate. These were force-added before the
+# exceptions existed; the rules are written down now so they need not be again.
+!data/qa_reports/phase6_validation_report.json
+!data/qa_reports/scenario_validation_report.json
+!data/qa_reports/m7_acceptance_report.json
+!data/qa_reports/clip_dataset_report.json
+!data/qa_reports/model_landing_report.json
 # Phase-4 validation/benchmark evidence is committed (referenced by docs/06)
 !data/qa_reports/phase4_mitigation/
 # Phase-5 full-build preflight evidence is committed (referenced by docs/07)

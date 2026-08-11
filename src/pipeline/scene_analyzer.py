@@ -61,7 +61,10 @@ class SmolVLM2Analyzer:
         Args:
             model_name:      HuggingFace model identifier or local path.
             max_new_tokens:  Maximum tokens in VLM response.
-            timeout_seconds: Discard stale context older than this threshold.
+            timeout_seconds: Budget for one inference. A result that took longer
+                is discarded rather than returned — see :meth:`analyze`. Set from
+                ``runtime.smolvlm_timeout_ms`` by the orchestrator; before
+                Phase-6 M9 the value was stored here and never consulted.
         """
         self.model_name = model_name
         self.max_new_tokens = max_new_tokens
@@ -112,7 +115,17 @@ class SmolVLM2Analyzer:
             frame_id:   Current frame index for traceability.
 
         Returns:
-            SceneContext on success; None on failure (graceful degradation).
+            SceneContext on success; None on failure, and None when inference
+            overran ``timeout_seconds``.
+
+        The overrun check is a *post-hoc discard*, not a cancellation: nothing
+        here can interrupt ``model.generate`` mid-call, and pretending otherwise
+        would be the more misleading design. What it does guarantee is that a
+        scene description of the world several seconds ago never gets fused into
+        the present, where it would raise confidence on detections it did not
+        actually see. Degrading to YOLO-only is the documented safe direction —
+        fusion can only ever *increase* confidence, so dropping it cannot
+        suppress an alert.
         """
         if not self._available:
             return None
@@ -154,6 +167,14 @@ class SmolVLM2Analyzer:
 
             response = self._processor.decode(output_ids[0], skip_special_tokens=True)
             inference_time_ms = time.time() * 1000 - start_ms
+
+            if inference_time_ms > self.timeout_seconds * 1000:
+                logger.warning(
+                    f"SmolVLM2 took {inference_time_ms:.0f}ms, over the "
+                    f"{self.timeout_seconds * 1000:.0f}ms budget — discarding stale context "
+                    f"for frame {frame_id}"
+                )
+                return None
 
             return self._parse_response(response, frame_id, inference_time_ms)
 
