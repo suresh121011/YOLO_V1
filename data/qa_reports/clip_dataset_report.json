@@ -1,9 +1,9 @@
 {
   "verdict": "FAIL",
   "totals": {
-    "manifests_on_disk": 0,
+    "manifests_on_disk": 19,
     "accepted": 0,
-    "pending": 0,
+    "pending": 19,
     "rejected": 0,
     "target_accepted": 100,
     "target_met": false
@@ -17,13 +17,13 @@
   },
   "provenance": {
     "own_capture": 0,
-    "external": 0,
+    "external": 19,
     "indian_home": 0,
-    "licence_complete": 0,
+    "licence_complete": 19,
     "licence_missing": 0
   },
   "privacy": {
-    "metadata_stripped": 0,
+    "metadata_stripped": 19,
     "metadata_not_stripped": 0,
     "consent_complete": 0,
     "consent_missing": 0
@@ -74,7 +74,7 @@
       "accepted": 0,
       "accepted_positive": 0,
       "accepted_negative": 0,
-      "pending": 0,
+      "pending": 19,
       "rejected": 0,
       "sufficient": false,
       "shortfall": 4
@@ -133,10 +133,10 @@
   ],
   "rejections": [],
   "problems": [
-    "0 accepted clip(s) against a target of 100. 0 manifest(s) exist but are not accepted -- a file on disk is not a dataset member.",
+    "0 accepted clip(s) against a target of 100. 19 manifest(s) exist but are not accepted -- a file on disk is not a dataset member.",
     "9 scenario(s) have fewer than 4 accepted clips: ['SC-BTH-001', 'SC-BTH-002', 'SC-BTH-003', 'SC-COR-001', 'SC-KIT-001', 'SC-KIT-002', 'SC-MED-001', 'SC-MOB-001', 'SC-SYS-001']"
   ],
-  "generated_at": "2026-08-11T11:37:32Z",
-  "git_commit": "c801c27",
+  "generated_at": "2026-08-15T07:51:28Z",
+  "git_commit": "754b74f",
   "clips_root": "data\\scenario_engine\\clips"
 }

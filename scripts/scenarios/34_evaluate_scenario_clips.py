@@ -24,7 +24,8 @@ This tests the identical predicate path without requiring clinical review status
 
 Usage:
     python scripts/scenarios/34_evaluate_scenario_clips.py
-    python scripts/scenarios/34_evaluate_scenario_clips.py --model models/benchmarks/models/baseline_r0/weights/best.pt
+    python scripts/scenarios/34_evaluate_scenario_clips.py \\
+        --model models/benchmarks/models/baseline_r0/weights/best.pt
     python scripts/scenarios/34_evaluate_scenario_clips.py --scenario SC-KIT-001
 """
 
@@ -41,11 +42,9 @@ from pathlib import Path
 from typing import Any
 
 import cv2
-import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from src.pipeline import Detection
 from src.pipeline.detector import YOLODetector
 from src.pipeline.event_memory import EventMemory
 from src.scenario_engine.clips import (
@@ -638,7 +637,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Summary to console.
     print(f"\n{'='*70}")
-    print(f"SC-KIT-001 EVALUATION RESULTS — Dataset v0.1")
+    print("SC-KIT-001 EVALUATION RESULTS — Dataset v0.1")
     print(f"{'='*70}")
     print(f"  Clips evaluated:     {total}")
     print(f"  PASS:                {passes}")
@@ -652,8 +651,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  FP Rate:             {false_positives / max(expected_negatives, 1):.2%}")
     print(f"{'─'*70}")
     print(f"  True Positives:      {true_positives} (0 expected — no genuine positives in v0.1)")
-    print(f"  Recall:              NOT REPORTED (no true positives)")
-    print(f"  F1:                  NOT REPORTED (no true positives)")
+    print("  Recall:              NOT REPORTED (no true positives)")
+    print("  F1:                  NOT REPORTED (no true positives)")
     print(f"{'─'*70}")
     print(f"  Classes detected:    {sorted(all_detected)}")
     print(f"  Evaluation time:     {eval_duration:.1f}s")
@@ -661,7 +660,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"{'='*70}")
 
     if false_positives > 0:
-        print(f"\n  FALSE POSITIVE CLIPS:")
+        print("\n  FALSE POSITIVE CLIPS:")
         for r in results:
             if r.result == "FALSE_POSITIVE":
                 print(f"    {r.clip_id}: alert at {r.first_alert_at_s:.1f}s, "

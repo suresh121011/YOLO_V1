@@ -16,7 +16,8 @@ This script:
 Usage:
     python scripts/scenarios/35_batch_ingest_external.py
     python scripts/scenarios/35_batch_ingest_external.py --dry-run
-    python scripts/scenarios/35_batch_ingest_external.py --raw-dir "SC-KIT-001 -- Kitchen Cooking Risk"
+    python scripts/scenarios/35_batch_ingest_external.py \\
+        --raw-dir "SC-KIT-001 -- Kitchen Cooking Risk"
 """
 
 from __future__ import annotations
@@ -33,7 +34,6 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.scenario_engine.clips import (
-    ClipRequirements,
     load_clip_requirements,
     probe_media,
 )
@@ -52,8 +52,12 @@ logger = logging.getLogger(__name__)
 # Session 002 = clips from the NEGATIVE collection folder
 # Session 003 = clips from the EDGE collection folder
 CATEGORY_SESSIONS: dict[str, tuple[str, str, str]] = {
-    "POSITIVE": ("s001", "pre_dwell", "Collection folder: POSITIVE. Kitchen cooking composition present "
-                 "but clip too short for SC-KIT-001 temporal condition (needs 1080s)."),
+    "POSITIVE": (
+        "s001", "pre_dwell",
+        "Collection folder: POSITIVE. Kitchen cooking composition "
+        "present but clip too short for SC-KIT-001 temporal "
+        "condition (needs 1080s).",
+    ),
     "NEGATIVE": ("s002", "absence", "Collection folder: NEGATIVE. Required objects absent or "
                  "wrong context for SC-KIT-001."),
     "EDGE": ("s003", "pre_dwell", "Collection folder: EDGE. Ambiguous/partial composition; "
@@ -320,13 +324,13 @@ def main(argv: list[str] | None = None) -> int:
     failed = sum(1 for r in results if r["result"] == "failed")
 
     print(f"\n{'='*70}")
-    print(f"BATCH INGEST SUMMARY")
+    print("BATCH INGEST SUMMARY")
     print(f"  Total scanned: {len(clips)}")
     print(f"  Rejected (pre-gate): {len(rejected)}")
     print(f"  Ingested: {ingested}")
     print(f"  Failed: {failed}")
     if failed:
-        print(f"\n  Failed clips:")
+        print("\n  Failed clips:")
         for r in results:
             if r["result"] == "failed":
                 error = r.get("error", "unknown")
