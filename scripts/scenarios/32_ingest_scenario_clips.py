@@ -131,10 +131,36 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--negative-kind",
         default="",
-        help="confuser|absence|assistive|out_of_taxonomy (required for --expect no-alert).",
+        help="confuser|absence|assistive|out_of_taxonomy|pre_dwell (required for --expect no-alert).",
     )
     parser.add_argument("--annotator", default="", help="Who reviewed the clip.")
     parser.add_argument("--notes", default="")
+
+    # ── External clip provenance (ADR-P6-10 / SourceProvenance) ──────────────
+    parser.add_argument(
+        "--external",
+        action="store_true",
+        help="Mark this clip as external (third-party). Uses licence instead of consent.",
+    )
+    parser.add_argument("--source-url", default="", help="URL where the original was found.")
+    parser.add_argument("--source-platform", default="", help="e.g. Pexels, iStock, Pixabay.")
+    parser.add_argument("--creator", default="", help="Original creator/uploader.")
+    parser.add_argument("--license", dest="clip_license", default="", help="e.g. Pexels-License.")
+    parser.add_argument("--license-url", default="", help="URL to the licence terms.")
+    parser.add_argument("--download-date", default="", help="ISO date the clip was downloaded.")
+    parser.add_argument("--original-video-id", default="", help="Original platform video ID.")
+    parser.add_argument(
+        "--indian-home",
+        action="store_true",
+        default=True,
+        help="Whether the clip depicts an Indian home environment.",
+    )
+    parser.add_argument(
+        "--no-indian-home",
+        action="store_false",
+        dest="indian_home",
+        help="Mark clip as NOT depicting an Indian home (e.g. stock footage).",
+    )
     return parser.parse_args(argv)
 
 
@@ -232,17 +258,20 @@ def _build_expected(args: argparse.Namespace) -> dict[str, Any]:
 
 def ingest(args: argparse.Namespace, requirements: ClipRequirements, artifact_path: Path) -> int:
     """Validate, sanitise and record a single clip."""
-    missing = [
-        name
-        for name, value in (
-            ("--clip-id", args.clip_id),
-            ("--source", args.source),
-            ("--scenario-id", args.scenario_id),
-            ("--expect", args.expect),
-            ("--consent-ref", args.consent_ref),
-        )
-        if not value
+    is_external = getattr(args, "external", False)
+
+    # Core required arguments.
+    required_pairs: list[tuple[str, Any]] = [
+        ("--clip-id", args.clip_id),
+        ("--source", args.source),
+        ("--scenario-id", args.scenario_id),
+        ("--expect", args.expect),
     ]
+    # Consent is required only for own-capture clips.
+    if not is_external:
+        required_pairs.append(("--consent-ref", args.consent_ref))
+
+    missing = [name for name, value in required_pairs if not value]
     if missing:
         logger.error(f"Missing required argument(s): {', '.join(missing)}")
         return 1
@@ -275,11 +304,12 @@ def ingest(args: argparse.Namespace, requirements: ClipRequirements, artifact_pa
 
     house_id, room, session_id = parse_clip_id(args.clip_id)
 
-    consent_problems = verify_clip_consent(args.consent_ref, house_id, requirements)
-    if consent_problems:
-        for problem in consent_problems:
-            logger.error(problem)
-        return 1
+    if not is_external:
+        consent_problems = verify_clip_consent(args.consent_ref, house_id, requirements)
+        if consent_problems:
+            for problem in consent_problems:
+                logger.error(problem)
+            return 1
 
     source = Path(args.source)
     if not source.exists():
@@ -324,7 +354,7 @@ def ingest(args: argparse.Namespace, requirements: ClipRequirements, artifact_pa
         "polarity": "positive" if args.expect == "fires" else "negative",
         "negative_kind": args.negative_kind,
         "scenario_id": args.scenario_id,
-        "consent_reference": args.consent_ref,
+        "consent_reference": args.consent_ref if not is_external else "",
         "sha256": compute_file_hash(destination),
         "duration_s": round(duration_s, 3),
         "fps": round(fps, 3),
@@ -335,7 +365,20 @@ def ingest(args: argparse.Namespace, requirements: ClipRequirements, artifact_pa
         "notes": args.notes,
         "metadata_stripped": bool(attestation["metadata_stripped"]),
         "ffmpeg_version": str(attestation["ffmpeg_version"]),
+        "indian_home": getattr(args, "indian_home", True),
     }
+
+    if is_external:
+        raw["provenance"] = {
+            "source_type": "external",
+            "source_url": getattr(args, "source_url", "") or "",
+            "source_platform": getattr(args, "source_platform", "") or "",
+            "creator": getattr(args, "creator", "") or "",
+            "license": getattr(args, "clip_license", "") or "",
+            "license_url": getattr(args, "license_url", "") or "",
+            "download_date": getattr(args, "download_date", "") or "",
+            "original_video_id": getattr(args, "original_video_id", "") or "",
+        }
 
     try:
         manifest = ClipManifest.from_mapping(raw, where=args.clip_id)
