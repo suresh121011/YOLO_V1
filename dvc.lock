@@ -1347,3 +1347,16 @@ stages:
       hash: md5
       md5: 892099e678aaf36244336d3cde9400ee
       size: 3420
+  ingest_scenario_clips:
+    cmd: python scripts/scenarios/32_ingest_scenario_clips.py --verify-all
+    outs:
+    - path: data/scenario_engine/clips/manifests
+      hash: md5
+      md5: dd4de43d34e427c0a9102706c3b279b5.dir
+      size: 327527
+      nfiles: 222
+    - path: data/scenario_engine/clips/video
+      hash: md5
+      md5: a8362eb9b739f562bf854fa967f08d8e.dir
+      size: 388959043
+      nfiles: 222

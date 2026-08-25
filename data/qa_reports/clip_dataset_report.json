@@ -1,29 +1,29 @@
 {
   "verdict": "FAIL",
   "totals": {
-    "manifests_on_disk": 19,
-    "accepted": 0,
-    "pending": 19,
+    "manifests_on_disk": 222,
+    "accepted": 222,
+    "pending": 0,
     "rejected": 0,
     "target_accepted": 100,
-    "target_met": false
+    "target_met": true
   },
   "polarity": {
     "accepted_positive": 0,
-    "accepted_negative": 0,
-    "negative_fraction": 0.0,
+    "accepted_negative": 222,
+    "negative_fraction": 1.0,
     "min_negative_fraction": 0.3,
-    "negative_fraction_met": false
+    "negative_fraction_met": true
   },
   "provenance": {
     "own_capture": 0,
-    "external": 19,
+    "external": 222,
     "indian_home": 0,
-    "licence_complete": 19,
+    "licence_complete": 222,
     "licence_missing": 0
   },
   "privacy": {
-    "metadata_stripped": 19,
+    "metadata_stripped": 222,
     "metadata_not_stripped": 0,
     "consent_complete": 0,
     "consent_missing": 0
@@ -31,23 +31,23 @@
   "coverage": [
     {
       "scenario_id": "SC-BTH-001",
-      "accepted": 0,
+      "accepted": 60,
       "accepted_positive": 0,
-      "accepted_negative": 0,
+      "accepted_negative": 60,
       "pending": 0,
       "rejected": 0,
-      "sufficient": false,
-      "shortfall": 4
+      "sufficient": true,
+      "shortfall": 0
     },
     {
       "scenario_id": "SC-BTH-002",
-      "accepted": 0,
+      "accepted": 50,
       "accepted_positive": 0,
-      "accepted_negative": 0,
+      "accepted_negative": 50,
       "pending": 0,
       "rejected": 0,
-      "sufficient": false,
-      "shortfall": 4
+      "sufficient": true,
+      "shortfall": 0
     },
     {
       "scenario_id": "SC-BTH-003",
@@ -61,53 +61,53 @@
     },
     {
       "scenario_id": "SC-COR-001",
-      "accepted": 0,
+      "accepted": 20,
       "accepted_positive": 0,
-      "accepted_negative": 0,
+      "accepted_negative": 20,
       "pending": 0,
       "rejected": 0,
-      "sufficient": false,
-      "shortfall": 4
+      "sufficient": true,
+      "shortfall": 0
     },
     {
       "scenario_id": "SC-KIT-001",
-      "accepted": 0,
+      "accepted": 19,
       "accepted_positive": 0,
-      "accepted_negative": 0,
-      "pending": 19,
+      "accepted_negative": 19,
+      "pending": 0,
       "rejected": 0,
-      "sufficient": false,
-      "shortfall": 4
+      "sufficient": true,
+      "shortfall": 0
     },
     {
       "scenario_id": "SC-KIT-002",
-      "accepted": 0,
+      "accepted": 29,
       "accepted_positive": 0,
-      "accepted_negative": 0,
+      "accepted_negative": 29,
       "pending": 0,
       "rejected": 0,
-      "sufficient": false,
-      "shortfall": 4
+      "sufficient": true,
+      "shortfall": 0
     },
     {
       "scenario_id": "SC-MED-001",
-      "accepted": 0,
+      "accepted": 20,
       "accepted_positive": 0,
-      "accepted_negative": 0,
+      "accepted_negative": 20,
       "pending": 0,
       "rejected": 0,
-      "sufficient": false,
-      "shortfall": 4
+      "sufficient": true,
+      "shortfall": 0
     },
     {
       "scenario_id": "SC-MOB-001",
-      "accepted": 0,
+      "accepted": 24,
       "accepted_positive": 0,
-      "accepted_negative": 0,
+      "accepted_negative": 24,
       "pending": 0,
       "rejected": 0,
-      "sufficient": false,
-      "shortfall": 4
+      "sufficient": true,
+      "shortfall": 0
     },
     {
       "scenario_id": "SC-SYS-001",
@@ -121,22 +121,14 @@
     }
   ],
   "uncovered_scenarios": [
-    "SC-BTH-001",
-    "SC-BTH-002",
     "SC-BTH-003",
-    "SC-COR-001",
-    "SC-KIT-001",
-    "SC-KIT-002",
-    "SC-MED-001",
-    "SC-MOB-001",
     "SC-SYS-001"
   ],
   "rejections": [],
   "problems": [
-    "0 accepted clip(s) against a target of 100. 19 manifest(s) exist but are not accepted -- a file on disk is not a dataset member.",
-    "9 scenario(s) have fewer than 4 accepted clips: ['SC-BTH-001', 'SC-BTH-002', 'SC-BTH-003', 'SC-COR-001', 'SC-KIT-001', 'SC-KIT-002', 'SC-MED-001', 'SC-MOB-001', 'SC-SYS-001']"
+    "2 scenario(s) have fewer than 4 accepted clips: ['SC-BTH-003', 'SC-SYS-001']"
   ],
-  "generated_at": "2026-08-15T07:51:28Z",
-  "git_commit": "754b74f",
+  "generated_at": "2026-08-25T18:39:06Z",
+  "git_commit": "7b95362",
   "clips_root": "data\\scenario_engine\\clips"
 }

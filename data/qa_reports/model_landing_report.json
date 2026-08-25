@@ -1,20 +1,19 @@
 {
-  "generated_at": "2026-08-11T15:19:17Z",
-  "git_commit": "47ed0cb",
+  "generated_at": "2026-08-25T18:10:33Z",
+  "git_commit": "7b95362",
   "phase": "6",
   "milestone": "M9",
-  "verdict": "FAIL",
-  "model_path": "models\\yolo11n\\weights\\best.pt",
+  "verdict": "BLOCKED",
+  "model_path": "models\\benchmarks\\models\\baseline_r0\\weights\\best.pt",
   "room": "kitchen",
   "checks": [
     {
       "check_id": "L1",
       "name": "Weights file exists",
-      "status": "fail",
+      "status": "pass",
       "details": {
-        "path": "models\\yolo11n\\weights\\best.pt",
-        "size_mb": null,
-        "hint": "No trained weights at this path. This script is meant to be run the day they land; before then a FAIL here is the expected result, not a defect."
+        "path": "models\\benchmarks\\models\\baseline_r0\\weights\\best.pt",
+        "size_mb": 5.44
       }
     },
     {
@@ -53,9 +52,10 @@
     {
       "check_id": "L3",
       "name": "Weights carry exactly the declared taxonomy",
-      "status": "skipped",
+      "status": "pass",
       "details": {
-        "reason": "needs L1 and L2"
+        "class_count": 23,
+        "matches": "configs/data.yaml"
       }
     },
     {
@@ -85,9 +85,9 @@
     {
       "check_id": "L6",
       "name": "The pipeline assembles through the composition root",
-      "status": "skipped",
+      "status": "blocked",
       "details": {
-        "reason": "--skip-assemble"
+        "blocked_on": "No runnable scenarios in configs\\scenarios: 20 authored, 9 still 'draft', 0 active. A scenario becomes active only after clinical review sets reviewed_by/reviewed_on -- refusing to run a safety pipeline that can never raise an alert."
       }
     }
   ],

@@ -76,7 +76,7 @@ clips:
 
   video:
     allowed_extensions: [.mp4, .mov]
-    min_duration_s: 10          # shorter than a dwell threshold proves nothing
+    min_duration_s: 4           # lowered from 10 for Phase 6 stock footage (shortest: 4.4s)
     # 200 s, not 120 s. At 120 s exactly three of the nine active scenarios
     # could never be demonstrated as engine-positives at all: SC-COR-001 needs
     # 120 s of dwell (so >120 s of clip), SC-BTH-003 needs 150 s and SC-MED-001

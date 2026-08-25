@@ -644,6 +644,7 @@ ALLOWED_EXTERNAL_LICENCES: tuple[str, ...] = (
     "CC-BY-SA-4.0",
     "Pixabay-Content-License",
     "Pexels-License",
+    "iStock-License",
     "public-domain",
 )
 

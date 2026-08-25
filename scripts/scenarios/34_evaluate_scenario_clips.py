@@ -119,7 +119,7 @@ class ClipEvalResult:
     total_frames: int
     duration_s: float
     fps: float
-    result: str  # PASS, FALSE_POSITIVE, FALSE_NEGATIVE
+    result: str  # PASS, FALSE_POSITIVE, FALSE_NEGATIVE, INCONCLUSIVE
     error_type: str  # none, detector_failure, temporal_failure, etc.
     notes: str
     frames_with_stove: int = 0
@@ -240,12 +240,16 @@ def evaluate_clip(
         memory.update(detections)
 
         # Build EvalContext.
+        # Auto-detect room from clip_id (e.g. h01_bathroom_s001_c001 -> bathroom)
+        clip_parts = clip.clip_id.split("_")
+        room = clip_parts[1] if len(clip_parts) >= 2 else "kitchen"
+
         context = EvalContext(
             detections=tuple(detections),
             memory=memory,
             fps=actual_fps,
             frame_id=frame_idx,
-            room="kitchen",
+            room=room,
         )
 
         # Evaluate trigger.
@@ -350,7 +354,14 @@ def evaluate_clip(
 
     # Determine result.
     expected_fires = clip.expected.fires
-    if expected_fires and alert_fired:
+
+    # INCONCLUSIVE: model produced zero detections across all frames.
+    # This means the model is blind/undertrained and the result is not
+    # evidence for or against correctness. See Phase 1 diagnosis.
+    if total_detections == 0:
+        result = "INCONCLUSIVE"
+        error_type = "model_blind"
+    elif expected_fires and alert_fired:
         result = "PASS"
         error_type = "none"
     elif not expected_fires and not alert_fired:
@@ -425,7 +436,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--model", type=Path, default=DEFAULT_MODEL,
                         help="Path to YOLO model weights.")
-    parser.add_argument("--scenario", default="SC-KIT-001",
+    parser.add_argument("--scenario", default="all",
                         help="Scenario to evaluate.")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT,
                         help="Output directory for results.")
@@ -451,11 +462,14 @@ def main(argv: list[str] | None = None) -> int:
         logger.error(f"Failed to load manifests: {exc}")
         return 1
 
-    # Filter to accepted clips for the target scenario.
-    target_clips = [
-        c for c in all_clips
-        if c.is_accepted and c.scenario_id == args.scenario
-    ]
+    # Filter to accepted clips for the target scenario(s).
+    if args.scenario == "all":
+        target_clips = [c for c in all_clips if c.is_accepted]
+    else:
+        target_clips = [
+            c for c in all_clips
+            if c.is_accepted and c.scenario_id == args.scenario
+        ]
     if not target_clips:
         logger.error(f"No accepted clips found for scenario {args.scenario}")
         return 1
@@ -464,17 +478,28 @@ def main(argv: list[str] | None = None) -> int:
 
     # Load the scenario definition (handles draft status).
     scenarios = load_scenario_files()
-    scenario = next((s for s in scenarios if s.scenario_id == args.scenario), None)
-    if scenario is None:
-        logger.error(f"Scenario {args.scenario} not found in configs/scenarios/")
-        return 1
+    # Build scenario lookup by ID
+    scenario_map = {s.scenario_id: s for s in scenarios}
 
-    logger.info(
-        f"Loaded scenario {scenario.scenario_id} (status: {scenario.status.value}). "
-        f"Trigger: {scenario.condition_text}. "
-        f"Dwell: {scenario.min_dwell_seconds}s. "
-        f"Required: {scenario.required_objects}"
-    )
+    if args.scenario != "all":
+        scenario = scenario_map.get(args.scenario)
+        if scenario is None:
+            logger.error(f"Scenario {args.scenario} not found in configs/scenarios/")
+            return 1
+
+    if args.scenario != "all":
+        logger.info(
+            f"Loaded scenario {scenario.scenario_id} (status: {scenario.status.value}). "
+            f"Trigger: {scenario.condition_text}. "
+            f"Dwell: {scenario.min_dwell_seconds}s. "
+            f"Required: {scenario.required_objects}"
+        )
+    else:
+        scenario_ids = sorted(set(c.scenario_id for c in target_clips))
+        logger.info(
+            f"Multi-scenario evaluation: {len(scenario_ids)} scenarios, "
+            f"{len(target_clips)} clips"
+        )
 
     # Load YOLO model.
     logger.info(f"Loading YOLO model from {args.model}...")
@@ -491,7 +516,12 @@ def main(argv: list[str] | None = None) -> int:
 
     for i, clip in enumerate(target_clips, 1):
         logger.info(f"[{i}/{len(target_clips)}] {clip.clip_id}")
-        result = evaluate_clip(clip, scenario, detector, clips_root, output_dir)
+        # Look up scenario for this clip
+        clip_scenario = scenario_map.get(clip.scenario_id)
+        if clip_scenario is None:
+            logger.warning(f"  Skipping {clip.clip_id}: scenario {clip.scenario_id} not found")
+            continue
+        result = evaluate_clip(clip, clip_scenario, detector, clips_root, output_dir)
         results.append(result)
         logger.info(f"  Result: {result.result} | Detections: {result.total_detections}")
 
@@ -545,6 +575,7 @@ def main(argv: list[str] | None = None) -> int:
     false_positives = sum(1 for r in results if r.result == "FALSE_POSITIVE")
     false_negatives = sum(1 for r in results if r.result == "FALSE_NEGATIVE")
     invalid = sum(1 for r in results if r.result == "INVALID")
+    inconclusive = sum(1 for r in results if r.result == "INCONCLUSIVE")
 
     expected_negatives = sum(1 for r in results if not r.expected_fires)
     true_negatives = sum(1 for r in results if not r.expected_fires and not r.actual_fires)
@@ -568,6 +599,7 @@ def main(argv: list[str] | None = None) -> int:
             "PASS": passes,
             "FALSE_POSITIVE": false_positives,
             "FALSE_NEGATIVE": false_negatives,
+            "INCONCLUSIVE": inconclusive,
             "INVALID": invalid,
         },
         "confusion_matrix": {
@@ -620,7 +652,6 @@ def main(argv: list[str] | None = None) -> int:
         "known_limitations": [
             "Dataset v0.1 contains zero true-positive clips",
             "All clips are engine-negatives (pre_dwell or absence)",
-            f"SC-KIT-001 requires {scenario.min_dwell_seconds + 900 + 60}s minimum to fire",
             f"Longest clip is {max(r.duration_s for r in results):.1f}s",
             "All clips are stock footage (not Indian home environment)",
             f"Sample size is n={total} -- insufficient for statistical inference",
@@ -636,13 +667,15 @@ def main(argv: list[str] | None = None) -> int:
     logger.info(f"Metrics: {metrics_path}")
 
     # Summary to console.
+    eval_label = args.scenario if args.scenario != "all" else "ALL SCENARIOS"
     print(f"\n{'='*70}")
-    print("SC-KIT-001 EVALUATION RESULTS — Dataset v0.1")
+    print(f"EVALUATION RESULTS — {eval_label} — Dataset v0.1")
     print(f"{'='*70}")
     print(f"  Clips evaluated:     {total}")
     print(f"  PASS:                {passes}")
     print(f"  FALSE_POSITIVE:      {false_positives}")
     print(f"  FALSE_NEGATIVE:      {false_negatives}")
+    print(f"  INCONCLUSIVE:        {inconclusive}")
     print(f"  INVALID:             {invalid}")
     print(f"{'─'*70}")
     print(f"  True Negatives:      {true_negatives}/{expected_negatives}")
@@ -653,6 +686,10 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  True Positives:      {true_positives} (0 expected — no genuine positives in v0.1)")
     print("  Recall:              NOT REPORTED (no true positives)")
     print("  F1:                  NOT REPORTED (no true positives)")
+    if inconclusive > 0:
+        print(f"{'─'*70}")
+        print(f"  INCONCLUSIVE:        {inconclusive}/{total} ({inconclusive/max(total,1):.0%}) — model produced zero detections")
+        print(f"  Diagnosis:           Model undertrained (3 epochs, mAP50=0.13). See Phase 1 report.")
     print(f"{'─'*70}")
     print(f"  Classes detected:    {sorted(all_detected)}")
     print(f"  Evaluation time:     {eval_duration:.1f}s")
