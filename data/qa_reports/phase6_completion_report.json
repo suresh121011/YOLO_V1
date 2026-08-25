@@ -1,0 +1,112 @@
+{
+  "phase": "Phase 6",
+  "title": "Video Dataset Pipeline + Multi-Scenario Evaluation",
+  "completion_date": "2026-08-26T00:52:34+05:30",
+  "git_commit": "31bcde2",
+  "git_branch": "phase-6-sc-kit-001-evaluation",
+  "overall_status": "SUBSTANTIALLY_COMPLETE",
+  "blocking_items": [
+    {
+      "id": "BLOCK-001",
+      "category": "NEEDS_HUMAN",
+      "title": "Model Training",
+      "description": "baseline_r0 trained for only 3 epochs (mAP50=0.13). Requires 50+ epochs on GPU for usable detections. All 222 evaluation results are INCONCLUSIVE due to zero detections.",
+      "impact": "Blocks Phase 6 hard-negative analysis and meaningful evaluation metrics",
+      "action_required": "Train model for 50+ epochs on GPU, then re-run: python scripts/scenarios/34_evaluate_scenario_clips.py --scenario all --model <new_model_path>"
+    },
+    {
+      "id": "BLOCK-002",
+      "category": "NEEDS_HUMAN",
+      "title": "Scenario Clinical Review",
+      "description": "All 9 scenarios have status=draft. Clinical review needed to promote to active.",
+      "impact": "ScenarioRuleEngine won't evaluate draft scenarios in production",
+      "action_required": "Clinical team reviews and promotes scenarios"
+    },
+    {
+      "id": "BLOCK-003",
+      "category": "ENHANCEMENT",
+      "title": "222 Unassigned Videos",
+      "description": "222 videos from 12 categories (SC-BED, SC-DOC, SC-ELC, SC-HOM, SC-HYD, SC-KIT-003) have no matching scenario YAML",
+      "impact": "Available for future scenario creation",
+      "action_required": "Create new scenario YAMLs and run batch ingest for these categories"
+    }
+  ],
+  "phases_completed": {
+    "phase_0_audit": {
+      "status": "PASS",
+      "evidence": "Repository structure verified, 9 scenarios, 19 clips, 433 in ZIPs"
+    },
+    "phase_1_model_landing": {
+      "status": "CONDITIONAL_PASS",
+      "evidence": "Taxonomy match OK (23 classes). Smoke test FAIL (0 detections). COCO model PASS (person=0.894). Root cause: 3-epoch training."
+    },
+    "phase_2_extraction_inventory": {
+      "status": "PASS",
+      "evidence": "433 videos extracted, 0 corrupt, 9 duplicates, 424 unique (291P/90N/52E)"
+    },
+    "phase_3_classification": {
+      "status": "PASS",
+      "evidence": "202 CANDIDATE, 222 UNASSIGNED, 9 REJECTED. Mapped to 6 scenarios."
+    },
+    "phase_4_ingestion_dvc": {
+      "status": "PASS",
+      "evidence": "202/202 ingested, 222 total manifests, all accepted, DVC committed"
+    },
+    "phase_5_evaluation": {
+      "status": "PASS",
+      "evidence": "222/222 evaluated. All INCONCLUSIVE (model blind). Infrastructure works."
+    },
+    "phase_6_hard_negative": {
+      "status": "DEFERRED",
+      "evidence": "No false positives to analyze (zero detections)"
+    },
+    "phase_7_documentation": {
+      "status": "COMPLETE",
+      "evidence": "14 files committed, DVC committed, walkthrough produced"
+    }
+  },
+  "dataset_summary": {
+    "total_videos_extracted": 433,
+    "total_unique": 424,
+    "total_ingested": 222,
+    "total_accepted": 222,
+    "scenarios_covered": ["SC-KIT-001", "SC-KIT-002", "SC-BTH-001", "SC-BTH-002", "SC-COR-001", "SC-MED-001", "SC-MOB-001"],
+    "scenarios_missing_clips": ["SC-BTH-003", "SC-SYS-001"]
+  },
+  "evaluation_summary": {
+    "model": "models/benchmarks/models/baseline_r0/weights/best.pt",
+    "model_epochs": 3,
+    "model_mAP50": 0.13,
+    "total_clips_evaluated": 222,
+    "total_frames_processed": 97608,
+    "evaluation_duration_s": 1764.8,
+    "results": {
+      "PASS": 0,
+      "FALSE_POSITIVE": 0,
+      "FALSE_NEGATIVE": 0,
+      "INCONCLUSIVE": 222,
+      "INVALID": 0
+    },
+    "total_detections": 0
+  },
+  "files_changed": {
+    "new": [
+      "scripts/scenarios/37_video_inventory.py",
+      "scripts/scenarios/39_batch_ingest_multiscenario.py",
+      "data/scenario_engine/staging/video_inventory.csv",
+      "data/scenario_engine/staging/scenario_mapping.json",
+      "data/scenario_engine/staging/domain_validation.json",
+      "data/qa_reports/batch_ingest_report.json",
+      "outputs/scenario_eval_phase6/evaluation.csv",
+      "outputs/scenario_eval_phase6/evaluation_metrics.json"
+    ],
+    "modified": [
+      "configs/capture_config.yaml",
+      "src/scenario_engine/clips.py",
+      "scripts/scenarios/34_evaluate_scenario_clips.py",
+      "dvc.lock",
+      "data/qa_reports/clip_dataset_report.json",
+      "data/qa_reports/model_landing_report.json"
+    ]
+  }
+}
