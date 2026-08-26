@@ -1,6 +1,6 @@
 [core]
     analytics = false
-    remote = localstore
+    remote = storage
 ['remote "storage"']
     # Credentials come from the standard AWS chain (env vars / ~/.aws)
     # — NEVER from this tracked file.
