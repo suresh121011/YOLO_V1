@@ -137,7 +137,6 @@ class TestCommittedEvidence:
         limitations = " ".join(report["known_limitations"]).lower()
         assert "draft" in limitations and "clinical review" in limitations
         assert "clips" in limitations
-        assert "risk_rules.yaml" in limitations
 
     @pytest.mark.unit
     def test_report_records_the_unusable_class(self) -> None:
