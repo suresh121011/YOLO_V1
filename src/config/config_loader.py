@@ -43,10 +43,9 @@ _DEFAULT_RUNTIME: dict[str, Any] = {
     "confidence_threshold": 0.25,
     "smolvlm_every_n_frames": 5,
     "smolvlm_timeout_ms": 2000,
-    "alert_cooldown_multiplier": 1.0,
     "max_alerts_per_minute": 6,
     "memory_window_frames": 150,
-    "tts_speed": 1.0,
+    "tts_speed": 0.9,
     "tts_volume": 0.8,
     "tts_language": "en_IN",
     "log_retention_days": 7,
@@ -103,18 +102,24 @@ class SystemConfig:
     runtime: dict[str, Any] = field(default_factory=dict)
     class_thresholds: dict[str, float] = field(default_factory=dict)
     config_path: str = "configs/feature_flags.yaml"
+    class_names: dict[int, str] = field(default_factory=dict)
 
     @classmethod
     def load(
         cls,
         flags_path: str = "configs/feature_flags.yaml",
         thresholds_path: str = "configs/class_thresholds.yaml",
+        data_path: str = "configs/data.yaml",
     ) -> SystemConfig:
         """Load configuration from YAML files.
 
         Args:
             flags_path:      Path to feature_flags.yaml
             thresholds_path: Path to class_thresholds.yaml
+            data_path:       Path to data.yaml — the taxonomy the deployed
+                weights must agree with. Carried here rather than read by the
+                detector because "no component reads YAML directly" is this
+                module's own documented contract.
 
         Returns:
             Populated SystemConfig instance.
@@ -153,10 +158,39 @@ class SystemConfig:
             runtime=runtime,
             class_thresholds=class_thresholds,
             config_path=str(flags_file.absolute()),
+            class_names=cls._load_class_names(data_path),
         )
 
         logger.info(f"Configuration loaded from: {flags_path}")
         return config
+
+    @staticmethod
+    def _load_class_names(data_path: str) -> dict[int, str]:
+        """Read the ``id -> name`` taxonomy from data.yaml.
+
+        Returns an empty mapping when the file is absent, which every caller
+        must treat as "unverified", never as "verified empty". The detector logs
+        loudly on an empty taxonomy and ``scripts/qa/model_landing_check.py``
+        fails on it, so the skip cannot pass for a pass.
+        """
+        path = Path(data_path)
+        if not path.exists():
+            logger.warning(
+                f"Taxonomy config not found: {data_path} — the deployed weights cannot be "
+                f"checked against the class list they were trained for."
+            )
+            return {}
+
+        with open(path, encoding="utf-8") as f:
+            payload: dict[str, Any] = yaml.safe_load(f) or {}
+
+        raw = payload.get("names", {})
+        if isinstance(raw, dict):
+            return {int(k): str(v) for k, v in raw.items()}
+        if isinstance(raw, list):
+            return {i: str(name) for i, name in enumerate(raw)}
+        logger.warning(f"{data_path}: 'names' is neither a mapping nor a list — ignoring")
+        return {}
 
     # ─── Query Methods ────────────────────────────────────────────────────────
 

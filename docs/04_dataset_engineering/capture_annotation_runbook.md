@@ -3,6 +3,13 @@
 > Operational SOP for collecting and annotating custom Indian-home data.
 > Tooling reference: `docs/04_dataset_engineering/README.md` §7–8. Class
 > definitions and capture guidance: `docs/03_engineering_appendix/annotation_guide.md` §10.
+>
+> **This runbook covers photographs.** Scenario *video* clips follow
+> `docs/08_scenario_engineering/clip_capture_protocol.md`, which extends this one
+> and differs in four gated ways: its own `clips:` config block, its own
+> `scenario-video` consent scope (image consent does **not** cover video), MP4
+> container stripping instead of EXIF, and a fatal rather than degraded response
+> to a missing consent registry.
 
 ---
 

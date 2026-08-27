@@ -1,0 +1,79 @@
+# ─── Scenario & Rule Engine ────────────────────────────────────────────────────
+# Elderly Assistant System — Phase-6 Knowledge Layer
+#
+# Read by:  src/scenario_engine/ (compiler, validators), scripts/scenarios/*.py
+# Used as:  the DVC params file for compile_scenarios / validate_scenarios
+#
+# Deliberately separate from configs/annotation.yaml and configs/data.yaml so
+# tuning a scenario budget never invalidates a dataset stage's params hash —
+# the same split rationale as configs/annotation.yaml.
+#
+# The authored scenarios themselves live in configs/scenarios/SC-*.yaml, one
+# file per scenario (ADR-P6-01). They are declared as a DVC *dep* rather than
+# params, since DVC has no "params from N files" concept.
+# ──────────────────────────────────────────────────────────────────────────────
+
+compile:
+  # Where the authored scenarios live. Knowledge is source, so it sits in
+  # configs/ (git) rather than data/ (the DVC plane) — ADR-P6-01.
+  scenario_dir: configs/scenarios
+
+  # Semver of the scenario dataset, distinct from the artifact's own schema
+  # version. Bumps are checked against the derived requirement (ADR-P6-06):
+  #   major — any rule_hash change on an active scenario, a deletion, or a
+  #           taxonomy fingerprint change (invalidates labelled clips)
+  #   minor — a new scenario, or an active scenario deprecated
+  #   patch — prompt/notes/evidence edits, schema-only migrations
+  scenarios_version: scenarios-v0.1.0
+
+  outputs:
+    artifact: data/scenario_engine/build/scenarios.compiled.json
+    view_csv: data/scenario_engine/build/scenarios.view.csv
+    editable_csv: data/scenario_engine/build/scenarios.editable.csv
+
+  # Inputs to the class capability map (ADR-P6-05). A taxonomy fingerprint
+  # cannot see a class demoted to scene-level with its id reserved, nor one
+  # switched off by a feature flag.
+  capability:
+    data_config: configs/data.yaml
+    feature_flags: configs/feature_flags.yaml
+    wet_floor_decision: data/qa_reports/wet_floor_decision.json
+
+validation:
+  # Alert-volume simulation budget (M4). The projected daily volume of the
+  # whole scenario set, replayed over labelled footage. The six legacy rules
+  # projected ~370 alerts/day with essentially none actionable, which ends in
+  # the device being muted or unplugged — a 100% false-negative rate.
+  max_projected_alerts_per_day: 20
+
+  # Per-scenario ceiling enforced by the schema's own max_per_day field.
+  # A scenario firing more than this is broken by definition rather than noisy.
+  max_per_scenario_per_day: 20
+
+  # Every class in this group must be referenced by at least one active
+  # scenario. The asymmetry is the point: 0 references for `book` or `laptop`
+  # is fine; 0 for a safety-critical class means a hazard we can see and ignore.
+  # Mirrors the safety_critical grouping documented in configs/data.yaml.
+  require_coverage_of:
+    - medicine_strip
+    - medicine_bottle
+    - knife
+    - stove
+    - gas_cylinder
+    - wire
+    - wet_floor
+
+# ─── Room vocabulary ───────────────────────────────────────────────────────────
+# Shared with configs/capture_config.yaml so <CAT> in SC-<CAT>-<NNN> and a
+# scenario's room_context validate against one list. A room is a deployment-time
+# constant (one camera per room), NOT a per-frame geometric zone — zones need an
+# authoring tool and a recalibration story, and are deferred (ADR-P6-07).
+rooms:
+  - kitchen
+  - bedroom
+  - bathroom
+  - hall
+  - balcony
+  - corridor
+  - pooja_room
+  - staircase

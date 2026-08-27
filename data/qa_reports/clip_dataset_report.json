@@ -1,0 +1,134 @@
+{
+  "verdict": "FAIL",
+  "totals": {
+    "manifests_on_disk": 222,
+    "accepted": 222,
+    "pending": 0,
+    "rejected": 0,
+    "target_accepted": 100,
+    "target_met": true
+  },
+  "polarity": {
+    "accepted_positive": 0,
+    "accepted_negative": 222,
+    "negative_fraction": 1.0,
+    "min_negative_fraction": 0.3,
+    "negative_fraction_met": true
+  },
+  "provenance": {
+    "own_capture": 0,
+    "external": 222,
+    "indian_home": 0,
+    "licence_complete": 222,
+    "licence_missing": 0
+  },
+  "privacy": {
+    "metadata_stripped": 222,
+    "metadata_not_stripped": 0,
+    "consent_complete": 0,
+    "consent_missing": 0
+  },
+  "coverage": [
+    {
+      "scenario_id": "SC-BTH-001",
+      "accepted": 60,
+      "accepted_positive": 0,
+      "accepted_negative": 60,
+      "pending": 0,
+      "rejected": 0,
+      "sufficient": true,
+      "shortfall": 0
+    },
+    {
+      "scenario_id": "SC-BTH-002",
+      "accepted": 50,
+      "accepted_positive": 0,
+      "accepted_negative": 50,
+      "pending": 0,
+      "rejected": 0,
+      "sufficient": true,
+      "shortfall": 0
+    },
+    {
+      "scenario_id": "SC-BTH-003",
+      "accepted": 0,
+      "accepted_positive": 0,
+      "accepted_negative": 0,
+      "pending": 0,
+      "rejected": 0,
+      "sufficient": false,
+      "shortfall": 4
+    },
+    {
+      "scenario_id": "SC-COR-001",
+      "accepted": 20,
+      "accepted_positive": 0,
+      "accepted_negative": 20,
+      "pending": 0,
+      "rejected": 0,
+      "sufficient": true,
+      "shortfall": 0
+    },
+    {
+      "scenario_id": "SC-KIT-001",
+      "accepted": 19,
+      "accepted_positive": 0,
+      "accepted_negative": 19,
+      "pending": 0,
+      "rejected": 0,
+      "sufficient": true,
+      "shortfall": 0
+    },
+    {
+      "scenario_id": "SC-KIT-002",
+      "accepted": 29,
+      "accepted_positive": 0,
+      "accepted_negative": 29,
+      "pending": 0,
+      "rejected": 0,
+      "sufficient": true,
+      "shortfall": 0
+    },
+    {
+      "scenario_id": "SC-MED-001",
+      "accepted": 20,
+      "accepted_positive": 0,
+      "accepted_negative": 20,
+      "pending": 0,
+      "rejected": 0,
+      "sufficient": true,
+      "shortfall": 0
+    },
+    {
+      "scenario_id": "SC-MOB-001",
+      "accepted": 24,
+      "accepted_positive": 0,
+      "accepted_negative": 24,
+      "pending": 0,
+      "rejected": 0,
+      "sufficient": true,
+      "shortfall": 0
+    },
+    {
+      "scenario_id": "SC-SYS-001",
+      "accepted": 0,
+      "accepted_positive": 0,
+      "accepted_negative": 0,
+      "pending": 0,
+      "rejected": 0,
+      "sufficient": false,
+      "shortfall": 4
+    }
+  ],
+  "uncovered_scenarios": [
+    "SC-BTH-003",
+    "SC-SYS-001"
+  ],
+  "rejections": [],
+  "problems": [
+    "2 scenario(s) have fewer than 4 accepted clips: ['SC-BTH-003', 'SC-SYS-001']"
+  ],
+  "generated_at": "2026-08-25T18:39:06Z",
+  "git_commit": "7b95362",
+  "clips_root": "data\\scenario_engine\\clips"
+}

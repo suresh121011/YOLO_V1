@@ -1,0 +1,32 @@
+# ─── SC-SAF-002 — Stove left on (REJECTED) ─────────────────────
+# Part of the versioned negative register (ADR-P6-08). Kept in the repository so
+# the reasoning is diffed alongside the positive set and the id stays reserved —
+# a rejected capability is a permanent limit, not a backlog item.
+#
+# The trigger below is what someone would naively write. It is recorded to show
+# what was considered, and never runs.
+# ──────────────────────────────────────────────────────────────────────────────
+scenario_id: SC-SAF-002
+schema_version: 1
+scenario_name: Stove left on
+category: kitchen
+status: rejected
+
+detectability: rejected
+claim_class: inference
+
+trigger:
+  op: detected
+  args: {class_name: stove}
+
+risk_level: INFO
+priority: 999
+patient_facing: false
+messages: {}
+next_best_action: ""
+caregiver_channel: none
+
+rejection_reason: >-
+  No flame or heat state. `stove` is a physical object and is always detected. The legacy rule asserted this at risk_rules.yaml:54.
+
+sample_video_needed: false

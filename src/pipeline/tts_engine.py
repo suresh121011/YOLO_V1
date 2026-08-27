@@ -21,6 +21,7 @@ Usage:
 
 from __future__ import annotations
 
+import heapq
 import logging
 import queue
 import subprocess
@@ -81,6 +82,16 @@ class PiperTTS:
     def speak(self, text: str, priority: bool = False) -> None:
         """Enqueue text for speech synthesis (non-blocking).
 
+        On overflow the **lowest-priority queued** message is evicted rather
+        than the incoming one. Dropping the arrival inverted the priority
+        contract: with five routine prompts backed up behind a multi-second
+        synthesis, an incoming CRITICAL was discarded with a log warning while
+        the chatter still played. ``AlertQueue.put`` was written specifically to
+        avoid that, and was never wired in — see
+        docs/08_scenario_engineering/architecture_review.md §6.
+
+        A message is only dropped now when nothing queued outranks it.
+
         Args:
             text:     Text to speak. Sanitized before passing to Piper.
             priority: If True, placed ahead of normal-priority messages.
@@ -91,8 +102,31 @@ class PiperTTS:
         prio = 0 if priority else 1
         try:
             self._queue.put_nowait((prio, text))
+            return
         except queue.Full:
-            logger.warning(f"TTS queue full, dropping: '{text[:40]}...'")
+            pass
+
+        with self._queue.mutex:
+            pending = self._queue.queue
+            if not pending:
+                # The worker drained it between the failed put and this lock.
+                heapq.heappush(pending, (prio, text))
+                self._queue.not_empty.notify()
+                return
+
+            worst_index = max(range(len(pending)), key=lambda i: pending[i][0])
+            worst_prio, worst_text = pending[worst_index]
+            if worst_prio <= prio:
+                logger.warning(f"TTS queue full, dropping: '{text[:40]}...'")
+                return
+
+            pending[worst_index] = (prio, text)
+            heapq.heapify(pending)
+
+        logger.warning(
+            f"TTS queue full — evicted lower-priority '{worst_text[:30]}...' "
+            f"to make room for '{text[:30]}...'"
+        )
 
     def is_speaking(self) -> bool:
         """Return True if TTS is currently synthesizing or playing audio."""

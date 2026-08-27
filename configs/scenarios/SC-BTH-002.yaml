@@ -1,0 +1,91 @@
+# ─── SC-BTH-002 — No grab bar near the toilet ─────────────────────────────────
+# The highest-value scenario available to this taxonomy, and it was absent from
+# the legacy rule set entirely.
+#
+# It is a literal CDC STEADI "Check for Safety" bathroom item, it is fully
+# supported by classes we actually have, it has a concrete one-time caregiver
+# action, and it never speaks to the resident. Bathrooms are among the
+# highest-risk rooms in the home, and absent grab rails is the single most
+# frequently observed hazard in survey after survey.
+#
+# Shape: environmental finding, not a real-time alarm. The STEADI intervention
+# is "install grab bars" — a caregiver job done once, not something the resident
+# can act on mid-visit.
+# ──────────────────────────────────────────────────────────────────────────────
+
+scenario_id: SC-BTH-002
+schema_version: 1
+scenario_name: No grab bar seen near the toilet
+category: bathroom
+status: draft            # activation requires real clinical review
+
+detectability: direct
+claim_class: observation
+
+trigger:
+  all:
+    - op: in_room
+      args: {room: bathroom}
+    # present_for, not detected: a fixture is a sustained observation, and this
+    # guards against a single mislabelled frame producing a home-safety claim.
+    - op: present_for
+      args: {class_name: toilet, seconds: 60}
+    # The finding is an ABSENCE across the whole session, which is why this is a
+    # temporal predicate rather than a per-frame one.
+    - not:
+        op: ever_seen
+        args: {class_name: support_handle}
+
+risk_level: LOW
+priority: 80             # environmental findings yield to live hazards
+
+min_confidence: 0.60     # precision-tuned: one wrong "you have no grab bar" destroys trust
+min_dwell_seconds: 60
+clear_after_seconds: 300
+cooldown_seconds: 86400
+max_repeats: 0           # a one-time finding is stated once
+max_per_day: 1
+
+room_context: bathroom
+optional_objects: [sink, person]
+
+quiet_hours:
+  start: "21:00"
+  end: "06:00"
+  behaviour: suppress
+
+patient_facing: false    # never spoken; the resident cannot install a grab bar
+messages: {}
+
+next_best_action: >-
+  Consider fitting a grab bar beside the toilet and inside the tub or shower.
+caregiver_channel: digest
+
+evidence:
+  - source_id: CDC-STEADI-CheckForSafety-2017
+    section: Bathroom
+    item: Have grab bars installed next to and inside the tub, and next to the toilet
+    strength: guideline
+    supports: intervention
+    note: >-
+      STEADI prescribes the modification directly, which is what makes this a
+      caregiver action rather than a resident warning.
+  - source_id: WHO-StepSafely-2021
+    section: Environmental modification
+    strength: guideline
+    supports: hazard
+
+false_positive_notes: >-
+  A grab bar occluded by a towel, a shower curtain, or the resident's body for
+  the whole session reads as absent. The 60s dwell on `toilet` and the
+  session-long absence window reduce but do not remove this; the once-per-day
+  budget keeps a wrong finding cheap.
+
+notes: >-
+  LIMITATION: `ever_seen` is session-scoped, so this is "not seen since the
+  device started", not "not seen across N days". A multi-day version needs
+  persistence the runtime does not have (EventMemory is in-memory and cleared on
+  shutdown). Until then a caregiver should treat a single report as a prompt to
+  look, not as an established fact — which is why it is digest-only and LOW.
+
+sample_video_needed: true

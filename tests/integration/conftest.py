@@ -20,8 +20,14 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 @pytest.fixture
 def risk_rules_path() -> Path:
-    """Path to the real risk_rules.yaml config file."""
-    return PROJECT_ROOT / "configs" / "risk_rules.yaml"
+    """Path to the RETIRED legacy rule file, kept as a fixture.
+
+    ``configs/risk_rules.yaml`` was removed in Phase 6 M8 (ADR-P6-03). The
+    frozen copy stays under tests/fixtures so the migration comparison in
+    ``tests/unit/pipeline/test_engine_migration.py`` remains runnable, and so
+    the rules that were deleted rather than migrated are still legible.
+    """
+    return PROJECT_ROOT / "tests" / "fixtures" / "legacy_risk_rules.yaml"
 
 
 @pytest.fixture

@@ -61,7 +61,10 @@ Related:
 | SmolVLM2-500M | ~2.5 GB | ~1,200ms CPU | Android flagship |
 | SmolVLM2-2.2B | ~5.2 GB | ~2,500ms CPU | Development / evaluation only |
 
-**Invocation Strategy:** Every 5th frame; skipped if `vlm_enabled = false`; 2,000ms timeout.
+**Invocation Strategy:** every `runtime.smolvlm_every_n_frames` frames (default 5); skipped unless
+`components.smolvlm_analysis` is true; a result that overruns `runtime.smolvlm_timeout_ms` (default
+2,000) is discarded. Corrected in Phase-6 M9: this said `vlm_enabled`, a key present in no config file,
+and both real keys were read by nothing until then.
 
 **Safety Constraint:** VLM response is advisory only. Rule Engine operates on YOLO detections first. VLM can upgrade alert severity but cannot cancel a rule-engine-triggered alert.
 

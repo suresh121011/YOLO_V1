@@ -55,8 +55,8 @@ fresh clone has an empty `data/` until you pull:
 
 | Remote | Where | Use |
 |---|---|---|
-| `storage` | `s3://…-329117470647-ap-south-1-an/datasets/yolo_v1` (`ap-south-1`) | `dvc pull -r storage` — the off-site copy |
-| `localstore` (default) | `C:\dvc_remote` | Only exists on the machine that built the dataset |
+| `storage` **(default)** | `s3://…-329117470647-ap-south-1-an/datasets/yolo_v1` (`ap-south-1`) | `dvc pull` — the off-site copy |
+| `localstore` | `C:\dvc_remote` | Only exists on the machine that built the dataset |
 
 Credentials come from the **standard AWS chain** (default profile, `AWS_PROFILE`,
 env vars, or an instance role). `.dvc/config` sets no `profile` key on purpose, so
@@ -160,6 +160,38 @@ python scripts/training/benchmark_mitigation.py --smoke   # baseline vs mitigate
 
 Architecture, ADRs, runbook, and committed validation/benchmark evidence:
 [docs/06_training_engineering](./docs/06_training_engineering/README.md).
+
+### Training quickstart
+
+```bash
+# Pull only the training split (images + labels):
+dvc pull split_train_val_test
+
+# Run training:
+python scripts/training/train_yolo.py \
+  --config configs/training/yolo11n_config.yaml
+```
+
+### Scenario evaluation (Phase-6)
+
+222 canonical scenario video clips test whether the scenario engine fires
+correctly. Manifests (assertions) are git-tracked; videos are DVC/S3-tracked.
+
+```bash
+# Pull scenario clips:
+dvc pull ingest_scenario_clips
+
+# Compile + validate scenarios:
+dvc repro validate_scenarios
+
+# Evaluate clips against a trained model:
+python scripts/scenarios/34_evaluate_scenario_clips.py \
+  --scenario all --model models/yolo11n/weights/best.pt
+```
+
+All 222 clips are currently negative (false-positive baseline). Positive clips
+for true-positive scenario testing require custom capture (see
+[docs/08_scenario_engineering](./docs/08_scenario_engineering/)).
 
 ---
 

@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, develop, phase-5-production-dataset-engineering]
+    branches: [main, develop, phase-5-production-dataset-engineering, "phase-6-*"]
   pull_request:
-    branches: [main, develop, phase-5-production-dataset-engineering]
+    branches: [main, develop, phase-5-production-dataset-engineering, "phase-6-*"]
 
 jobs:
   lint-and-typecheck:
@@ -33,11 +33,13 @@ jobs:
         run: ruff check src/ scripts/ tests/
 
       - name: Run mypy (type check)
-        run: mypy src/dataset src/utils src/config src/logging src/training
-        # src/pipeline is deferred to the Phase-6 runtime cleanup (17 errors as of
-        # the 2026-07-14 validation pass: mostly missing numpy stubs in a bare
-        # CI-style env plus untyped defs in scene_analyzer.py/orchestrator.py;
-        # see docs/04_dataset_engineering/README.md §7 for the Phase-2 descope).
+        run: mypy src/
+        # Whole-tree scope since Phase-6 M1. src/pipeline was excluded here on the
+        # strength of a "17 errors" note from 2026-07-14 that had gone stale — it
+        # measured clean when re-run, while Makefile:78 had been running `mypy src/`
+        # locally the whole time, leaving local dev stricter than CI. Keeping the
+        # exclusion would also have hidden errors in the very dataclasses
+        # src/pipeline/__init__.py declares LOCKED.
 
   test:
     name: Tests (${{ matrix.os }}, py${{ matrix.python-version }})

@@ -28,7 +28,7 @@ pytestmark = [
     pytest.mark.skipif(bool(os.environ.get("CI")), reason="No model/scale budget check on CI"),
 ]
 
-_BUDGET_SECONDS = 600  # 10 minutes
+_BUDGET_SECONDS = 1200  # 20 minutes — generous for dev machines; pre-vectorization was hours
 _SCALE = 30_000
 
 

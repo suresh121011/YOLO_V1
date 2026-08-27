@@ -10,6 +10,502 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Phase-6 M0: Scenario & Rule Engine design record (`docs/08_scenario_engineering/`).
+  The knowledge layer that turns detections over the 23-class taxonomy into
+  elderly-care scenarios (risk level → patient prompt → next best action →
+  caregiver alert). **This phase is spec-drift reconciliation plus the missing
+  governed knowledge dataset, not a new engine** — `src/pipeline/` already ships
+  a rule evaluator, event memory, an alert queue, a TTS sink and six live rules,
+  and `near(class_a, class_b, pixel_dist)` has been documented as a V1 condition
+  at `docs/02_technical_architecture_specification/rule_engine.md:34` since
+  Phase 2 without ever being implemented.
+  - `architecture_review.md` — runtime as built vs. as documented, including
+    **ten defects verified against the code**: every feature flag is inert
+    (`orchestrator.py:49` reads a `feature_flags:` root key that does not exist,
+    so `passport: false  # privacy` is a false claim); the only CRITICAL rule
+    cannot fire cold (`event_memory.py:114` returns the 150-frame window for
+    never-seen ⇒ 10.0 s, against a 30 s threshold); recall-tuned per-class
+    thresholds are structurally unreachable (`detector.py:133` filters at the
+    global 0.25 first, and `class_thresholds.yaml` is never loaded at runtime);
+    `any_of([...])` silently discards the rest of its condition; AND/OR
+    precedence is inverted; one bad severity string zeroes all alerts silently
+    and the rule engine has **zero tests**; `save_csv_report` writes CRLF while
+    its JSON sibling documents why LF is mandatory; and the `AnalysisPlugin`
+    seam has three mutually incompatible contracts with no registration
+    mechanism. These are the content of M1.
+  - `requirements_specification.md` — Scenario/Rule/Predicate/Event definitions,
+    the eight validity conditions, mandatory vs optional fields, and the
+    forbidden assumptions (absence of `person` ≠ absence of a person;
+    single-resident homes; a working system; repetition as escalation).
+  - `domain_research_report.md` — CDC STEADI, WHO falls guidance, Katz ADL /
+    Lawton–Brody IADL, alarm-fatigue evidence, DPDP Act 2023 posture, and the
+    `evidence` field contract (`supports: hazard` never licenses
+    `detectability: direct`).
+  - `negative_register.md` — scenarios permanently out of scope with these 23
+    static-object classes (fall detection, "stove is on", gas leaks, medication
+    adherence, hydration, wandering), plus the three live rules being **deleted
+    rather than migrated** (`knife_near_person`, `medicine_reminder`,
+    `gas_cylinder_check`; projected day-one volume ~370 alerts, ~0 actionable).
+  - `adr/ADR-P6-01…09` — per-scenario YAML master in `configs/scenarios/` ·
+    CSV is an export-only view · structured AST over the string DSL ·
+    `BaseRuleEngine` injection over the plugin seam · class capability map (the
+    taxonomy fingerprint provably cannot catch the scheduled `wet_floor`
+    demotion, since class ID 20 stays reserved) · `rule_hash` semantic
+    versioning with a derived-semver gate · `near()` units and room-vs-zone ·
+    rejected-scenario negative register · additive extension of the LOCKED
+    `Alert` contract.
+- Phase-6 M1: `src/scenario_engine/` package with `EvalContext` — the single
+  input type every scenario predicate will receive (detections **with bounding
+  boxes and multiplicity**, temporal memory via a `MemoryView` Protocol, the
+  measured FPS, frame id, and deployment room). This is why "extend the existing
+  DSL" was not an option: the legacy evaluator was handed a bare `set[str]`, so
+  geometry and multiplicity were destroyed before any predicate ran, making
+  `near`/`overlaps`/`count` unimplementable rather than merely awkward. A
+  half-done `near(person, stove, 0.2)` would have silently degraded into
+  `detected(person) AND detected(stove)` — the exact rule being deleted for
+  false positives — while looking implemented.
+  `tests/unit/scenario_engine/test_layering.py` statically enforces the ADR-P6-04
+  dependency direction (the scenario engine is a leaf; `src/pipeline` must never
+  import it), scanning the AST so lazy and conditional imports are caught too.
+- Phase-6 M2: predicate registry and structured trigger trees.
+  - `src/scenario_engine/predicates/` — the fourth instance of the house
+    registry pattern (`completeness_policies.py`, `splitting/registry.py`,
+    `annotation/registry.py`). A predicate is a pure function of `EvalContext`
+    plus declaratively-typed arguments, so one generic checker produces every
+    error message and each predicate gets a table-driven test with no YAML in
+    the loop. Twelve built-ins across five *kinds*: `detected`/`any_of`/`all_of`
+    (static) · `count` (counting) · `absent_for`/`present_for`/`ever_seen`
+    (temporal) · `near`/`overlaps`/`above`/`below` (spatial) · `in_room`
+    (context). An unknown predicate raises and enumerates the valid set, where
+    the legacy engine returned `False` and produced a rule that never fired.
+  - `src/scenario_engine/trigger.py` — triggers are authored as nested
+    `all`/`any`/`not`/`op` structures, validated at parse time, and compiled to
+    an immutable tree. Precedence is structural rather than implied, empty
+    `all`/`any` are rejected rather than silently constant, and `not` composes
+    with every predicate. Errors name the field path
+    (`trigger.all[1].args.max_dist`) instead of a character offset — the whole
+    reason for structured trees over condition strings. `render_trigger`
+    emits the one-line string for the CSV view and logs; it is never parsed back.
+  - `trigger_kinds`/`is_static_only` give the compiler the check that
+    disqualifies a trigger satisfiable by object presence alone. Tests assert it
+    rejects all three legacy rules being deleted (`knife_near_person`,
+    `medicine_reminder`, `gas_cylinder_check`) while accepting the same
+    conditions once a dwell or proximity term is added.
+  - `near` is pinned by test to be **false for two distant detections in the
+    same frame** — the failure that would silently reduce every spatial
+    predicate to co-presence — and to be true for adjacent boxes whose IoU is 0,
+    which is why `overlaps` cannot replace it.
+  - `src/scenario_engine/schema.py` — the scenario row as frozen dataclasses
+    with a hand-rolled `_validate`, matching the house pattern (no pydantic; it
+    would be a new dependency and a convention break needing its own ADR).
+    The **trigger tree is the only authored condition**: `required_objects` is
+    derived from it so the CSV view cannot drift from the executable rule, and
+    negation stays inside the trigger rather than being split back out into a
+    flat `forbidden_objects` list.
+    `caregiver_channel` is an enum (`none`/`digest`/`push`/`push_and_call`) —
+    as a boolean it gets set true everywhere, fatiguing the caregiver whose
+    attention actually protects the resident.
+    Safety invariants enforced at construction: `status: active` requires
+    `reviewed_by`/`reviewed_on` (this project already demands two annotators at
+    IAA ≥ 0.75 to accept a bounding box); `detectability: inferred` requires a
+    `capability_disclaimer`; `detectability: rejected` requires a
+    `rejection_reason` naming the missing capability; `quiet_hours: always_speak`
+    is CRITICAL-only; `max_repeats` is capped at 3; escalation steps must be
+    ordered.
+  - `rule_hash` (ADR-P6-06) spans the trigger and the behavioural scalars only.
+    Tests pin both directions: a risk downgrade, a dwell change, a threshold
+    change or a trigger edit **moves** the hash; a reworded prompt, a note, a
+    renamed scenario or an evidence edit **does not**. Getting this backwards
+    either trains contributors to ignore staleness warnings or lets the clip
+    suite pass green against behaviour that no longer exists.
+- Phase-6 M3: the scenario compiler, class capability map and CSV view.
+  - `src/scenario_engine/taxonomy.py` — the **class capability map** (ADR-P6-05),
+    derived from `configs/data.yaml` + `configs/feature_flags.yaml` + a
+    git-tracked R24 decision artifact. A taxonomy fingerprint answers "is the
+    taxonomy the same?", which is not the question a scenario needs: the
+    documented `wet_floor` demotion keeps class ID 20 reserved, so `nc` and
+    `names` are unchanged and the fingerprint is **byte-identical** while the
+    detector emits nothing. A test pins exactly that — the fingerprint is blind
+    to the demotion, the capability map is not. `passport` is the live instance:
+    the compiled artifact records it as `enabled: false`, so any scenario keyed
+    on it is now a build failure rather than a rule that never fires.
+    `taxonomy_fingerprint` deliberately re-implements the algorithm from
+    `src/dataset/completeness.py` because `src/scenario_engine` may not depend on
+    `src.dataset`; a test pins the two byte-for-byte so the duplication cannot
+    drift.
+  - `src/scenario_engine/compile.py` — set-level validation (duplicate ids,
+    unknown/demoted/disabled classes, static-only triggers, evidence gating
+    risk level and push channel) and the compiled artifact. The artifact carries
+    `rule_count` + `content_hash` so the loader can **fail closed**: a
+    hand-edited or truncated artifact is rejected, where the legacy loader did
+    `data.get("rules", [])` and logged `Loaded 0 rules` at INFO. It also carries
+    an **inverted index** (class → scenario ids) so an edge device evaluates only
+    the scenarios that touch a detected class, which is what keeps a few hundred
+    scenarios inside the 5 ms rule budget.
+  - `src/scenario_engine/csv_view.py` — CSV is a **view, not a format**
+    (ADR-P6-02). `scenarios.view.csv` is a read-only projection with a fixed
+    column order, `QUOTE_ALL`, LF endings and embedded newlines *rejected rather
+    than escaped* (a quoted multi-line cell renders as broken rows in `git
+    diff`). `scenarios.editable.csv` is a restricted subset a stakeholder can
+    safely edit, with **prompt fields excluded** — which is what keeps Devanagari
+    out of Excel's cp1252 reach — written with a BOM, matched by `scenario_id`,
+    and unable to create or delete scenarios.
+  - `scripts/scenarios/30_compile_scenarios.py` with `--check` (exit 0 current,
+    1 validation failure, 2 drift), `configs/scenario_engine.yaml`, and the
+    `compile_scenarios` DVC stage. All three outputs are `cache: false` so they
+    stay git-readable at a tag. `.gitignore`'s generic `build/` rule silently
+    ignored them — a `cache: false` out under an ignored directory is
+    uncommittable, which is exactly how an artifact "that records what a thing
+    is" goes missing from a release; the directory is now explicitly re-allowed.
+  - First exemplar scenario `configs/scenarios/SC-BTH-001.yaml` (wet floor),
+    carried over from `risk_rules.yaml` with its three defects fixed: a 3 s dwell
+    so flicker cannot fire it, an explicit clear condition so a floor wet for 20
+    minutes is one event rather than ten announcements, and escalation to the
+    caregiver instead of repeating at the resident.
+- Phase-6 M4: the validator suite and the alert-volume simulation gate.
+  - `src/scenario_engine/validators.py` — report-level checks with ERROR/WARN
+    severities, following the `--exit-zero-on-warnings` convention. The message
+    lints are tied to real strings from `configs/risk_rules.yaml`, not
+    hypotheticals: **no unobservable assertions** catches "the stove appears to
+    be **on**" (`:54`) — hedging the verb does not make an unobservable state
+    observable; **no unanswerable questions** catches "Have you taken your
+    medication today?" (`:63`), since there is no ASR and the answer is never
+    heard; **no startle language** catches "Please be careful" (`:31`), because
+    startle is itself a fall mechanism. Plus locale completeness (a `hi` field
+    with no Devanagari is an English string pasted into it), message length,
+    regulated-claim verbs, confidence reachability against the detector floor,
+    dwell against the Event Memory ceiling, safety-class coverage, exhaustive
+    determinism, and ambiguous arbitration.
+  - `src/scenario_engine/simulate.py` — replays a day of detections through the
+    scenario set and projects per-scenario and whole-set alert volume, modelling
+    dwell, cooldown, `max_repeats`, the daily budget, quiet hours, and event
+    hysteresis. It deliberately excludes the global rate limit and queue
+    eviction: those are runtime back-pressure, and counting them would let a
+    scenario set be "in budget" only because the queue was discarding its alerts.
+  - **The simulation surfaced something worth recording.** Modelling the three
+    legacy rules against a representative Indian-kitchen day (cylinder and stove
+    permanently visible, two cooking sessions, a medicine strip out all day)
+    projects ~370 alerts under the *legacy* engine, but only 16 under the new
+    schema — because `max_repeats` is capped at 3 and hysteresis makes a
+    persisting condition one event rather than a metronome. The failure mode was
+    designed out by the schema rather than left for the gate to catch. The gate
+    still earns its place on the case per-scenario limits cannot see: ten
+    individually-reasonable scenarios, each inside its own budget, summing well
+    past the whole-set ceiling — which is how a taxonomy actually degrades, since
+    nobody adds an obviously noisy scenario, they add the twentieth reasonable one.
+  - `scripts/scenarios/31_validate_scenarios.py` + the `validate_scenarios` DVC
+    stage, writing `data/qa_reports/scenario_validation_report.json` as a
+    `cache: false` metric (git-readable at a tag, allowlisted in `.gitignore`).
+  - The validators immediately flagged two prompts in the M3 exemplar scenario as
+    over the 14-word bound; the messages were shortened rather than the bound
+    raised.
+- Phase-6 M5: the scenario taxonomy and the initial set — 20 scenarios, of which
+  **9 are supportable and 11 are rejected**. That ratio is the finding, not a
+  gap: 23 static-object classes plus `person`/`face`, with no pose, no on/off
+  state and no tracking, support far fewer real-time scenarios than the product
+  framing implies.
+  - `docs/08_scenario_engineering/scenario_taxonomy.md` — the category scheme,
+    the three shapes a scenario can take (environmental finding · real-time
+    hazard · observation), the classes that deliberately carry no scenario, and
+    the empty categories. `STA` (staircase) is empty *and important*: stairs are
+    among the strongest STEADI items and there is **no `stairs` class** — a
+    capability gap, not an oversight.
+  - Supportable: `SC-BTH-002` no grab bar seen near the toilet (a literal STEADI
+    bathroom item, fully supported, never spoken to the resident — the highest-
+    value scenario available and absent from the legacy set entirely) ·
+    `SC-KIT-001` cooking left unattended · `SC-KIT-002` knife left out with
+    nobody present (the only defensible knife scenario; `knife` + `person` is
+    cooking) · `SC-BTH-001` wet floor · `SC-MOB-001` walking aid left away from
+    the person · `SC-COR-001` cord on the floor · `SC-BTH-003` prolonged
+    bathroom occupancy · `SC-MED-001` medicine packaging left out (the honest
+    replacement for the deleted `medicine_reminder`) · `SC-SYS-001` nobody seen
+    for an unusually long time.
+  - Rejected (`SC-SAF-001…011`): fall detection, stove left on, gas leak,
+    medication adherence, hydration, tap running, person unconscious, wandering,
+    cognitive decline, knife-handling safety, and identifying who is home. Each
+    records the trigger someone would naively write, so the file documents what
+    was considered as well as why it was refused.
+  - **Projected volume for the whole set is 5 alerts/day against a budget of 20**,
+    versus ~370/day for the six legacy rules.
+  - `configs/feature_flags.yaml`: `memory_window_frames` raised 150 → 2700
+    (10.0s → 180s at 15 FPS). The scenario schema's dwell field and the
+    `present_for` predicate are both bounded by this window, and the
+    environmental findings need 60s while unattended-cooking needs 120s — all
+    unexpressible at 150 frames. The validator surfaced this rather than letting
+    the scenarios silently never fire. Footprint stays negligible (~6MB).
+  - Every scenario ships as `status: draft`. `status: active` requires
+    `reviewed_by`/`reviewed_on`, and that review is a **clinical judgement by a
+    qualified human**, not an engineering sign-off — marking them active would
+    fabricate the sign-off the schema exists to require. The consequence is
+    honest and visible: `validate_scenarios` reports `safety-class-uncovered`
+    for every safety-critical class, because coverage counts active scenarios
+    only. Those warnings clear when clinical review happens, not before.
+- Phase-6 M6: **the mandatory correctness gate. Verdict PASS, 8/8 gates.** This is
+  the boundary between building the scenario engine and using it; M7+ was blocked
+  until it passed, mirroring Phase-5's M6.
+  - `scripts/qa/validate_phase6.py` runs the real checks against the real
+    repository and commits the evidence to
+    `data/qa_reports/phase6_validation_report.json` (`cache: false`, allowlisted
+    in `.gitignore`). G1 artifact currency - G2 zero validator ERRORs - G3 alert
+    volume within budget - G4 order-independent firing - G5 scenario-engine and
+    pipeline suites - G6 performance budgets - G7 DVC idempotency - G8 layering.
+  - `tests/performance/test_scenario_budget.py` closes a gap the plan named: the
+    5 ms/frame rule-engine allocation from `performance_budget.md:30` had no
+    test. It measures the **worst case** (300 scenarios, all evaluated, crowded
+    frame, spatial predicates O(n^2)) rather than only the indexed path, since
+    passing the worst case implies the indexed one. A second test asserts the
+    inverted index actually prunes, rather than merely existing.
+  - **The gate is proved falsifiable.** `tests/unit/test_validate_phase6.py`
+    drives G2 and G3 with deliberately broken inputs and asserts they fail. This
+    repository has a recorded incident where release gate RG6 read green for an
+    entire cycle while structurally incapable of failing, certifying a release
+    over 21,964 un-pushed objects (`gates.py:394-421`) — a gate that cannot fail
+    converts an unchecked property into a documented assurance.
+  - The report records its own **known limitations** rather than a bare PASS, and
+    a test asserts they are present: every scenario is still `draft` pending
+    clinical review; no labelled clips exist yet, so G3 is a projection over a
+    synthetic occupancy profile rather than measured field behaviour; and the
+    runtime still loads `configs/risk_rules.yaml` (M8).
+- Phase-6 M7: scenario clip capture protocol, ingest, and **MP4 metadata
+  stripping — which did not exist**. `src/dataset/capture/exif.py` strips EXIF
+  from images and does not cover video, and could not: MP4 carries GPS in the
+  `moov/udta` `©xyz` atom next to creation time and device model, which an EXIF
+  stripper never touches. A clip reaching the S3 remote with that atom intact is
+  a participant's home address in a **versioned** bucket, where deleting the
+  object does not remove prior versions.
+  - `src/scenario_engine/clips.py` — `ffmpeg -map_metadata -1 -map_chapters -1
+    -c copy` **plus a read-back assertion** via ffprobe; a surviving forbidden
+    key rejects the clip. `-c copy` so sanitising never re-encodes the footage a
+    scenario is validated against. A missing toolchain is an **error, not a
+    skip**: a privacy control that silently degrades is not a control.
+  - `ClipManifest`/`ExpectedOutcome` turn a clip into a test rather than a
+    recording — a positive clip must state `first_alert_within_s`, a negative
+    must state `negative_kind` (`confuser`/`absence`/`assistive`/
+    `out_of_taxonomy`). `rule_hash_at_label_time` makes staleness detectable: a
+    suite passing green against an expectation the scenario no longer has is
+    worse than one that fails.
+  - **Consent gained a scope, and video is not implied by images.** Clips
+    require `scope: scenario-video`; `dataset-training` is refused at ingest. A
+    still can be curated frame by frame before it is kept, a 30-second clip
+    cannot. Unlike image ingest, a **missing consent registry is fatal** rather
+    than a downgrade to format-only checking — scope is precisely what cannot be
+    verified without it, so clips are only ever ingested on the collection
+    machine. Documented in `data/consent/README.md`.
+  - `clips:` block in `configs/capture_config.yaml` as a **sibling** of
+    `capture:`. Video extensions are deliberately *not* added to
+    `capture.image.allowed_extensions` — that list feeds a per-image `min_dim`
+    gate that opens each file with PIL, so an `.mp4` entry there would reject or
+    crash on every clip. A test fails if anyone tries. `strip_metadata: false`
+    is rejected at load: the privacy control is not a preference.
+  - Clip IDs extend the Phase-3 session grammar (`{session}_c{NNN}`), so frames
+    named `{clip_id}_frame_{NNNNN}.jpg` are already recognised by
+    `src/utils/dataset_utils.py`'s group extractor — **leakage prevention comes
+    for free**, with no new code.
+  - `min_negative_fraction: 0.30` is enforced over the clip *set*: a suite of
+    positives measures sensitivity and is blind to the false-positive rate,
+    which is the failure mode that gets the device unplugged. The 10-scenario
+    matrix in `validation_strategy.md` already carried exactly three negatives.
+  - `scripts/scenarios/32_ingest_scenario_clips.py` and the **frozen**
+    `ingest_scenario_clips` DVC stage, mirroring `ingest_custom_captures` so
+    `dvc repro` on a fresh machine can never overwrite human-collected footage
+    with an empty re-run. Outs are split by review value: `video/` cached (large
+    binary, confidentiality rests on the remote), `manifests/` `cache: false` and
+    git-committed, because a manifest is an **assertion** and changing what the
+    suite claims must appear in a pull request.
+  - `docs/08_scenario_engineering/clip_capture_protocol.md` and
+    `adr/ADR-P6-10-clips-as-a-frozen-stage.md`.
+  - **No clip has been ingested.** ffmpeg is not installed on the development
+    machine and the module refuses rather than proceeding unsanitised. This is
+    the design working; installing ffmpeg on the collection machine is a
+    prerequisite of the first session.
+- Phase-6 M7 real-world acceptance: ffmpeg 9.0 installed, the full ingest path
+  run against a real MP4 carrying real GPS, and the collection design for the
+  first 100-clip batch. Evidence: `data/qa_reports/m7_acceptance_report.json`
+  (**PASS 10/10**), `scripts/qa/m7_acceptance.py`.
+  - **A defect the unit tests could not have found.** `handler_name` was
+    required to be *absent* after stripping. Against real ffmpeg it never can
+    be: it lives in the mandatory MP4 `hdlr` box and the muxer rewrites it on
+    every remux — neither `-map_metadata -1` nor `-metadata:s handler_name=`
+    removes it, both measured. The gate was **unsatisfiable and would have
+    rejected every clip**, which is the worst kind of privacy control because
+    the pressure to switch it off is irresistible. Now checked by *value*
+    against `NEUTRAL_HANDLER_NAMES`; a device-chosen handler
+    (`Samsung Video Handler`) still fails. `encoder` stayed an absence check
+    because it *is* removable — `-fflags +bitexact` added.
+  - The acceptance test is built so it cannot pass vacuously: A3 proves the
+    fixture carries GPS **before** stripping, and A6 proves the residual
+    detector still fires on that file afterwards. Without both, a green A5
+    could mean the file never had metadata, or that the detector broke.
+  - **Permission is now exactly one thing.** `SourceProvenance` splits
+    `own_capture` (permitted by `consent_reference`, licence fields must be
+    empty) from `external` (permitted by a licence from an allowlist, with
+    `source_url`/`source_platform`/`creator`/`license_url` mandatory, and
+    `consent_reference` must be **empty**). Previously an external clip could
+    only be ingested by inventing a consent id — recording a consent no human
+    gave. Licences are an allowlist because "free to use" and "publicly
+    viewable" are what would otherwise land in that field.
+  - **A clip is not a dataset member until a human says so.** `review_status`
+    (`pending`/`accepted`/`rejected`), `reviewed_by`, `rejection_reason`.
+    Acceptance names a reviewer; rejection states a reason. `metadata_stripped`
+    is machine-verified and deliberately does not substitute — sanitisation says
+    nothing about whether an identity document is in frame.
+  - `src/scenario_engine/clip_dataset.py` + `33_clip_dataset_report.py` count
+    **accepted** clips, never files. 100 pending manifests is zero clips and the
+    report says FAIL.
+  - **`min_clip_seconds()` and the impossible-positive gate.** Read off each
+    compiled condition: `SC-KIT-001` cannot fire before 960 s, `SC-SYS-001`
+    before 28 800 s. A 20-second clip of a person at a stove is therefore **not**
+    an `SC-KIT-001` positive — the engine correctly stays silent — and the report
+    now refuses it with the instruction to relabel it `negative` /
+    `negative_kind: pre_dwell`. That is the likeliest mislabelling in a
+    short-clip batch and the hardest to catch by eye, since the footage looks
+    exactly like the hazard. `pre_dwell` added to the negative vocabulary.
+  - `max_duration_s` 120 → **200**. At 120 s, three of the nine active scenarios
+    (`SC-COR-001` 120 s, `SC-BTH-003` 150 s, `SC-MED-001` 170 s) could not be
+    demonstrated as positives at all.
+  - The consent registry path was hardcoded in `clips.py`; it is now read from
+    `consent.registry_path`, so an isolated acceptance run cannot be forced to
+    touch the real registry.
+  - `docs/08_scenario_engineering/clip_collection_plan.md` — M7 component audit,
+    the dwell-vs-clip-length arithmetic, reconciliation of the requested
+    scenario groups against the rejected register (hydration, fall detection,
+    wandering and `SC-FAL-001`/`SC-ELC-002` do not exist), the 100-clip matrix,
+    variation requirements, five-member allocation, QA gates and accounting.
+  - **No scenario clip has been collected.** The acceptance fixture is synthetic
+    (`ffmpeg testsrc2`), lives in a temporary tree under reserved house id
+    `h99`, and is not a dataset member.
+- Phase-6 M8: **runtime integration. `configs/risk_rules.yaml` is retired** and
+  the scenario engine is the pipeline's rule engine (ADR-P6-03, ADR-P6-04).
+  - `src/scenario_engine/runtime.py` — `ScenarioRuleEngine`. Dwell before
+    firing, hysteresis on clearing, `max_repeats`/`max_per_day` caps, quiet
+    hours, room gating, per-scenario confidence floors, and an inverted index
+    that prunes candidates. Its state machine mirrors `simulate.py` on purpose:
+    a projected alert volume computed from a different model than the runtime
+    would be a number with no meaning.
+  - **`src/app/` — a composition root, and the reason one was needed.** The
+    obvious wiring (orchestrator constructs the engine) would make
+    `src.pipeline` import `src.scenario_engine`, which already imports
+    `src.pipeline`. That cycle works today only because
+    `src/pipeline/__init__.py` re-exports no submodules and would detonate the
+    first time one is added — `test_layering.py` already forbade it. So
+    `ElderlyAssistantPipeline` now **requires** an injected `rule_engine` and
+    raises a pointed error when given none, and `src.app.factory.build_pipeline()`
+    does the assembly from above both packages. A new layering test asserts
+    nothing imports the composition root.
+  - **`BaseRuleEngine` was wrong, and typing the parameter revealed it.** The
+    documented interface declared `evaluate(detections, memory, context)` while
+    `orchestrator.py` has always passed a fourth argument, the measured FPS —
+    so anyone implementing the published interface exactly would have crashed on
+    the first frame. Now a `Protocol` (matching `MemoryView`) with `current_fps`
+    present and `memory` typed `Any`, because the two engines legitimately want
+    different surfaces of it and this package cannot name `MemoryView` without
+    importing the layer above.
+  - `Alert` extended additively per ADR-P6-09: `scenario_id`,
+    `next_best_action`, `caregiver_channel`, `patient_facing`, `messages`,
+    `capability_disclaimer`. All defaulted, so every pre-existing construction
+    site is unaffected. The LOCKED header now states precisely what LOCKED
+    permits — additive with a default, recorded in an ADR — so the nuance
+    travels with the code rather than living only in the ADR.
+  - **The golden alert-trace test asserts the opposite of what the plan asked
+    for, and says why.** The plan wanted "identical alerts for retained rules".
+    Running it showed the premise was wrong: the behaviour was *supposed* to
+    change, and pinning sameness would have locked in the defect the phase
+    exists to remove. `tests/unit/pipeline/test_engine_migration.py` is a
+    characterisation test instead — it replays one detection trace (a person
+    cooking, with stove, knife and cylinder visible) through both engines and
+    pins the difference. The legacy engine alerts on frame one; the scenario
+    engine stays silent for the whole minute, because `SC-KIT-001` is about
+    cooking left *unattended* and `knife_near_person` no longer exists.
+  - `configs/feature_flags.yaml` `rules:` now names scenario ids. The six legacy
+    keys were **removed rather than left as inert no-ops** — a flag that toggles
+    nothing is worse than an absent one, because it reads as control.
+  - `troubleshooting.md`: the corruption-recovery step told operators to
+    `git checkout HEAD configs/risk_rules.yaml`, which would now be a footgun
+    against a generated artifact. Rewritten for the authored-masters flow, plus
+    a new "starts but never alerts" section covering the three real causes
+    (everything is draft, no `room` configured, dwell not yet elapsed) and
+    `last_decisions()`, which reports per-scenario why each stayed silent.
+  - **The engine refuses to start while every scenario is `draft`** — the
+    current, correct state. A safety engine that quietly loads zero rules is
+    indistinguishable from one working perfectly and seeing nothing.
+- Phase-6 M9 (**Phase 6 complete**): integration strategy for the five seams —
+  YOLO · tracking · VLM · voice · caregiver
+  (`docs/08_scenario_engineering/integration_strategy.md`). The acceptance was
+  "no further code changes are required when the model lands", which is
+  unfalsifiable as prose, so it ships as a command: **`scripts/qa/model_landing_check.py`**
+  (L1 weights load · L2 taxonomy declared · L3 weights carry *exactly* it ·
+  L4 scenario classes usable · L5 a scenario is active · L6 the pipeline
+  assembles). A check ends `pass`/`fail`/`blocked`/`skipped`, where **`blocked`
+  means the engineering is done and a human step is outstanding** — kept distinct
+  so a pending clinical review never reads as a broken pipeline, and a broken
+  pipeline never hides behind one.
+  - **Auditing the seams found five more pre-existing defects (#14–#18).** They
+    are seam defects rather than component defects: each component worked, and
+    nothing had ever made the joins load-bearing.
+  - **#14 — `Alert.patient_facing` was enforced nowhere.** It is documented as
+    "when False, nothing is spoken to the resident", and **7 of the 9 scenarios
+    set it False**. All seven were spoken aloud to the resident, including
+    `SC-BTH-002`, whose entire design is that it never addresses them; a
+    quiet-hours `caregiver_only` scenario would have spoken at 3am, the precise
+    behaviour that setting exists to prevent. Now honoured, and silent alerts are
+    *skipped* rather than left queued, so one cannot gag a speakable alert behind
+    it or consume the speech budget.
+  - **#15 — `caregiver_channel` had no consumer**, and contrary to ADR-P6-09's
+    claim was not logged either. All nine scenarios declare a channel.
+    **Defects 14 and 15 were masking each other**: with everything spoken and
+    nothing routed the device looked correct, and fixing 14 alone would have
+    taken seven of nine scenarios to producing nothing observable anywhere.
+    `src/pipeline/caregiver.py` + `BaseCaregiverSink` (ADR-P6-11) is the sink —
+    **local only**, `logs/caregiver.jsonl`, no network. `push_and_call` records
+    `escalation_pending: true` and logs `NOBODY HAS BEEN CALLED`: escalation
+    terminates at a human, and when it cannot reach one it must say so rather
+    than write a line that reads as delivered. `log_alert` now carries the
+    ADR-P6-09 fields.
+  - **#16 — the VLM's control surface was decorative.** The sampling interval
+    was hard-coded to 5 while `smolvlm_every_n_frames` sat unread, and
+    `smolvlm_timeout_ms` was stored by the analyzer and never consulted. Both
+    wired; an overrunning inference is now *discarded* rather than fused, so a
+    description of the world seconds ago cannot raise confidence on detections it
+    never saw.
+  - **#17 — nothing checked the weights' class list.** `YOLODetector` now takes
+    `expected_classes` and raises `TaxonomyMismatchError` naming the exact
+    difference (ADR-P6-12). Ids are compared as well as names: the R24 decision
+    holds id 20 reserved for `wet_floor` without renumbering, so a model that
+    shuffles ids while keeping every name is precisely the case a name-set check
+    waves through. `SystemConfig` carries `class_names` from `configs/data.yaml`
+    so the detector still reads no YAML itself.
+  - **#18 — eight of the ten `components:` flags were read by no code at all.**
+    The file opens "All runtime behavior is controlled here"; an operator setting
+    `tts_output: false` was still spoken to. This is defect #1 wearing a
+    different hat — M1 fixed how the file is *loaded*, and nobody checked that
+    each flag was *consumed*. `tts_output` is now wired;
+    `tests/unit/test_feature_flags_are_live.py` requires every remaining flag to
+    be wired or explicitly labelled NOT WIRED, in both the YAML and the test, so
+    the labels can rot in neither direction.
+  - `runtime.tts_language` selects from a scenario's `messages` map, falling back
+    to English rather than to silence. **The loaded voice file wins a
+    disagreement with the config** — Devanagari through an `en_IN` voice does not
+    fail, it produces confident gibberish at someone who may be alone.
+  - `tts_speed` wired, and the config changed 1.0 → **0.9**: 0.9 was Piper's own
+    default and therefore the rate the device has always actually spoken at.
+    Wiring a dead key must not quietly change behaviour on the way past.
+  - `alert_cooldown_multiplier` **removed** rather than labelled: wiring it would
+    let an operator scale every cooldown outside the governed path, silently
+    invalidating the alert-volume projection the M6 gate depends on.
+  - **Tracking is deliberately absent — no code, no stub.** `EventMemory` counts
+    classes, not instances, and every authored scenario is written to survive
+    that (`SC-BTH-003` says "time in the bathroom", never "*you* have been in the
+    bathroom"). A `track_id` is a claim about sameness of a person, which is
+    stronger than anything this system currently asserts. A tracker arrives with
+    the scenarios that need it and the evidence it is reliable enough, or not at
+    all: one that is right 80% of the time is worse than none, because the
+    scenarios written on top will assume 100%.
+  - `docs/02_technical_architecture_specification/feature_flags.md` corrected —
+    it listed `vlm_enabled` (a key in no config file — defect 3) and
+    `active_learning` (real name `active_learning_logging`), and claimed type
+    validation and hot reload that do not exist.
+  - ADR-P6-11 (caregiver sink is local-only) and ADR-P6-12 (weights must declare
+    their taxonomy) added.
 - Phase-5: Production Dataset Engineering, Missing-Annotation Resolution &
   Dataset v1.0 — makes dataset quality the primary solution and demotes
   Phase-4 masking to a safety net. Core invariant: auto-generated labels never
@@ -208,6 +704,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the only reference in the repo was a mypy override.
 
 ### Fixed
+- Phase-6 M1: the nine runtime defects catalogued in
+  `docs/08_scenario_engineering/architecture_review.md` §3. Each fix ships with
+  the regression test that pins it; `src/pipeline/rule_engine.py`,
+  `event_memory.py` and `detector.py` had **no tests at all** beforehand.
+  - **Every feature flag was inert.** `orchestrator.py` read a `feature_flags:`
+    root key that does not exist in `configs/feature_flags.yaml`, so the flag
+    dict was permanently `{}` while the correct loader (`SystemConfig`) was
+    reachable only from tests. The orchestrator now loads `SystemConfig` and
+    routes every component through it, per that class's own documented
+    contract. This makes `passport: false  # privacy`, the per-rule toggles,
+    `memory_window_frames`, and `smolvlm_analysis: false` real for the first
+    time — the VLM previously loaded unconditionally because the orchestrator
+    consulted a `vlm_enabled` key that exists in no config file.
+  - **Class gating is now enforced in the detector**, so a disabled class never
+    becomes a `Detection` and therefore never reaches a rule, a log, or an
+    alert — a comment in a config file is not a privacy guarantee.
+  - **Recall-tuned thresholds were unreachable.** Ultralytics filters by `conf`
+    before the per-class pass runs, so passing the global 0.25 silently defeated
+    every lower safety threshold in `configs/class_thresholds.yaml` — which was
+    itself never loaded at runtime. Prediction now runs at the loosest threshold
+    any class asks for, with the per-class cut applied after.
+  - **`stove_unattended`, the only CRITICAL rule, could not fire cold.**
+    `frames_since_seen*` returned the 150-frame window for never-seen classes,
+    saturating at exactly 10.0 s at 15 FPS, so any `absent_for` threshold above
+    10 s was unreachable until the class had been seen once. Never-seen now
+    means "absent for the whole session".
+  - **Temporal rules used the nominal FPS.** The orchestrator now measures the
+    real loop rate, so a throttled device no longer silently rescales a 30 s
+    threshold to 225 s.
+  - **The condition DSL was replaced with a real parser**
+    (`src/pipeline/condition_parser.py`): tokenizer, recursive-descent parse to
+    an immutable AST, evaluated per frame. Fixes `any_of([...])` silently
+    discarding the rest of its condition, AND/OR precedence being inverted,
+    parentheses being unsupported, and `NOT` composing only with `detected`.
+    Conditions are parsed **once at load time**, so a malformed condition, an
+    unknown predicate, an invalid severity, a duplicate id, a negative cooldown,
+    or an empty rule set is now a loud failure instead of a rule that silently
+    never fires. A bad hot-reload leaves the previous rule set active, and
+    cooldown entries for removed rules are pruned rather than leaking forever.
+    Alerts are returned severity-ordered, as `rule_engine.md:37-43` has always
+    specified. Optionally validates class references against `configs/data.yaml`,
+    so `detected(knive)` fails at load.
+  - **`save_csv_report` wrote CRLF**, which permanently dirties the working tree
+    (failing release gate RG5) and gives one report two DVC hashes across the CI
+    matrix. Now writes LF, matching its JSON sibling's documented contract.
+  - **`log_alert` wrote `explanation` unredacted** while `log_frame` redacted the
+    same `person`/`face` geometry. Explanations are now redacted at any nesting
+    depth, on word boundaries, before they reach `logs/events.jsonl`.
+- Phase-6 M1: **alert arbitration now exists.** `AlertQueue` — severity-ordered,
+  bounded, evicting the lowest-priority pending item on overflow — was fully
+  implemented and unit-tested but never imported by anything. The orchestrator
+  instead spoke `max(alerts)` each frame and discarded the rest, so a backlog
+  could not survive a frame. It is now wired in, and `max_alerts_per_minute`
+  (commented "Hard cap — prevents alert fatigue" in `configs/feature_flags.yaml`,
+  referenced by no code) is enforced. CRITICAL alerts bypass the cap: a limit
+  that can silence an emergency is a worse failure than the fatigue it prevents,
+  and the alarm-fatigue evidence concerns routine chatter. Suppression affects
+  speech only — every alert is still queued, logged, and counted.
+- Phase-6 M1: `PiperTTS.speak` **evicts the lowest-priority queued message on
+  overflow instead of dropping the incoming one.** With five routine prompts
+  backed up behind a multi-second synthesis, an arriving CRITICAL was discarded
+  with a log warning while the chatter still played — inverting the very
+  priority contract the class documents. A message is dropped now only when
+  nothing queued outranks it.
+- Phase-6 M1: CI now runs `mypy src/` (whole tree, matching `Makefile:78`). The
+  `src/pipeline` exclusion rested on a "17 errors" note from 2026-07-14 that had
+  gone stale — it measures clean — and it was hiding the dataclasses that
+  `src/pipeline/__init__.py` declares LOCKED. Local dev had been stricter than CI.
 - CVAT label paste failed with `unknown label type "undefined"` on the
   deployed CVAT: `build_cvat_labels_spec` omitted `type`, assuming CVAT
   defaults it to `"any"`. It now emits `{"name": ..., "type": "rectangle",

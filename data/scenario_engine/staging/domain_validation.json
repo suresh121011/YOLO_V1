@@ -1,0 +1,82 @@
+{
+  "generated_at": "2026-08-25T18:25:37.917148+00:00",
+  "summary": {
+    "total_videos": 433,
+    "qa_pass": 424,
+    "qa_fail": 9,
+    "candidates": 202,
+    "unassigned": 222,
+    "rejected": 9
+  },
+  "by_status": {
+    "UNASSIGNED": 222,
+    "REJECTED": 9,
+    "CANDIDATE": 202
+  },
+  "by_candidate_scenario": {
+    "SC-BTH-001": 60,
+    "SC-BTH-002": 50,
+    "SC-COR-001": 20,
+    "SC-KIT-002": 28,
+    "SC-MED-001": 20,
+    "SC-MOB-001": 24
+  },
+  "by_polarity": {
+    "EDGE": 52,
+    "NEGATIVE": 90,
+    "POSITIVE": 291
+  },
+  "issue_types": {
+    "duplicate_of": 9
+  },
+  "thresholds": {
+    "min_duration_s": 3.0,
+    "max_duration_s": 300.0,
+    "min_fps": 15.0,
+    "min_resolution": 240
+  },
+  "candidates_by_scenario_and_polarity": {
+    "SC-BTH-001": {
+      "POSITIVE": 46,
+      "NEGATIVE": 5,
+      "EDGE": 9,
+      "UNKNOWN": 0,
+      "total": 60
+    },
+    "SC-BTH-002": {
+      "POSITIVE": 36,
+      "NEGATIVE": 7,
+      "EDGE": 7,
+      "UNKNOWN": 0,
+      "total": 50
+    },
+    "SC-COR-001": {
+      "POSITIVE": 13,
+      "NEGATIVE": 3,
+      "EDGE": 4,
+      "UNKNOWN": 0,
+      "total": 20
+    },
+    "SC-KIT-002": {
+      "POSITIVE": 0,
+      "NEGATIVE": 28,
+      "EDGE": 0,
+      "UNKNOWN": 0,
+      "total": 28
+    },
+    "SC-MED-001": {
+      "POSITIVE": 10,
+      "NEGATIVE": 10,
+      "EDGE": 0,
+      "UNKNOWN": 0,
+      "total": 20
+    },
+    "SC-MOB-001": {
+      "POSITIVE": 13,
+      "NEGATIVE": 5,
+      "EDGE": 6,
+      "UNKNOWN": 0,
+      "total": 24
+    }
+  }
+}

@@ -1,0 +1,32 @@
+# ─── SC-SAF-001 — Fall detection (REJECTED) ─────────────────────
+# Part of the versioned negative register (ADR-P6-08). Kept in the repository so
+# the reasoning is diffed alongside the positive set and the id stays reserved —
+# a rejected capability is a permanent limit, not a backlog item.
+#
+# The trigger below is what someone would naively write. It is recorded to show
+# what was considered, and never runs.
+# ──────────────────────────────────────────────────────────────────────────────
+scenario_id: SC-SAF-001
+schema_version: 1
+scenario_name: Fall detection
+category: safety
+status: rejected
+
+detectability: rejected
+claim_class: inference
+
+trigger:
+  op: detected
+  args: {class_name: person}
+
+risk_level: INFO
+priority: 999
+patient_facing: false
+messages: {}
+next_best_action: ""
+caregiver_channel: none
+
+rejection_reason: >-
+  No pose estimation, no keypoints, no floor plane and no motion model. A person box that becomes wide and low is someone bending, sitting on the floor, praying or exercising. This is the first capability every family will assume the product has, so the exclusion must also appear in the product surface, not only here.
+
+sample_video_needed: false

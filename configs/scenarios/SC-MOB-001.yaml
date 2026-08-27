@@ -1,0 +1,50 @@
+# ─── SC-MOB-001 — Walking aid left away from the person ───────────────────────
+# `walking_stick` is the highest-value class in the taxonomy: mobility-aid
+# non-use is an established fall risk factor, and unlike most of what this
+# system sees, the aid being present or absent is genuinely observable.
+#
+# Framing matters. This must never scold. It reports where the aid is, to a
+# caregiver, and says nothing at all to the resident.
+# ──────────────────────────────────────────────────────────────────────────────
+scenario_id: SC-MOB-001
+schema_version: 1
+scenario_name: Walking aid left away from the person
+category: corridor
+status: draft
+
+detectability: inferred
+claim_class: inference
+
+trigger:
+  all:
+    - op: present_for
+      args: {class_name: walking_stick, seconds: 60}
+    - op: absent_for
+      args: {class_name: person, seconds: 300}
+
+risk_level: LOW
+priority: 70
+
+min_confidence: 0.50
+min_dwell_seconds: 60
+clear_after_seconds: 120
+cooldown_seconds: 7200
+max_repeats: 0
+max_per_day: 2
+
+patient_facing: false
+messages: {}
+
+next_best_action: Check the walking stick is within easy reach
+caregiver_channel: digest
+
+capability_disclaimer: >-
+  The system sees where the walking stick is, not whether it is needed or being
+  used. A stick resting in its usual place is not evidence of anything.
+
+evidence:
+  - source_id: WHO-StepSafely-2021
+    section: Mobility aids
+    strength: guideline
+    supports: hazard
+sample_video_needed: true

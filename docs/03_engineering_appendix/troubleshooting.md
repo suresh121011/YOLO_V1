@@ -23,16 +23,20 @@ Related:
 |:--------|:-------------|:-----------|
 | "Model hash mismatch" on startup | Corrupted model file | Re-download or `dvc checkout` the model |
 | FPS drops below 5 | Thermal throttling or CPU contention | Check device temperature; reduce `process_every_n_frames` |
-| No alerts generated | Rule cooldowns active or config issue | Check cooldown timers; verify `risk_rules.yaml` |
-| TTS silent (no audio) | Speaker muted or Piper crash | Check device volume; verify TTS health check |
+| No alerts generated | Rule cooldowns active or config issue | See §15.3 "starts but never alerts"; call `last_decisions()` |
+| `TaxonomyMismatchError` on startup | Weights trained on a different class list | `python scripts/qa/model_landing_check.py` names the difference. Fix it in training/export — do **not** add a rename map |
+| TTS silent (no audio) | Speaker muted, Piper crash, or `tts_output: false` | Check the flag first, then device volume and the TTS health check |
+| One scenario is never spoken but others are | `patient_facing: false` — by design for 7 of the 9 | It went to `logs/caregiver.jsonl` instead. Not a fault |
+| `NOBODY HAS BEEN CALLED` in the log | A `push_and_call` alert fired; no telephony exists | Expected. Read `logs/caregiver.jsonl` and escalate by hand |
+| A feature flag appears to do nothing | It may genuinely be inert | Flags read by no code are labelled `NOT WIRED` in `configs/feature_flags.yaml` |
 | "Camera source unavailable" | Camera permission or hardware | Check OS camera permissions; try different camera index |
 | High false positive rate | Low confidence threshold | Increase `conf_threshold` for affected class |
 | High false negative rate | High confidence threshold or poor training data | Decrease threshold; collect more training data |
 | SQLite "database is locked" | Concurrent write from multiple threads | Verify single logger instance; check threading |
-| Out of memory error | VLM model too large for device | Disable VLM (`vlm_enabled: false`); use smaller variant |
+| Out of memory error | VLM model too large for device | Disable VLM (`smolvlm_analysis: false`); use a smaller variant |
 | `yaml.scanner.ScannerError` on config load | YAML syntax error | Validate YAML with `yamllint`; check indentation |
 | `piper: command not found` | Piper TTS not installed | Install Piper: `pip install piper-tts` or download binary |
-| Alert repeating too frequently | Cooldown too short for class | Increase `cooldown_seconds` in `risk_rules.yaml` |
+| Alert repeating too frequently | Cooldown too short for that scenario | Raise `cooldown_seconds` in `configs/scenarios/<id>.yaml`, then recompile. `max_repeats` is capped at 3 by the schema |
 | VLM timeout errors in log | Device too slow for SmolVLM2 | Disable VLM or switch to 256M variant |
 
 ---
@@ -115,16 +119,48 @@ sqlite3 logs/events.db \
 5. Escalate: If repeated, report for engineering investigation
 ```
 
-### Scenario: Rule Engine YAML Corruption
+### Scenario: Scenario YAML Corruption
+
+`configs/risk_rules.yaml` was retired in Phase 6 (ADR-P6-03). The authored
+knowledge now lives as one file per scenario in `configs/scenarios/`, and the
+compiled artifact `data/scenario_engine/build/scenarios.compiled.json` is
+**generated** — never hand-edit it, and never `git checkout` it as a recovery
+step, because the next compile will overwrite whatever you restored.
 
 ```
-1. Identify: "YAML parse error" in logs; no alerts being generated
-2. Contain: Pipeline continues using last valid rule set (in-memory)
+1. Identify: "Cannot load scenarios" / ScenarioRuntimeError on start-up, or
+   "Scenarios hot-reloaded" absent after an edit. The engine names the file and
+   the field.
+2. Contain: A failed reload leaves the previously loaded set active — a bad edit
+   never disarms a running pipeline. A failed *start-up* refuses to run at all,
+   which is deliberate: a silent engine is indistinguishable from a working one
+   that has seen no hazards.
 3. Recover:
-   a. git diff configs/risk_rules.yaml  # See what changed
-   b. git checkout HEAD configs/risk_rules.yaml  # Restore
-   c. rule_engine.reload_rules()  # Trigger hot-reload
-4. Verify: Check that rules fire correctly on next hazard detection
+   a. git diff configs/scenarios/          # See what changed
+   b. git checkout HEAD configs/scenarios/ # Restore the AUTHORED masters
+   c. python scripts/scenarios/30_compile_scenarios.py   # Regenerate
+   d. python scripts/scenarios/31_validate_scenarios.py  # Is it still wise?
+   e. rule_engine.reload_rules()           # Hot-reload into the running pipeline
+4. Verify: 30_compile_scenarios.py --check exits 0 (1 = validation failure,
+   2 = the committed artifact has drifted from the sources).
+```
+
+### Scenario: The pipeline starts but never alerts
+
+Three causes, in the order worth checking:
+
+```
+1. Every scenario is still `status: draft`. This is the expected state until a
+   clinical reviewer sets reviewed_by/reviewed_on. The engine refuses to start
+   rather than running silently — check the start-up error, which counts the
+   drafts.
+2. No `room` was passed to build_pipeline(). Room-scoped scenarios (SC-KIT-*,
+   SC-BTH-*, SC-COR-*) are gated on it, so a camera with no room configured is
+   inert for most of the set.
+3. The hazard has not dwelled long enough. SC-KIT-001 needs 16 minutes,
+   SC-KIT-002 11, SC-MOB-001 6. Call rule_engine.last_decisions() — it reports
+   per-scenario why each did or did not fire ("dwelling", "cooling_down",
+   "wrong_room", "quiet_hours_suppress", "max_per_day").
 ```
 
 ---

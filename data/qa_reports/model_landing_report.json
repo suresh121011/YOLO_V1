@@ -1,0 +1,95 @@
+{
+  "generated_at": "2026-08-25T18:10:33Z",
+  "git_commit": "7b95362",
+  "phase": "6",
+  "milestone": "M9",
+  "verdict": "BLOCKED",
+  "model_path": "models\\benchmarks\\models\\baseline_r0\\weights\\best.pt",
+  "room": "kitchen",
+  "checks": [
+    {
+      "check_id": "L1",
+      "name": "Weights file exists",
+      "status": "pass",
+      "details": {
+        "path": "models\\benchmarks\\models\\baseline_r0\\weights\\best.pt",
+        "size_mb": 5.44
+      }
+    },
+    {
+      "check_id": "L2",
+      "name": "configs/data.yaml declares a taxonomy",
+      "status": "pass",
+      "details": {
+        "class_count": 23,
+        "classes": [
+          "person",
+          "face",
+          "medicine_strip",
+          "medicine_bottle",
+          "water_bottle",
+          "knife",
+          "stove",
+          "gas_cylinder",
+          "passport",
+          "book",
+          "charger",
+          "wire",
+          "laptop",
+          "monitor",
+          "cupboard",
+          "door",
+          "chair",
+          "bed",
+          "toilet",
+          "sink",
+          "wet_floor",
+          "walking_stick",
+          "support_handle"
+        ]
+      }
+    },
+    {
+      "check_id": "L3",
+      "name": "Weights carry exactly the declared taxonomy",
+      "status": "pass",
+      "details": {
+        "class_count": 23,
+        "matches": "configs/data.yaml"
+      }
+    },
+    {
+      "check_id": "L4",
+      "name": "Every class the scenarios need is detectable and enabled",
+      "status": "pass",
+      "details": {
+        "referenced_class_count": 10,
+        "unusable": [],
+        "unknown": [],
+        "taxonomy_fingerprint": "sha256:a831924bb82e23ffbc6cc1d56647a78cc72ff5e329920569b05bd5ae99c2f125"
+      }
+    },
+    {
+      "check_id": "L5",
+      "name": "At least one scenario is active and flag-enabled",
+      "status": "blocked",
+      "details": {
+        "authored": 20,
+        "active": 0,
+        "runnable": 0,
+        "draft": 9,
+        "runnable_ids": [],
+        "blocked_on": "Clinical review. A scenario becomes active only when a qualified human sets reviewed_by/reviewed_on; engineering cannot clear this."
+      }
+    },
+    {
+      "check_id": "L6",
+      "name": "The pipeline assembles through the composition root",
+      "status": "blocked",
+      "details": {
+        "blocked_on": "No runnable scenarios in configs\\scenarios: 20 authored, 9 still 'draft', 0 active. A scenario becomes active only after clinical review sets reviewed_by/reviewed_on -- refusing to run a safety pipeline that can never raise an alert."
+      }
+    }
+  ],
+  "what_a_pass_means": "The trained weights agree with configs/data.yaml, every class the authored scenarios rely on is detectable and enabled, and the pipeline assembles with the scenario engine injected -- with no code change. It does NOT mean the model is accurate; that is the evaluation suite's job, not this one's."
+}

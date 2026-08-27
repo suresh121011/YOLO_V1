@@ -20,7 +20,8 @@ into the registry. Houses are identified only by pseudonymous IDs (`h01`,
 ## Registry format (`consent_registry.yaml`)
 
 ```yaml
-# consent_id → record. Read by src/dataset/capture/consent.py.
+# consent_id → record. Read by src/dataset/capture/consent.py
+# and src/scenario_engine/clips.py.
 CONSENT-h01-2026-001:
   house_id: h01
   granted_on: "2026-07-20"
@@ -32,6 +33,31 @@ CONSENT-h01-2026-001:
   `configs/capture_config.yaml` (default `CONSENT-h{NN}-{YYYY}-{NNN}`).
 - The free-text location of the signed form may be recorded in a separate
   private note by the lead — not in the repo.
+
+## Scope vocabulary
+
+`scope` records **what the household agreed to**, and the two media are not
+interchangeable.
+
+| Scope | Covers | Enforced by |
+|---|---|---|
+| `dataset-training` | Still photographs for the training/eval datasets | Format-checked only; image ingest does not read `scope` |
+| `scenario-video` | Short scenario clips (10–120 s of continuous video) | `src/scenario_engine/clips.py` — ingest **refuses** any other scope |
+
+**Video needs its own consent and its own signed form.** A still can be
+curated frame by frame before it is kept; a 30-second clip cannot, so it will
+contain incidental faces, speech in the background, and whatever else was in
+the room for that half-minute. A household that agreed to photographs has not
+agreed to that, and `dataset-training` consent is therefore rejected at clip
+ingest rather than treated as implying it.
+
+Two consequences worth knowing before a capture session:
+
+- A household contributing both media needs **two records** (e.g.
+  `CONSENT-h01-2026-001` for images and `CONSENT-h01-2026-002` for clips).
+- Clip ingest **requires the registry to be present**. Image ingest degrades to
+  a format-only check when the registry is missing; scope cannot be checked
+  without it, so clips are only ever ingested on the collection machine.
 
 ## Withdrawal
 

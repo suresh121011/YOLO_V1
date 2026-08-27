@@ -24,6 +24,19 @@ from src.training.mitigation_config import MitigationConfig  # noqa: E402
 
 _NC = 5
 
+# Ultralytics ≥8.4.104 returns loss_items as dict{"box_loss","cls_loss","dfl_loss"}
+# instead of tensor[box,cls,dfl]. This helper normalises to a (box,cls,dfl) tuple
+# so tests work with both the pinned 8.4.103 and any later version.
+_LOSS_KEYS = ("box_loss", "cls_loss", "dfl_loss")
+
+
+def _unpack_loss_items(items):
+    """Return (box, cls, dfl) tensors regardless of the items format."""
+    if isinstance(items, dict):
+        return tuple(items[k] for k in _LOSS_KEYS)
+    # tensor path (ultralytics ≤8.4.103)
+    return items[0], items[1], items[2]
+
 
 def make_lookup(
     mask_rows: dict[str, tuple[int, ...]] | None = None,
@@ -160,7 +173,11 @@ class TestMaskedDetectionLoss:
         loss_stock, items_stock = stock(preds, batch)
         loss_masked, items_masked = masked(preds, batch)
         assert torch.equal(loss_stock, loss_masked)
-        assert torch.equal(items_stock, items_masked)
+        box_s, cls_s, dfl_s = _unpack_loss_items(items_stock)
+        box_m, cls_m, dfl_m = _unpack_loss_items(items_masked)
+        assert torch.equal(box_s, box_m)
+        assert torch.equal(cls_s, cls_m)
+        assert torch.equal(dfl_s, dfl_m)
 
     def test_untrusted_classes_reduce_cls_loss_only(self) -> None:
         from ultralytics.utils.loss import v8DetectionLoss
@@ -176,9 +193,11 @@ class TestMaskedDetectionLoss:
         masked = MaskedDetectionLoss(model, lookup=lookup, config=MitigationConfig(enabled=True))
         _, items_stock = stock(preds, batch)  # [box, cls, dfl]
         _, items_masked = masked(preds, batch)
-        assert items_masked[1] < items_stock[1]  # cls loss strictly reduced
-        assert torch.equal(items_masked[0], items_stock[0])  # box identical
-        assert torch.equal(items_masked[2], items_stock[2])  # dfl identical
+        box_s, cls_s, dfl_s = _unpack_loss_items(items_stock)
+        box_m, cls_m, dfl_m = _unpack_loss_items(items_masked)
+        assert cls_m < cls_s  # cls loss strictly reduced
+        assert torch.equal(box_m, box_s)  # box identical
+        assert torch.equal(dfl_m, dfl_s)  # dfl identical
 
     def test_unknown_image_error_policy_raises(self) -> None:
         model = build_model()

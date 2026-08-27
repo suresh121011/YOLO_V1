@@ -429,5 +429,83 @@ stages:
       - data/qa_reports/eval_report.json:
           cache: false
 
+  # ─── Scenario & Rule Engine (Phase-6) ───────────────────────────────────────
+  # Masters are configs/scenarios/SC-*.yaml (plain git, hand-authored,
+  # PR-reviewed): knowledge is source, not data-plane content (ADR-P6-01). The
+  # directory is a *dep* rather than a params entry because DVC has no
+  # "params from N files" concept -- so adding a scenario correctly re-triggers
+  # the compile.
+  #
+  # All three outs are `cache: false`: the artifact that records what the rule
+  # set IS must stay readable at a git tag by anyone without DVC remote
+  # credentials, the same rationale record_release documents above. The
+  # compiled JSON is also the semantic review surface -- a rule set's
+  # correctness is a property of the SET, so a one-file scenario diff never
+  # shows the whole change.
+  compile_scenarios:
+    cmd: python scripts/scenarios/30_compile_scenarios.py
+    deps:
+      - scripts/scenarios/30_compile_scenarios.py
+      - src/scenario_engine
+      - configs/scenarios
+      - configs/data.yaml
+      - configs/feature_flags.yaml
+    params:
+      - configs/scenario_engine.yaml:
+          - compile
+          - rooms
+    outs:
+      - data/scenario_engine/build/scenarios.compiled.json:
+          cache: false
+      - data/scenario_engine/build/scenarios.view.csv:
+          cache: false
+      - data/scenario_engine/build/scenarios.editable.csv:
+          cache: false
+
+  # Report-level validators plus the alert-volume simulation. Separate from
+  # compile_scenarios because compilation answers "is this runnable?" while
+  # validation answers "is this WISE?" -- message lints, reachability, coverage,
+  # determinism, and the projected daily alert volume. Metric rather than out,
+  # and cache: false so the evidence is readable at a tag.
+  validate_scenarios:
+    cmd: python scripts/scenarios/31_validate_scenarios.py --exit-zero-on-warnings
+    deps:
+      - scripts/scenarios/31_validate_scenarios.py
+      - src/scenario_engine
+      - configs/scenarios
+      - configs/class_thresholds.yaml
+      - data/scenario_engine/build/scenarios.compiled.json
+    params:
+      - configs/scenario_engine.yaml:
+          - validation
+    metrics:
+      - data/qa_reports/scenario_validation_report.json:
+          cache: false
+
+  # Scenario clips are human-collected video that cannot be regenerated, so the
+  # stage is FROZEN for the same reason ingest_custom_captures is: `dvc repro`
+  # on a fresh machine must never overwrite footage with an empty re-run. The
+  # stage exists so the clips are tracked in dvc.lock like any other output.
+  # Humans run 32_ingest_scenario_clips.py, then `dvc commit -f
+  # ingest_scenario_clips`. The cmd is --verify-all so that reproducing it
+  # deliberately re-checks what is on disk rather than re-ingesting.
+  #
+  # The two outs are split on purpose. `video/` is cached: large binary with no
+  # review value in a git diff, and the one Phase-6 artifact whose
+  # confidentiality rests on the remote rather than on git (every clip is
+  # metadata-stripped with a read-back assertion before it can land there).
+  # `manifests/` is cache: false and git-committed, because a manifest is an
+  # ASSERTION -- "this clip must fire SC-KIT-001 at CRITICAL within 30s" -- and
+  # changing what the suite claims must be visible in a pull request, the same
+  # rationale as the compiled artifact above.
+  # See ADR-P6-10 and docs/08_scenario_engineering/clip_capture_protocol.md.
+  ingest_scenario_clips:
+    frozen: true
+    cmd: python scripts/scenarios/32_ingest_scenario_clips.py --verify-all
+    outs:
+      - data/scenario_engine/clips/video
+      - data/scenario_engine/clips/manifests:
+          cache: false
+
   # export_model.py (ONNX/TFLite export for Raspberry Pi/Android targets)
   # will be added alongside its own DVC stage in Phase 6 — not Phase-5 scope.

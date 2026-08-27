@@ -1,0 +1,32 @@
+# ─── SC-SAF-005 — Hydration monitoring (REJECTED) ─────────────────────
+# Part of the versioned negative register (ADR-P6-08). Kept in the repository so
+# the reasoning is diffed alongside the positive set and the id stays reserved —
+# a rejected capability is a permanent limit, not a backlog item.
+#
+# The trigger below is what someone would naively write. It is recorded to show
+# what was considered, and never runs.
+# ──────────────────────────────────────────────────────────────────────────────
+scenario_id: SC-SAF-005
+schema_version: 1
+scenario_name: Hydration monitoring
+category: hall
+status: rejected
+
+detectability: rejected
+claim_class: inference
+
+trigger:
+  op: detected
+  args: {class_name: water_bottle}
+
+risk_level: INFO
+priority: 999
+patient_facing: false
+messages: {}
+next_best_action: ""
+caregiver_channel: none
+
+rejection_reason: >-
+  No fill level and no drinking event. Bottle presence is not fluid intake.
+
+sample_video_needed: false

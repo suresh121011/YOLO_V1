@@ -1,0 +1,103 @@
+{
+  "generated_at": "2026-08-11T15:20:14Z",
+  "git_commit": "47ed0cb",
+  "phase": "6",
+  "milestone": "M6",
+  "verdict": "PASS",
+  "scenario_counts": {
+    "authored": 20,
+    "runnable": 9,
+    "deprecated": 0,
+    "rejected": 11
+  },
+  "taxonomy_fingerprint": "sha256:a831924bb82e23ffbc6cc1d56647a78cc72ff5e329920569b05bd5ae99c2f125",
+  "content_hash": "sha256:4a757cbac4ff38e3f668a64763c3a83ee54edc10a6f192bcaffb4eab81486f08",
+  "unusable_classes": [
+    "passport"
+  ],
+  "gates": [
+    {
+      "gate_id": "G1",
+      "name": "Compiled artifact is current with the authored sources",
+      "status": "pass",
+      "details": {
+        "exit_code": 0,
+        "message": "2026-08-11T20:49:56 [INFO] __main__: --check: committed artifact is current."
+      }
+    },
+    {
+      "gate_id": "G2",
+      "name": "Zero ERROR findings from the validator suite",
+      "status": "pass",
+      "details": {
+        "errors": [],
+        "warning_count": 7,
+        "warning_codes": [
+          "safety-class-uncovered"
+        ]
+      }
+    },
+    {
+      "gate_id": "G3",
+      "name": "Projected alert volume within the configured budget",
+      "status": "pass",
+      "details": {
+        "occupancy_profile": "indian_kitchen_day",
+        "total_alerts": 5,
+        "budget": 20,
+        "over_budget_scenarios": []
+      }
+    },
+    {
+      "gate_id": "G4",
+      "name": "Firing is deterministic and independent of file order",
+      "status": "pass",
+      "details": {
+        "counterexamples": [],
+        "scenarios_checked": 20
+      }
+    },
+    {
+      "gate_id": "G5",
+      "name": "Scenario-engine and pipeline unit suites pass",
+      "status": "pass",
+      "details": {
+        "exit_code": 0,
+        "summary": "\u001b[32m============================= \u001b[32m\u001b[1m509 passed\u001b[0m\u001b[32m in 7.06s\u001b[0m\u001b[32m =============================\u001b[0m"
+      }
+    },
+    {
+      "gate_id": "G6",
+      "name": "Performance budgets hold (5 ms/frame rule engine, 10 s compile)",
+      "status": "pass",
+      "details": {
+        "exit_code": 0,
+        "summary": "\u001b[32m============================== \u001b[32m\u001b[1m3 passed\u001b[0m\u001b[32m in 0.16s\u001b[0m\u001b[32m ==============================\u001b[0m",
+        "budget_ms": 5.0
+      }
+    },
+    {
+      "gate_id": "G7",
+      "name": "Both scenario DVC stages are idempotent",
+      "status": "pass",
+      "details": {
+        "exit_code": 0,
+        "message": "Data and pipelines are up to date."
+      }
+    },
+    {
+      "gate_id": "G8",
+      "name": "Leaf-package layering rule holds",
+      "status": "pass",
+      "details": {
+        "exit_code": 0,
+        "summary": "\u001b[32m============================= \u001b[32m\u001b[1m18 passed\u001b[0m\u001b[32m in 0.29s\u001b[0m\u001b[32m ==============================\u001b[0m"
+      }
+    }
+  ],
+  "known_limitations": [
+    "Every scenario is status: draft. Activation requires clinical review by a qualified human (reviewed_by/reviewed_on), which is a human track, not an engineering sign-off. Until then G2 reports safety-class-uncovered warnings for every safety-critical class, because coverage counts active scenarios only.",
+    "No labelled scenario clips exist yet (M7). G3 replays a synthetic occupancy profile, which is a projection rather than measured field behaviour.",
+    "No trained model exists. Every gate here runs against synthetic detections; scripts/qa/model_landing_check.py is the check to run when weights arrive (M9)."
+  ]
+}

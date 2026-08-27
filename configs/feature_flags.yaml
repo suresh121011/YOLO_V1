@@ -7,18 +7,31 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ─── Component Toggles ─────────────────────────────────────────────────────────
-# Enable or disable entire pipeline subsystems
+# Enable or disable entire pipeline subsystems.
+#
+# Keys marked NOT WIRED are read by no code: setting them changes nothing. They
+# are labelled rather than deleted because they are referenced by the V2 plan in
+# docs/03_engineering_appendix/future_modules.md, and a silently inert flag is
+# how an operator comes to believe they have switched something off.
+# tests/unit/test_feature_flags_are_live.py holds this list honest — adding a
+# flag without wiring it, or wiring one without unlabelling it, fails the suite.
 components:
-  yolo_detection: true
+  yolo_detection: true             # NOT WIRED — structural, not a toggle: without
+                                   # the detector there is no pipeline to run
   smolvlm_analysis: false          # Set true only if hardware supports VLM
-  tts_output: true
-  active_learning_logging: true
+  tts_output: true                 # Wired in Phase-6 M9 — false really is silent
+  active_learning_logging: true    # NOT WIRED — uncertain-band capture is V2
   performance_logging: true
-  thermal_monitoring: false        # Enable in Phase 7 field testing
-  rule_hot_reload: false           # Hot-reload rules without restart (V2)
-  caregiver_sync: false            # WiFi sync to caregiver dashboard (V2)
-  hindi_tts: false                 # Hindi TTS voice model (V2)
-  debug_overlay: false             # Visual bounding box overlay on frame
+  thermal_monitoring: false        # NOT WIRED — Phase 7 field testing
+  rule_hot_reload: false           # NOT WIRED — ScenarioRuleEngine.reload_rules()
+                                   # exists and works; nothing calls it on a timer
+  caregiver_sync: false            # NOT WIRED — governs *remote* delivery only.
+                                   # The local sink (logs/caregiver.jsonl) is
+                                   # always on; see src/pipeline/caregiver.py
+  hindi_tts: false                 # NOT WIRED — superseded by runtime.tts_language
+                                   # plus per-scenario `messages` (ADR-P6-09)
+  debug_overlay: false             # NOT WIRED — no render surface in the headless
+                                   # pipeline
 
 # ─── Per-Class Detection Toggles ───────────────────────────────────────────────
 # Set any class to false to suppress its detections globally.
@@ -49,20 +62,35 @@ classes:
   support_handle: true
 
 # ─── Per-Rule Toggles ──────────────────────────────────────────────────────────
-# Disable individual safety rules without touching code or risk_rules.yaml
+# Disable individual scenarios without touching code or configs/scenarios/.
+# Keys are scenario ids (SC-KIT-001, ...). risk_rules.yaml is retired (ADR-P6-03).
+#
+# A key that names no scenario is inert, so the six legacy rule ids that used to
+# live here were removed rather than left as reassuring no-ops:
+# knife_near_person, medicine_reminder and gas_cylinder_check were DELETED in
+# Phase 6, not renamed (see docs/08_scenario_engineering/negative_register.md);
+# stove_unattended, wet_floor_hazard and wire_tripping_hazard became SC-KIT-001,
+# SC-BTH-001 and SC-COR-001 with corrected semantics.
+#
+# These are kill switches, not the review gate. A scenario also has to be
+# `status: active`, which needs a clinical reviewer.
 rules:
-  knife_near_person: true
-  stove_unattended: true
-  wet_floor_hazard: true
-  medicine_reminder: true
-  wire_tripping_hazard: true
-  gas_cylinder_check: true
+  SC-KIT-001: true    # cooking left unattended
+  SC-KIT-002: true    # knife left out with nobody present
+  SC-BTH-001: true    # wet floor in a wet-room
+  SC-BTH-002: true    # no grab bar seen near the toilet
+  SC-BTH-003: true    # prolonged time in the bathroom
+  SC-COR-001: true    # cord on the floor in a walkway
+  SC-MED-001: true    # medicine packaging left out
+  SC-MOB-001: true    # walking aid left away from the person
+  SC-SYS-001: true    # nobody seen for an unusually long time
 
 # ─── Runtime Behavior ──────────────────────────────────────────────────────────
 runtime:
   # Frame processing
   target_fps: 15                   # Target inference FPS
-  camera_index: 0                  # OpenCV camera index
+  camera_index: 0                  # NOT WIRED — the camera loop belongs to the
+                                   # caller; process_frame() takes a frame
 
   # Confidence thresholds
   confidence_threshold: 0.25       # Global minimum confidence (all classes)
@@ -73,18 +101,38 @@ runtime:
   smolvlm_timeout_ms: 2000        # Timeout for VLM inference
 
   # Alert behavior
-  alert_cooldown_multiplier: 1.0  # Multiply all rule cooldowns by this factor
+  # alert_cooldown_multiplier was REMOVED in Phase-6 M9 rather than labelled.
+  # It was read by nothing, and wiring it would have let an operator scale every
+  # cooldown outside the governed path — silently invalidating the alert-volume
+  # projection that configs/scenario_engine.yaml gates on. Cooldowns are authored
+  # per scenario in configs/scenarios/ and validated there.
   max_alerts_per_minute: 6        # Hard cap — prevents alert fatigue
 
   # Event Memory
-  memory_window_frames: 150       # Sliding window size (~10s at 15 FPS)
+  # Raised from 150 (10.0s) in Phase-6 M5. The scenario schema's dwell field and
+  # the present_for predicate are both bounded by this window, and the
+  # environmental findings need 60s while unattended-cooking needs ~120s — all
+  # unexpressible at 150 frames. 2700 frames is 180s at 15 FPS; footprint is
+  # window x classes x ~100B, so ~6MB, still negligible. `absent_for` is NOT
+  # bounded by this (it counts frames since start-up), only sustained presence is.
+  memory_window_frames: 2700      # Sliding window size (~180s at 15 FPS)
 
   # TTS
-  tts_speed: 1.0                  # Speech rate (1.0 = normal, 0.9 = slightly slower)
-  tts_volume: 0.8                 # Volume level [0.0, 1.0]
-  tts_language: en_IN             # Voice model language code
+  # tts_speed is wired as of Phase-6 M9. It reads 0.9, not the 1.0 it used to
+  # declare, because 0.9 was PiperTTS's own default and therefore the rate the
+  # device has actually always spoken at. Wiring a dead key must not quietly
+  # change behaviour on the way past, and slightly slower speech is the
+  # deliberate choice for the target population.
+  tts_speed: 0.9                  # Speech rate (1.0 = normal, 0.9 = slightly slower)
+  tts_volume: 0.8                 # NOT WIRED — the OS mixer is the volume control.
+                                  # Piper writes a WAV to a player this code does
+                                  # not always own, so a half-honoured level would
+                                  # be less predictable than none.
+  tts_language: en_IN             # Wired in M9: selects from a scenario's
+                                  # `messages` map. The loaded voice file wins any
+                                  # disagreement — see orchestrator.py.
 
   # Logging
-  log_retention_days: 7           # Delete log files older than N days
-  active_learning_conf_min: 0.25  # Log detections above this confidence...
-  active_learning_conf_max: 0.55  # ...and below this confidence (uncertain band)
+  log_retention_days: 7           # NOT WIRED — rotation is the deployment's job
+  active_learning_conf_min: 0.25  # NOT WIRED — uncertain-band capture is V2...
+  active_learning_conf_max: 0.55  # NOT WIRED — ...along with its upper bound

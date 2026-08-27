@@ -32,6 +32,13 @@ configs/deployment/*.yaml  ← device-specific overrides
 
 ## Config Schema (Key Sections)
 
+> **This section is a Phase-2 sketch, not the shipped file.** Corrected note added in Phase-6 M9 rather
+> than rewriting the sketch, so the drift is visible instead of quietly patched. The real
+> `configs/feature_flags.yaml` has four roots — `components:`, `classes:`, `rules:`, `runtime:` — and
+> none of the roots below. `vlm_enabled` exists in no config file (the orchestrator read that key for
+> the VLM until Phase-6 M1; the real one is `components.smolvlm_analysis`). For what is actually read,
+> and which keys are inert, see [feature_flags.md](./feature_flags.md).
+
 ```yaml
 pipeline:
   camera_fps: 30
@@ -64,7 +71,11 @@ feature_flags:
 
 ## Config Validation
 
-All configs validated against a Pydantic schema on load. Invalid configs raise `ConfigValidationError` with human-readable messages. Pipeline does not start with invalid config.
+**Not as built.** There is no Pydantic schema and no `ConfigValidationError` — pydantic is not a
+dependency of this project, and configs are hand-validated in the house style. `SystemConfig.load()`
+falls back to the defaults in `src/config/config_loader.py` for missing keys and ignores unknown ones.
+Validation that *is* enforced lives where the values are used: the scenario schema rejects an invalid
+scenario at compile time, and the detector refuses weights that disagree with `configs/data.yaml`.
 
 > For full config templates, see [../03_engineering_appendix/yaml_examples.md](../03_engineering_appendix/yaml_examples.md)
 

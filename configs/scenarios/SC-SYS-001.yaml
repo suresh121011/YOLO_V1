@@ -1,0 +1,61 @@
+# ─── SC-SYS-001 — Nobody seen for an unusually long time ──────────────────────
+# The presence-unknown condition.
+#
+# "No person detected" collapses five different situations: nobody home, a
+# person occluded, a detector miss, a blocked or moved camera, and a person on
+# the floor below the field of view. The system cannot separate them, so this
+# reports the ambiguity to a caregiver rather than asserting any one of them.
+#
+# It is a system-health signal as much as a safety one, which is why it stays
+# INFO and goes to digest. The ladder terminates at a human check-in.
+# ──────────────────────────────────────────────────────────────────────────────
+scenario_id: SC-SYS-001
+schema_version: 1
+scenario_name: Nobody seen for an unusually long time
+category: hall
+status: draft
+
+detectability: inferred
+claim_class: inference
+
+trigger:
+  all:
+    - op: ever_seen
+      args: {class_name: person}
+    - op: absent_for
+      args: {class_name: person, seconds: 28800}
+
+risk_level: INFO
+priority: 95
+
+min_confidence: 0.30
+min_dwell_seconds: 0
+clear_after_seconds: 60
+cooldown_seconds: 43200
+max_repeats: 0
+max_per_day: 2
+
+patient_facing: false
+messages: {}
+
+next_best_action: Consider a check-in call
+caregiver_channel: digest
+
+capability_disclaimer: >-
+  Not seeing a person is not the same as nobody being there. This can equally
+  mean the camera view is blocked or the person is out of frame, and it is never
+  evidence of an emergency.
+
+evidence:
+  - source_id: AAMI-AlarmFatigue-2012
+    section: Non-actionable alarms
+    strength: systematic_review
+    supports: hazard
+    note: >-
+      Cited for the SUPPRESSION design rather than the hazard: an ambiguous
+      signal escalated as an alarm is exactly what produces non-actionable alerts.
+
+notes: >-
+  The 8-hour window is deliberately far beyond any normal absence. A tighter
+  threshold would need an occupancy baseline the system does not build.
+sample_video_needed: false

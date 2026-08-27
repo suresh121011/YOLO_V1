@@ -1,0 +1,85 @@
+# ─── SC-KIT-001 — Cooking left unattended ─────────────────────────────────────
+# Keeps the intent of the legacy `stove_unattended` rule, which was sound:
+# unattended cooking is a leading contributing factor in home cooking fires.
+# Everything else is rebuilt.
+#
+# The legacy rule could not fire at all in a room nobody had walked into (D4),
+# asserted "the stove appears to be ON" which no class encodes, and repeated
+# every 30s into an empty room. Here the message describes only what is
+# observed, a cooking session must already have been established (a person was
+# recently present), the absence window is long enough that fetching dal from
+# the next room is not an alarm, and it escalates to a caregiver rather than
+# repeating at nobody.
+# ──────────────────────────────────────────────────────────────────────────────
+scenario_id: SC-KIT-001
+schema_version: 1
+scenario_name: Cooking left unattended
+category: kitchen
+status: draft
+
+detectability: direct
+claim_class: observation
+
+trigger:
+  all:
+    - op: in_room
+      args: {room: kitchen}
+    - op: present_for
+      args: {class_name: stove, seconds: 60}
+    # A person WAS here, so this is a cooking session rather than an empty
+    # kitchen the camera happens to face.
+    - op: ever_seen
+      args: {class_name: person}
+    - op: absent_for
+      args: {class_name: person, seconds: 900}
+
+risk_level: CRITICAL
+priority: 5
+
+min_confidence: 0.35        # recall-tuned; the dwell buys the precision back
+min_dwell_seconds: 120
+clear_after_seconds: 120
+cooldown_seconds: 1800
+max_repeats: 1
+max_per_day: 4
+
+room_context: kitchen
+optional_objects: [knife, gas_cylinder]
+
+quiet_hours:
+  start: "21:00"
+  end: "06:00"
+  behaviour: always_speak    # permitted only for CRITICAL; the schema enforces it
+
+patient_facing: true
+messages:
+  en: "Nobody has been near the stove for a while."
+  hi: "काफ़ी देर से चूल्हे के पास कोई नहीं है।"
+
+next_best_action: Ask someone to check the kitchen
+caregiver_channel: push
+
+escalation:
+  - after_seconds: 300
+    action: notify_caregiver
+
+evidence:
+  - source_id: NFPA-CookingSafety
+    section: Unattended cooking
+    item: Unattended cooking is the leading contributing factor in home cooking fires
+    strength: guideline
+    supports: hazard
+    note: >-
+      Backs the HAZARD only. We cannot see whether the stove is lit, which is why
+      the message describes the absence of a person, not the state of the stove.
+
+false_positive_notes: >-
+  The dominant cause of "person absent" is occlusion, not departure: turning
+  away, bending below the counter, stepping behind a cupboard door. The
+  15-minute window plus the 120s dwell is chosen so ordinary occlusion cannot
+  reach it.
+
+notes: >-
+  Cannot detect whether the stove is on. This fires on a prolonged absence from
+  a kitchen someone was recently in. That is the whole claim.
+sample_video_needed: true
