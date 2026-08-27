@@ -1,0 +1,83 @@
+# ─── SC-FAL-001 — Wet floor detected outside the bathroom ──────────────────────
+# Extends the wet-floor detection of SC-BTH-001 to non-bathroom rooms.
+#
+# SC-BTH-001 handles wet floors in bathrooms (where water on the floor is
+# expected but still dangerous). This scenario handles wet floors in kitchens,
+# corridors, and living areas — where water on the floor is unexpected and
+# therefore a higher-priority safety signal.
+#
+# The `NOT in_room(bathroom)` clause ensures exactly one scenario fires per
+# room — no conflict or double-counting with SC-BTH-001.
+# ──────────────────────────────────────────────────────────────────────────────
+scenario_id: SC-FAL-001
+schema_version: 1
+scenario_name: Wet floor detected outside the bathroom
+category: fall_risk
+status: draft            # → active once clinically reviewed
+
+detectability: direct
+claim_class: observation
+
+trigger:
+  all:
+    - op: detected
+      args: {class_name: wet_floor}
+    # Same dwell as SC-BTH-001 — 3s to eliminate detector flicker from
+    # polished granite/tile reflections.
+    - op: present_for
+      args: {class_name: wet_floor, seconds: 3}
+    - op: detected
+      args: {class_name: person}
+    # Exclude bathroom — SC-BTH-001 handles wet floors there.
+    - not:
+        op: in_room
+        args: {room: bathroom}
+
+risk_level: HIGH
+priority: 18
+
+min_confidence: 0.50
+min_dwell_seconds: 3
+clear_after_seconds: 30
+cooldown_seconds: 120
+max_repeats: 2
+max_per_day: 6
+
+room_context: any_except_bathroom
+optional_objects: [sink, door]
+
+quiet_hours:
+  start: "22:00"
+  end: "06:00"
+  behaviour: suppress       # HIGH but not CRITICAL: do not wake
+
+patient_facing: true
+messages:
+  en: "The floor appears to be wet."
+  hi: "फर्श गीला दिख रहा है।"
+
+next_best_action: Check and dry the wet area
+caregiver_channel: push
+
+escalation:
+  - after_seconds: 120
+    action: notify_caregiver
+
+evidence:
+  - source_id: CDC-STEADI-CheckForSafety-2017
+    section: Floors
+    item: Keep floors dry — wipe up spills immediately
+    strength: guideline
+    supports: hazard
+
+false_positive_notes: >-
+  Polished granite, marble, and freshly mopped tile can reflect light in a way
+  that the detector interprets as wet_floor. The 3-second dwell reduces but does
+  not eliminate this. Shiny flooring common in Indian homes is the primary false-
+  positive source.
+
+notes: >-
+  Companion to SC-BTH-001. Covers kitchen, corridor, and living areas. The
+  present_for dwell is identical (3s) to maintain consistency. Dataset has 30
+  clips from SC-FAL-001 source (23 positive, 3 negative, 4 edge).
+sample_video_needed: false    # 30 clips available

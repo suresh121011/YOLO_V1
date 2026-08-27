@@ -1,0 +1,79 @@
+# ─── SC-ELC-001 — Charger left plugged in unattended ───────────────────────────
+# Electrical fire prevention: a charger or adaptor left plugged in without
+# anyone nearby is a low-level but real fire risk, especially with Indian
+# voltage fluctuations and common use of unregulated chargers.
+#
+# TEMPORAL LIMITATION:
+# The absent_for(person, 300) predicate requires 5 minutes of continuous
+# person absence. Source clips are 5–60 seconds long. This means the full
+# temporal trigger CANNOT be demonstrated by any available clip. The scenario
+# is DEFINED but NOT EVALUATION-READY for temporal correctness. Clips can
+# still test object detection (charger visibility, person presence/absence
+# within the clip).
+# ──────────────────────────────────────────────────────────────────────────────
+scenario_id: SC-ELC-001
+schema_version: 1
+scenario_name: Charger left plugged in unattended
+category: electrical
+status: draft
+
+detectability: direct
+claim_class: inference
+
+trigger:
+  all:
+    - op: detected
+      args: {class_name: charger}
+    - op: present_for
+      args: {class_name: charger, seconds: 60}
+    - op: absent_for
+      args: {class_name: person, seconds: 300}
+
+risk_level: LOW
+priority: 80
+
+min_confidence: 0.55
+min_dwell_seconds: 60
+clear_after_seconds: 120
+cooldown_seconds: 3600
+max_repeats: 0
+max_per_day: 2
+
+room_context: any
+optional_objects: [wire, laptop]
+
+patient_facing: false
+messages: {}
+
+next_best_action: Unplug the charger when not in use
+caregiver_channel: digest
+
+capability_disclaimer: >-
+  The system cannot determine whether the charger is actually delivering power
+  or merely lying disconnected. A charger detected by the camera may be unplugged
+  from both the device and the wall. This scenario signals prolonged unattended
+  presence of a charger-shaped object, not confirmed electrical draw.
+
+evidence:
+  - source_id: BEE-Electrical-Safety-2023
+    section: Household Appliance Safety
+    item: Unplug chargers and adaptors when not in use to prevent overheating
+    strength: expert_opinion
+    supports: hazard
+    note: >-
+      Bureau of Energy Efficiency guidance. The actual risk depends on charger
+      quality, voltage stability, and ambient temperature — none of which are
+      observable by a camera.
+
+false_positive_notes: >-
+  `charger` is visually similar to small adaptors, transformers, and cable
+  management boxes. A phone lying on a table may also trigger if the training
+  data included phone-as-charger examples. The 60-second dwell requirement
+  reduces false-positive rate from transient detections.
+
+notes: >-
+  TEMPORAL LIMITATION: Source clips are 5-60s. The absent_for(person, 300)
+  requires 5 minutes of person absence — no clip can demonstrate this. Scenario
+  is DEFINED but NOT EVALUATION-READY for temporal correctness. Dataset has 24
+  clips (7P, 10N, 7E) which can test object detection and spatial context.
+sample_video_needed: false

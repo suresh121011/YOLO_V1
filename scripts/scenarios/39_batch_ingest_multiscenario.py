@@ -46,6 +46,7 @@ STAGING_DIR = REPO / "data" / "scenario_engine" / "staging" / "extracted"
 SCENARIO_META: dict[str, tuple[str, str]] = {
     "SC-KIT-001": ("h00", "kitchen"),
     "SC-KIT-002": ("h01", "kitchen"),
+    "SC-KIT-003": ("h02", "kitchen"),
     "SC-BTH-001": ("h01", "bathroom"),
     "SC-BTH-002": ("h01", "bathroom"),
     "SC-BTH-003": ("h01", "bathroom"),
@@ -53,6 +54,10 @@ SCENARIO_META: dict[str, tuple[str, str]] = {
     "SC-MED-001": ("h01", "medical"),
     "SC-MOB-001": ("h01", "mobility"),
     "SC-SYS-001": ("h01", "system"),
+    "SC-ELC-001": ("h02", "electrical"),
+    "SC-FAL-001": ("h02", "fallrisk"),
+    # Hard-negative categories — ingested for false-positive evaluation
+    "HARD_NEGATIVE": ("h99", "hardneg"),
 }
 
 # Polarity -> session code

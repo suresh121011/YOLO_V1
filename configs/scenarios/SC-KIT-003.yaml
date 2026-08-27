@@ -1,0 +1,76 @@
+# ─── SC-KIT-003 — Gas cylinder visible near the stove ──────────────────────────
+# First scenario to use the spatial `near` predicate. Gas cylinders stored
+# close to a stove represent a fire and explosion risk — Indian home kitchens
+# commonly have standalone LPG cylinders that can be positioned dangerously
+# close to open-flame stoves.
+#
+# The `near` predicate measures screen-space (frame-fraction) distance between
+# bounding-box centres. This is a proxy for physical proximity that varies with
+# camera mounting and field of view — installation guidance is needed (ADR-P6-07).
+#
+# Unlike SC-KIT-001 (cooking left unattended), this scenario does not require
+# person absence — the hazard exists regardless of whether someone is present.
+# ──────────────────────────────────────────────────────────────────────────────
+scenario_id: SC-KIT-003
+schema_version: 1
+scenario_name: Gas cylinder visible near the stove
+category: kitchen
+status: draft
+
+detectability: direct
+claim_class: observation
+
+trigger:
+  all:
+    - op: detected
+      args: {class_name: gas_cylinder}
+    - op: detected
+      args: {class_name: stove}
+    # Screen-space proximity: 0.3 of frame diagonal. Calibration-dependent —
+    # installation guidance (ADR-P6-07) must define acceptable mounting ranges.
+    - op: near
+      args: {class_a: gas_cylinder, class_b: stove, max_dist: 0.3}
+
+risk_level: HIGH
+priority: 15
+
+min_confidence: 0.40
+min_dwell_seconds: 5       # 5s dwell: gas cylinder positions are stable
+clear_after_seconds: 60
+cooldown_seconds: 3600     # once per hour — this is a structural hazard
+max_repeats: 0
+max_per_day: 2
+
+room_context: kitchen
+optional_objects: [person, knife]
+
+patient_facing: false      # structural hazard — caregiver-facing
+messages: {}
+
+next_best_action: Move the gas cylinder away from the stove
+caregiver_channel: push
+
+evidence:
+  - source_id: BIS-IS-8423-2024
+    section: LPG Installation Safety
+    item: Cylinder should be at a safe distance from any source of ignition
+    strength: guideline
+    supports: hazard
+    note: >-
+      Indian Standard IS 8423 specifies LPG cylinder installation requirements.
+      No screen-space distance can reliably map to a physical safe distance,
+      but close proximity is always worse than far.
+
+false_positive_notes: >-
+  The `near` predicate uses screen-space centre distance, not physical distance.
+  A gas cylinder behind the stove (far in depth but near in screen space) and one
+  beside it at the same depth are indistinguishable. Camera mounting angle is the
+  dominant confounder. The 0.3 threshold is an initial estimate requiring
+  calibration.
+
+notes: >-
+  First spatial scenario in the engine. Paradigm expansion: proves that `near`
+  predicate works end-to-end. Dataset has 15 clips from SC-KIT-003 source, all
+  POSITIVE — ZERO negatives. Scenario is DEFINED but NOT EVALUATION-READY
+  until negative clips are available (e.g. stove without nearby gas cylinder).
+sample_video_needed: false

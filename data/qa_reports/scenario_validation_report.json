@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-08-26T15:16:36Z",
-  "git_commit": "0605edd",
-  "scenario_count": 20,
+  "generated_at": "2026-08-27T15:28:54Z",
+  "git_commit": "e0084d6",
+  "scenario_count": 23,
   "verdict": "PASS",
   "errors": [],
   "warnings": [
@@ -49,7 +49,7 @@
     }
   ],
   "volume": {
-    "total_alerts": 5,
+    "total_alerts": 6,
     "max_projected_alerts_per_day": 20,
     "within_budget": true,
     "simulated_seconds": 86370.0,
@@ -88,6 +88,22 @@
         "over_budget": false
       },
       {
+        "scenario_id": "SC-ELC-001",
+        "alerts": 0,
+        "max_per_day": 2,
+        "suppressed_by_budget": 0,
+        "events": 0,
+        "over_budget": false
+      },
+      {
+        "scenario_id": "SC-FAL-001",
+        "alerts": 0,
+        "max_per_day": 6,
+        "suppressed_by_budget": 0,
+        "events": 0,
+        "over_budget": false
+      },
+      {
         "scenario_id": "SC-KIT-001",
         "alerts": 4,
         "max_per_day": 4,
@@ -101,6 +117,14 @@
         "max_per_day": 3,
         "suppressed_by_budget": 0,
         "events": 0,
+        "over_budget": false
+      },
+      {
+        "scenario_id": "SC-KIT-003",
+        "alerts": 1,
+        "max_per_day": 2,
+        "suppressed_by_budget": 0,
+        "events": 1,
         "over_budget": false
       },
       {

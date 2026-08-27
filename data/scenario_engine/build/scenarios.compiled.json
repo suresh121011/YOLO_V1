@@ -2,7 +2,7 @@
   "artifact_schema_version": 1,
   "scenarios_version": "scenarios-v0.1.0",
   "taxonomy_fingerprint": "sha256:a831924bb82e23ffbc6cc1d56647a78cc72ff5e329920569b05bd5ae99c2f125",
-  "rule_count": 9,
+  "rule_count": 12,
   "classes": {
     "bed": {
       "id": 17,
@@ -122,6 +122,12 @@
     }
   },
   "inverted_index": {
+    "charger": [
+      "SC-ELC-001"
+    ],
+    "gas_cylinder": [
+      "SC-KIT-003"
+    ],
     "knife": [
       "SC-KIT-002"
     ],
@@ -134,13 +140,16 @@
     "person": [
       "SC-BTH-001",
       "SC-BTH-003",
+      "SC-ELC-001",
+      "SC-FAL-001",
       "SC-KIT-001",
       "SC-KIT-002",
       "SC-MOB-001",
       "SC-SYS-001"
     ],
     "stove": [
-      "SC-KIT-001"
+      "SC-KIT-001",
+      "SC-KIT-003"
     ],
     "support_handle": [
       "SC-BTH-002"
@@ -152,7 +161,8 @@
       "SC-MOB-001"
     ],
     "wet_floor": [
-      "SC-BTH-001"
+      "SC-BTH-001",
+      "SC-FAL-001"
     ],
     "wire": [
       "SC-COR-001"
@@ -220,6 +230,121 @@
       "reviewed_by": "",
       "reviewed_on": "",
       "rule_hash": "sha256:5f882c026393a7a2d36adcf7cca624d5257eb59dacb5eb8040a4c7131912a747"
+    },
+    {
+      "scenario_id": "SC-KIT-003",
+      "schema_version": 1,
+      "scenario_name": "Gas cylinder visible near the stove",
+      "category": "kitchen",
+      "status": "draft",
+      "detectability": "direct",
+      "claim_class": "observation",
+      "risk_level": "HIGH",
+      "priority": 15,
+      "condition": "(detected(class_name='gas_cylinder') AND detected(class_name='stove') AND near(class_a='gas_cylinder', class_b='stove', max_dist=0.3))",
+      "required_objects": [
+        "gas_cylinder",
+        "stove"
+      ],
+      "optional_objects": [
+        "person",
+        "knife"
+      ],
+      "suppress_during": [],
+      "room_context": "kitchen",
+      "min_confidence": 0.4,
+      "min_dwell_seconds": 5.0,
+      "clear_after_seconds": 60.0,
+      "cooldown_seconds": 3600,
+      "max_repeats": 0,
+      "max_per_day": 2,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": false,
+      "messages": {},
+      "next_best_action": "Move the gas cylinder away from the stove",
+      "caregiver_channel": "push",
+      "escalation": [],
+      "evidence": [
+        {
+          "source_id": "BIS-IS-8423-2024",
+          "section": "LPG Installation Safety",
+          "item": "Cylinder should be at a safe distance from any source of ignition",
+          "strength": "guideline",
+          "supports": "hazard",
+          "note": "Indian Standard IS 8423 specifies LPG cylinder installation requirements. No screen-space distance can reliably map to a physical safe distance, but close proximity is always worse than far."
+        }
+      ],
+      "capability_disclaimer": "",
+      "rejection_reason": "",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:43e9fc824d9bb0d448dff36050a224bb0c0e6df2f1797558db8ddb4f17091a71"
+    },
+    {
+      "scenario_id": "SC-FAL-001",
+      "schema_version": 1,
+      "scenario_name": "Wet floor detected outside the bathroom",
+      "category": "fall_risk",
+      "status": "draft",
+      "detectability": "direct",
+      "claim_class": "observation",
+      "risk_level": "HIGH",
+      "priority": 18,
+      "condition": "(detected(class_name='wet_floor') AND present_for(class_name='wet_floor', seconds=3) AND detected(class_name='person') AND NOT in_room(room='bathroom'))",
+      "required_objects": [
+        "person",
+        "wet_floor"
+      ],
+      "optional_objects": [
+        "sink",
+        "door"
+      ],
+      "suppress_during": [],
+      "room_context": "any_except_bathroom",
+      "min_confidence": 0.5,
+      "min_dwell_seconds": 3.0,
+      "clear_after_seconds": 30.0,
+      "cooldown_seconds": 120,
+      "max_repeats": 2,
+      "max_per_day": 6,
+      "quiet_hours": {
+        "start": "22:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": true,
+      "messages": {
+        "en": "The floor appears to be wet.",
+        "hi": "फर्श गीला दिख रहा है।"
+      },
+      "next_best_action": "Check and dry the wet area",
+      "caregiver_channel": "push",
+      "escalation": [
+        {
+          "after_seconds": 120.0,
+          "action": "notify_caregiver",
+          "messages": {}
+        }
+      ],
+      "evidence": [
+        {
+          "source_id": "CDC-STEADI-CheckForSafety-2017",
+          "section": "Floors",
+          "item": "Keep floors dry — wipe up spills immediately",
+          "strength": "guideline",
+          "supports": "hazard",
+          "note": ""
+        }
+      ],
+      "capability_disclaimer": "",
+      "rejection_reason": "",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:386cfe1405783e73adc1d318edbe2a314081475d3663bfc44fc72f47b13f5f40"
     },
     {
       "scenario_id": "SC-BTH-001",
@@ -505,6 +630,59 @@
       "reviewed_by": "",
       "reviewed_on": "",
       "rule_hash": "sha256:2315908ff6953b0731f94c782eb049cd9e8c2dca82e90b9c9407c13926b3eb5e"
+    },
+    {
+      "scenario_id": "SC-ELC-001",
+      "schema_version": 1,
+      "scenario_name": "Charger left plugged in unattended",
+      "category": "electrical",
+      "status": "draft",
+      "detectability": "direct",
+      "claim_class": "inference",
+      "risk_level": "LOW",
+      "priority": 80,
+      "condition": "(detected(class_name='charger') AND present_for(class_name='charger', seconds=60) AND absent_for(class_name='person', seconds=300))",
+      "required_objects": [
+        "charger",
+        "person"
+      ],
+      "optional_objects": [
+        "wire",
+        "laptop"
+      ],
+      "suppress_during": [],
+      "room_context": "any",
+      "min_confidence": 0.55,
+      "min_dwell_seconds": 60.0,
+      "clear_after_seconds": 120.0,
+      "cooldown_seconds": 3600,
+      "max_repeats": 0,
+      "max_per_day": 2,
+      "quiet_hours": {
+        "start": "21:00",
+        "end": "06:00",
+        "behaviour": "suppress"
+      },
+      "patient_facing": false,
+      "messages": {},
+      "next_best_action": "Unplug the charger when not in use",
+      "caregiver_channel": "digest",
+      "escalation": [],
+      "evidence": [
+        {
+          "source_id": "BEE-Electrical-Safety-2023",
+          "section": "Household Appliance Safety",
+          "item": "Unplug chargers and adaptors when not in use to prevent overheating",
+          "strength": "expert_opinion",
+          "supports": "hazard",
+          "note": "Bureau of Energy Efficiency guidance. The actual risk depends on charger quality, voltage stability, and ambient temperature — none of which are observable by a camera."
+        }
+      ],
+      "capability_disclaimer": "The system cannot determine whether the charger is actually delivering power or merely lying disconnected. A charger detected by the camera may be unplugged from both the device and the wall. This scenario signals prolonged unattended presence of a charger-shaped object, not confirmed electrical draw.",
+      "rejection_reason": "",
+      "reviewed_by": "",
+      "reviewed_on": "",
+      "rule_hash": "sha256:a4133bb20133a16c02a2341d3d494af99c9ff6412fe9919674ff885f7f6060c4"
     },
     {
       "scenario_id": "SC-COR-001",
@@ -1098,5 +1276,5 @@
       "rule_hash": "sha256:9cc84ba0932a4dc070f57e6fa474725ed0bb5b113f9f24893537a705209f1506"
     }
   ],
-  "content_hash": "sha256:4a757cbac4ff38e3f668a64763c3a83ee54edc10a6f192bcaffb4eab81486f08"
+  "content_hash": "sha256:75afbb3bf70c3d4fd7ad7ac70dca6b0a49b6328f3df065b137f810bee65638d7"
 }
