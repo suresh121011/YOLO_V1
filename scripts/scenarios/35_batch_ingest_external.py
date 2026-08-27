@@ -53,15 +53,23 @@ logger = logging.getLogger(__name__)
 # Session 003 = clips from the EDGE collection folder
 CATEGORY_SESSIONS: dict[str, tuple[str, str, str]] = {
     "POSITIVE": (
-        "s001", "pre_dwell",
+        "s001",
+        "pre_dwell",
         "Collection folder: POSITIVE. Kitchen cooking composition "
         "present but clip too short for SC-KIT-001 temporal "
         "condition (needs 1080s).",
     ),
-    "NEGATIVE": ("s002", "absence", "Collection folder: NEGATIVE. Required objects absent or "
-                 "wrong context for SC-KIT-001."),
-    "EDGE": ("s003", "pre_dwell", "Collection folder: EDGE. Ambiguous/partial composition; "
-             "temporal condition unmet regardless."),
+    "NEGATIVE": (
+        "s002",
+        "absence",
+        "Collection folder: NEGATIVE. Required objects absent or " "wrong context for SC-KIT-001.",
+    ),
+    "EDGE": (
+        "s003",
+        "pre_dwell",
+        "Collection folder: EDGE. Ambiguous/partial composition; "
+        "temporal condition unmet regardless.",
+    ),
 }
 
 # External house_id for stock footage (h99 is reserved for test fixtures).
@@ -100,8 +108,7 @@ def scan_clips(raw_dir: Path) -> list[dict[str, Any]]:
             continue
 
         video_files = sorted(
-            f for f in cat_dir.iterdir()
-            if f.is_file() and f.suffix.lower() in (".mp4", ".mov")
+            f for f in cat_dir.iterdir() if f.is_file() and f.suffix.lower() in (".mp4", ".mov")
         )
 
         for idx, video_path in enumerate(video_files, start=1):
@@ -128,24 +135,26 @@ def scan_clips(raw_dir: Path) -> list[dict[str, Any]]:
             else:
                 # Assume Pexels for numeric-only filenames (Pexels download pattern).
                 source_platform = "Pexels"
-                video_id = video_path.stem.split("_")[0].rstrip("_medium")
+                video_id = video_path.stem.split("_")[0].removesuffix("_medium")
                 source_url = f"https://www.pexels.com/video/{video_id}"
 
-            clips.append({
-                "clip_id": clip_id,
-                "category": category,
-                "session": session,
-                "original_filename": video_path.name,
-                "original_path": str(video_path),
-                "duration_s": round(duration_s, 1),
-                "fps": round(fps, 1),
-                "negative_kind": neg_kind,
-                "notes": default_notes,
-                "source_platform": source_platform,
-                "source_url": source_url,
-                "original_video_id": video_id,
-                "size_mb": round(video_path.stat().st_size / (1024 * 1024), 1),
-            })
+            clips.append(
+                {
+                    "clip_id": clip_id,
+                    "category": category,
+                    "session": session,
+                    "original_filename": video_path.name,
+                    "original_path": str(video_path),
+                    "duration_s": round(duration_s, 1),
+                    "fps": round(fps, 1),
+                    "negative_kind": neg_kind,
+                    "notes": default_notes,
+                    "source_platform": source_platform,
+                    "source_url": source_url,
+                    "original_video_id": video_id,
+                    "size_mb": round(video_path.stat().st_size / (1024 * 1024), 1),
+                }
+            )
 
     return clips
 
@@ -172,22 +181,37 @@ def ingest_clip(clip: dict[str, Any], repo_root: Path, dry_run: bool = False) ->
     cmd = [
         sys.executable,
         str(repo_root / "scripts" / "scenarios" / "32_ingest_scenario_clips.py"),
-        "--clip-id", clip["clip_id"],
-        "--source", clip["inbox_path"],
-        "--scenario-id", SCENARIO_ID,
-        "--lighting", "mixed",
-        "--expect", "no-alert",
-        "--negative-kind", clip["negative_kind"],
-        "--annotator", "automated-batch",
-        "--notes", clip["notes"],
+        "--clip-id",
+        clip["clip_id"],
+        "--source",
+        clip["inbox_path"],
+        "--scenario-id",
+        SCENARIO_ID,
+        "--lighting",
+        "mixed",
+        "--expect",
+        "no-alert",
+        "--negative-kind",
+        clip["negative_kind"],
+        "--annotator",
+        "automated-batch",
+        "--notes",
+        clip["notes"],
         "--external",
-        "--source-url", clip["source_url"],
-        "--source-platform", clip["source_platform"],
-        "--creator", clip.get("source_platform", "unknown"),
-        "--license", DEFAULT_PROVENANCE.get("license", ""),
-        "--license-url", DEFAULT_PROVENANCE.get("license_url", ""),
-        "--download-date", DEFAULT_PROVENANCE.get("download_date", ""),
-        "--original-video-id", clip.get("original_video_id", ""),
+        "--source-url",
+        clip["source_url"],
+        "--source-platform",
+        clip["source_platform"],
+        "--creator",
+        clip.get("source_platform", "unknown"),
+        "--license",
+        DEFAULT_PROVENANCE.get("license", ""),
+        "--license-url",
+        DEFAULT_PROVENANCE.get("license_url", ""),
+        "--download-date",
+        DEFAULT_PROVENANCE.get("download_date", ""),
+        "--original-video-id",
+        clip.get("original_video_id", ""),
         "--no-indian-home",
     ]
 
@@ -219,12 +243,18 @@ def main(argv: list[str] | None = None) -> int:
         description="Batch ingest SC-KIT-001 external clips.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument("--raw-dir", type=Path, default=None,
-                        help="Path to the raw SC-KIT-001 collection directory.")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Scan and map clips without actually ingesting.")
-    parser.add_argument("--skip-copy", action="store_true",
-                        help="Skip copy to inbox (clips already there).")
+    parser.add_argument(
+        "--raw-dir",
+        type=Path,
+        default=None,
+        help="Path to the raw SC-KIT-001 collection directory.",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Scan and map clips without actually ingesting."
+    )
+    parser.add_argument(
+        "--skip-copy", action="store_true", help="Skip copy to inbox (clips already there)."
+    )
     args = parser.parse_args(argv)
 
     repo_root = Path(__file__).resolve().parents[2]
@@ -233,8 +263,7 @@ def main(argv: list[str] | None = None) -> int:
     raw_dir = args.raw_dir or find_raw_dir(repo_root)
     if raw_dir is None or not raw_dir.exists():
         logger.error(
-            "SC-KIT-001 raw collection directory not found. "
-            "Use --raw-dir to specify the path."
+            "SC-KIT-001 raw collection directory not found. " "Use --raw-dir to specify the path."
         )
         return 1
 
@@ -297,12 +326,18 @@ def main(argv: list[str] | None = None) -> int:
         logger.info("[DRY RUN] No files copied or ingested.")
         print(f"\n{'='*70}")
         print(f"DRY RUN SUMMARY: {len(accepted)} clips would be ingested")
-        print(f"  POSITIVE folder (pre_dwell): "
-              f"{sum(1 for c in accepted if c['category'] == 'POSITIVE')}")
-        print(f"  NEGATIVE folder (absence):   "
-              f"{sum(1 for c in accepted if c['category'] == 'NEGATIVE')}")
-        print(f"  EDGE folder (pre_dwell):     "
-              f"{sum(1 for c in accepted if c['category'] == 'EDGE')}")
+        print(
+            f"  POSITIVE folder (pre_dwell): "
+            f"{sum(1 for c in accepted if c['category'] == 'POSITIVE')}"
+        )
+        print(
+            f"  NEGATIVE folder (absence):   "
+            f"{sum(1 for c in accepted if c['category'] == 'NEGATIVE')}"
+        )
+        print(
+            f"  EDGE folder (pre_dwell):     "
+            f"{sum(1 for c in accepted if c['category'] == 'EDGE')}"
+        )
         print(f"  Rejected: {len(rejected)}")
         for r in rejected:
             print(f"    {r['clip_id']}: {r['result']} ({r['original_filename']})")

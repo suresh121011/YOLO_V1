@@ -29,7 +29,6 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from src.scenario_engine.clips import load_clip_requirements, probe_media
 from src.utils.report_utils import timestamp_str
 
 logging.basicConfig(
@@ -122,8 +121,7 @@ def generate_clip_id(scenario_id: str, polarity: str, index: int) -> str:
     return f"{house_id}_{room}_{session}_c{index:03d}"
 
 
-def ingest_one_clip(clip: dict[str, Any], repo_root: Path,
-                    dry_run: bool = False) -> dict[str, Any]:
+def ingest_one_clip(clip: dict[str, Any], repo_root: Path, dry_run: bool = False) -> dict[str, Any]:
     """Call 32_ingest_scenario_clips.py for one clip."""
     scenario_id = clip["candidate_scenario_id"]
     polarity = clip["polarity"]
@@ -140,28 +138,42 @@ def ingest_one_clip(clip: dict[str, Any], repo_root: Path,
         neg_kind = neg_kind_map.get(clip["negative_kind"], neg_kind)
 
     provenance = infer_provenance(clip["filename"])
-    notes = f"Batch ingest Phase 6. Source: {clip['source_category']}. " \
-            f"Polarity: {polarity}."
+    notes = f"Batch ingest Phase 6. Source: {clip['source_category']}. " f"Polarity: {polarity}."
 
     cmd = [
         sys.executable,
         str(repo_root / "scripts" / "scenarios" / "32_ingest_scenario_clips.py"),
-        "--clip-id", clip["clip_id"],
-        "--source", clip["inbox_path"],
-        "--scenario-id", scenario_id,
-        "--lighting", "mixed",
-        "--expect", expect,
-        "--negative-kind", neg_kind,
-        "--annotator", "automated-batch-phase6",
-        "--notes", notes,
+        "--clip-id",
+        clip["clip_id"],
+        "--source",
+        clip["inbox_path"],
+        "--scenario-id",
+        scenario_id,
+        "--lighting",
+        "mixed",
+        "--expect",
+        expect,
+        "--negative-kind",
+        neg_kind,
+        "--annotator",
+        "automated-batch-phase6",
+        "--notes",
+        notes,
         "--external",
-        "--source-url", provenance.get("source_url", ""),
-        "--source-platform", provenance.get("source_platform", ""),
-        "--creator", provenance.get("source_platform", "unknown"),
-        "--license", provenance.get("license", DEFAULT_PROVENANCE["license"]),
-        "--license-url", provenance.get("license_url", DEFAULT_PROVENANCE["license_url"]),
-        "--download-date", provenance.get("download_date", DEFAULT_PROVENANCE["download_date"]),
-        "--original-video-id", provenance.get("original_video_id", ""),
+        "--source-url",
+        provenance.get("source_url", ""),
+        "--source-platform",
+        provenance.get("source_platform", ""),
+        "--creator",
+        provenance.get("source_platform", "unknown"),
+        "--license",
+        provenance.get("license", DEFAULT_PROVENANCE["license"]),
+        "--license-url",
+        provenance.get("license_url", DEFAULT_PROVENANCE["license_url"]),
+        "--download-date",
+        provenance.get("download_date", DEFAULT_PROVENANCE["download_date"]),
+        "--original-video-id",
+        provenance.get("original_video_id", ""),
         "--no-indian-home",
     ]
 
@@ -181,8 +193,12 @@ def ingest_one_clip(clip: dict[str, Any], repo_root: Path,
     if result.returncode != 0:
         error_msg = result.stderr.strip() or result.stdout.strip()
         logger.error(f"  FAILED: {clip['clip_id']}: {error_msg[-300:]}")
-        return {**clip, "result": "failed", "exit_code": result.returncode,
-                "error": error_msg[-500:]}
+        return {
+            **clip,
+            "result": "failed",
+            "exit_code": result.returncode,
+            "error": error_msg[-500:],
+        }
 
     logger.info(f"  OK: {clip['clip_id']}")
     return {**clip, "result": "ingested", "exit_code": 0}
@@ -193,14 +209,24 @@ def main(argv: list[str] | None = None) -> int:
         description="Multi-scenario batch ingest from staging to canonical.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Map clips and report without ingesting.")
-    parser.add_argument("--scenario", type=str, default=None,
-                        help="Only ingest clips for this scenario (e.g., SC-BTH-001).")
-    parser.add_argument("--mapping", type=Path, default=MAPPING_JSON,
-                        help="Path to scenario_mapping.json.")
-    parser.add_argument("--skip-existing", action="store_true", default=True,
-                        help="Skip clips whose clip_id already has a manifest.")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Map clips and report without ingesting."
+    )
+    parser.add_argument(
+        "--scenario",
+        type=str,
+        default=None,
+        help="Only ingest clips for this scenario (e.g., SC-BTH-001).",
+    )
+    parser.add_argument(
+        "--mapping", type=Path, default=MAPPING_JSON, help="Path to scenario_mapping.json."
+    )
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        default=True,
+        help="Skip clips whose clip_id already has a manifest.",
+    )
     args = parser.parse_args(argv)
 
     repo_root = Path(__file__).resolve().parents[2]
@@ -212,7 +238,8 @@ def main(argv: list[str] | None = None) -> int:
 
     # Filter to CANDIDATE only
     candidates = [
-        v for v in all_videos
+        v
+        for v in all_videos
         if v["mapping_status"] in ("CANDIDATE", "CANDIDATE_WITH_ISSUES")
         and v.get("candidate_scenario_id") not in ("UNASSIGNED", "", None)
     ]
@@ -343,7 +370,8 @@ def main(argv: list[str] | None = None) -> int:
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(
         json.dumps(report, indent=2, ensure_ascii=False, default=str) + "\n",
-        encoding="utf-8", newline="\n",
+        encoding="utf-8",
+        newline="\n",
     )
     logger.info(f"Report: {report_path}")
 

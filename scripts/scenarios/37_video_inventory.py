@@ -12,7 +12,8 @@ Outputs a comprehensive CSV inventory:
 
 Usage:
     python scripts/scenarios/37_video_inventory.py
-    python scripts/scenarios/37_video_inventory.py --staging-dir data/scenario_engine/staging/extracted
+    python scripts/scenarios/37_video_inventory.py \
+        --staging-dir data/scenario_engine/staging/extracted
 """
 
 from __future__ import annotations
@@ -133,8 +134,10 @@ def ffprobe_full(path: Path) -> dict:
         result = subprocess.run(
             [
                 "ffprobe",
-                "-v", "quiet",
-                "-print_format", "json",
+                "-v",
+                "quiet",
+                "-print_format",
+                "json",
                 "-show_format",
                 "-show_streams",
                 str(path),
@@ -146,8 +149,12 @@ def ffprobe_full(path: Path) -> dict:
         )
         payload = json.loads(result.stdout or "{}")
         return payload if isinstance(payload, dict) else {}
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired,
-            json.JSONDecodeError, OSError) as e:
+    except (
+        subprocess.CalledProcessError,
+        subprocess.TimeoutExpired,
+        json.JSONDecodeError,
+        OSError,
+    ) as e:
         logger.warning(f"ffprobe failed for {path.name}: {e}")
         return {}
 
@@ -247,8 +254,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Discover all video files
     videos = sorted(
-        p for p in staging.rglob("*")
-        if p.is_file() and p.suffix.lower() in VIDEO_EXTENSIONS
+        p for p in staging.rglob("*") if p.is_file() and p.suffix.lower() in VIDEO_EXTENSIONS
     )
     logger.info(f"Found {len(videos)} video files in {staging}")
 

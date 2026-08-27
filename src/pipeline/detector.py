@@ -129,7 +129,7 @@ class YOLODetector:
         names = getattr(model, "names", None)
         if isinstance(names, dict):
             return {int(k): str(v) for k, v in names.items()}
-        if isinstance(names, (list, tuple)):
+        if isinstance(names, list | tuple):
             return {i: str(name) for i, name in enumerate(names)}
         return {}
 

@@ -320,33 +320,41 @@ def evaluate_clip(
                 if d.class_name not in conf_summary or d.confidence > conf_summary[d.class_name]:
                     conf_summary[d.class_name] = round(d.confidence, 3)
 
-        decisions.append(FrameDecision(
-            frame_idx=frame_idx,
-            time_s=round(current_time_s, 3),
-            condition_true=condition_true,
-            state=frame_state,
-            detected_classes=sorted(detected_names),
-            detection_count=len(detections),
-            confidence_summary=conf_summary,
-        ))
+        decisions.append(
+            FrameDecision(
+                frame_idx=frame_idx,
+                time_s=round(current_time_s, 3),
+                condition_true=condition_true,
+                state=frame_state,
+                detected_classes=sorted(detected_names),
+                detection_count=len(detections),
+                confidence_summary=conf_summary,
+            )
+        )
 
         # Log every Nth frame for the detection log.
         if frame_idx % max(1, int(actual_fps)) == 0:  # ~1 per second
-            detection_log.append({
-                "frame": frame_idx,
-                "time_s": round(current_time_s, 3),
-                "detections": [
-                    {
-                        "class": d.class_name,
-                        "confidence": round(d.confidence, 3),
-                        "bbox": [round(d.bbox.cx, 3), round(d.bbox.cy, 3),
-                                 round(d.bbox.w, 3), round(d.bbox.h, 3)],
-                    }
-                    for d in detections
-                ],
-                "trigger": condition_true,
-                "state": frame_state,
-            })
+            detection_log.append(
+                {
+                    "frame": frame_idx,
+                    "time_s": round(current_time_s, 3),
+                    "detections": [
+                        {
+                            "class": d.class_name,
+                            "confidence": round(d.confidence, 3),
+                            "bbox": [
+                                round(d.bbox.cx, 3),
+                                round(d.bbox.cy, 3),
+                                round(d.bbox.w, 3),
+                                round(d.bbox.h, 3),
+                            ],
+                        }
+                        for d in detections
+                    ],
+                    "trigger": condition_true,
+                    "state": frame_state,
+                }
+            )
 
         frame_idx += 1
 
@@ -434,14 +442,14 @@ def main(argv: list[str] | None = None) -> int:
         description="Offline scenario clip evaluator.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument("--model", type=Path, default=DEFAULT_MODEL,
-                        help="Path to YOLO model weights.")
-    parser.add_argument("--scenario", default="all",
-                        help="Scenario to evaluate.")
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT,
-                        help="Output directory for results.")
-    parser.add_argument("--device", default="cpu",
-                        help="Inference device (cpu, cuda, mps).")
+    parser.add_argument(
+        "--model", type=Path, default=DEFAULT_MODEL, help="Path to YOLO model weights."
+    )
+    parser.add_argument("--scenario", default="all", help="Scenario to evaluate.")
+    parser.add_argument(
+        "--output", type=Path, default=DEFAULT_OUTPUT, help="Output directory for results."
+    )
+    parser.add_argument("--device", default="cpu", help="Inference device (cpu, cuda, mps).")
     args = parser.parse_args(argv)
 
     repo_root = Path(__file__).resolve().parents[2]
@@ -466,10 +474,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.scenario == "all":
         target_clips = [c for c in all_clips if c.is_accepted]
     else:
-        target_clips = [
-            c for c in all_clips
-            if c.is_accepted and c.scenario_id == args.scenario
-        ]
+        target_clips = [c for c in all_clips if c.is_accepted and c.scenario_id == args.scenario]
     if not target_clips:
         logger.error(f"No accepted clips found for scenario {args.scenario}")
         return 1
@@ -531,14 +536,26 @@ def main(argv: list[str] | None = None) -> int:
     # Generate evaluation CSV.
     csv_path = output_dir / "evaluation.csv"
     csv_fields = [
-        "clip_id", "scenario_id", "collection_label",
-        "expected_fires", "actual_fires",
-        "expected_alert", "predicted_alert",
-        "first_alert_at_s", "total_frames", "duration_s", "fps",
-        "result", "error_type",
-        "frames_with_stove", "frames_with_person",
-        "frames_with_knife", "frames_with_gas_cylinder",
-        "total_detections", "unique_classes_detected", "notes",
+        "clip_id",
+        "scenario_id",
+        "collection_label",
+        "expected_fires",
+        "actual_fires",
+        "expected_alert",
+        "predicted_alert",
+        "first_alert_at_s",
+        "total_frames",
+        "duration_s",
+        "fps",
+        "result",
+        "error_type",
+        "frames_with_stove",
+        "frames_with_person",
+        "frames_with_knife",
+        "frames_with_gas_cylinder",
+        "total_detections",
+        "unique_classes_detected",
+        "notes",
     ]
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=csv_fields)
@@ -610,12 +627,8 @@ def main(argv: list[str] | None = None) -> int:
         },
         "metrics": {
             "accuracy": round(passes / max(total, 1), 4),
-            "false_positive_rate": round(
-                false_positives / max(expected_negatives, 1), 4
-            ),
-            "specificity": round(
-                true_negatives / max(expected_negatives, 1), 4
-            ),
+            "false_positive_rate": round(false_positives / max(expected_negatives, 1), 4),
+            "specificity": round(true_negatives / max(expected_negatives, 1), 4),
             "note": (
                 "Recall and F1 are NOT reported because Dataset v0.1 contains "
                 "zero true-positive clips (all clips are engine-negatives). "
@@ -688,8 +701,13 @@ def main(argv: list[str] | None = None) -> int:
     print("  F1:                  NOT REPORTED (no true positives)")
     if inconclusive > 0:
         print(f"{'─'*70}")
-        print(f"  INCONCLUSIVE:        {inconclusive}/{total} ({inconclusive/max(total,1):.0%}) — model produced zero detections")
-        print(f"  Diagnosis:           Model undertrained (3 epochs, mAP50=0.13). See Phase 1 report.")
+        print(
+            f"  INCONCLUSIVE:        {inconclusive}/{total} "
+            f"({inconclusive/max(total,1):.0%}) — model produced zero detections"
+        )
+        print(
+            "  Diagnosis:           Model undertrained (3 epochs, mAP50=0.13). See Phase 1 report."
+        )
     print(f"{'─'*70}")
     print(f"  Classes detected:    {sorted(all_detected)}")
     print(f"  Evaluation time:     {eval_duration:.1f}s")
@@ -700,8 +718,10 @@ def main(argv: list[str] | None = None) -> int:
         print("\n  FALSE POSITIVE CLIPS:")
         for r in results:
             if r.result == "FALSE_POSITIVE":
-                print(f"    {r.clip_id}: alert at {r.first_alert_at_s:.1f}s, "
-                      f"error: {r.error_type}")
+                print(
+                    f"    {r.clip_id}: alert at {r.first_alert_at_s:.1f}s, "
+                    f"error: {r.error_type}"
+                )
 
     return 0
 

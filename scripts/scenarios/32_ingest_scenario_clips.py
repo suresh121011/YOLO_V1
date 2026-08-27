@@ -131,7 +131,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--negative-kind",
         default="",
-        help="confuser|absence|assistive|out_of_taxonomy|pre_dwell (required for --expect no-alert).",
+        help=(
+            "confuser|absence|assistive|out_of_taxonomy|pre_dwell "
+            "(required for --expect no-alert)."
+        ),
     )
     parser.add_argument("--annotator", default="", help="Who reviewed the clip.")
     parser.add_argument("--notes", default="")
